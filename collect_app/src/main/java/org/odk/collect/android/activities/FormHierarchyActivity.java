@@ -20,6 +20,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
@@ -75,6 +76,8 @@ public class FormHierarchyActivity extends CollectAbstractActivity implements De
      * {@link #getCurrentPath()}.
      */
     private TextView groupPathTextView;
+
+    private ImageView groupFolderIcon;
 
     /**
      * A ref to the current context group.
@@ -151,6 +154,7 @@ public class FormHierarchyActivity extends CollectAbstractActivity implements De
 
         setTitle(formController.getFormTitle());
 
+        groupFolderIcon = findViewById(R.id.pathicon);
         groupPathTextView = findViewById(R.id.pathtext);
 
         jumpBeginningButton = findViewById(R.id.jumpBeginningButton);
@@ -501,9 +505,12 @@ public class FormHierarchyActivity extends CollectAbstractActivity implements De
 
             if (event == FormEntryController.EVENT_BEGINNING_OF_FORM && !shouldShowRepeatGroupPicker()) {
                 // The beginning of form has no valid prompt to display.
+                groupFolderIcon.setVisibility(View.GONE);
                 groupPathTextView.setVisibility(View.GONE);
             } else {
+                groupFolderIcon.setVisibility(View.VISIBLE);
                 groupPathTextView.setVisibility(View.VISIBLE);
+                groupFolderIcon.setImageDrawable(getDrawable(R.drawable.ic_folder_open));
                 groupPathTextView.setText(getCurrentPath());
             }
 

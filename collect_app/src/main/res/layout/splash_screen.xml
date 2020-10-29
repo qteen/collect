@@ -23,43 +23,14 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical|center_horizontal"
         android:orientation="horizontal"
-        android:paddingBottom="5dip">
+        android:paddingBottom="5dip"
+        android:background="@android:color/transparent">
 
         <ImageView
-            android:layout_width="72dip"
-            android:layout_height="72dip"
-            android:contentDescription="@string/app_name"
-            android:src="@drawable/notes" />
-
-        <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center_vertical|start"
-            android:orientation="vertical"
-            android:paddingBottom="5dip">
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@android:color/transparent"
-                android:paddingEnd="7dip"
-                android:paddingLeft="7dip"
-                android:paddingRight="7dip"
-                android:paddingStart="7dip"
-                android:text="@string/app_name"
-                android:textSize="22sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:background="@android:color/transparent"
-                android:paddingEnd="7dip"
-                android:paddingLeft="7dip"
-                android:paddingRight="7dip"
-                android:paddingStart="7dip"
-                android:text="@string/app_url"
-                android:textSize="14sp" />
-        </LinearLayout>
+            android:layout_height="120dp"
+            android:contentDescription="@string/app_name"
+            android:src="@drawable/moda_s_logo"
+            android:background="@color/grey_100_transparant"/>
     </LinearLayout>
 </LinearLayout>

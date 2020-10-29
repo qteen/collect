@@ -1,0 +1,94 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    tools:context=".activities.LoginActivity" android:id="@+id/container">
+
+    <FrameLayout
+        android:id="@+id/containerTop"
+        android:layout_alignParentTop="true"
+        android:layout_width="match_parent"
+        android:layout_height="400dp">
+        <ImageView
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="200sp"
+            android:id="@+id/imageView2"
+            android:layout_gravity="center_horizontal"
+            android:src="@drawable/moda_s_logo2"
+            />
+        <ImageView
+            android:layout_gravity="bottom|center_horizontal"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:src="@drawable/bnn_logo"/>
+    </FrameLayout>
+    <LinearLayout
+        android:layout_below="@+id/containerTop"
+        android:orientation="vertical"
+        android:layout_width="fill_parent"
+        android:layout_height="match_parent" android:gravity="center_vertical">
+        <EditText
+            android:singleLine="true"
+            android:lines="1"
+            android:maxLines="1"
+            android:drawableLeft="@drawable/ic_web_white"
+            android:layout_marginBottom="5dp"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:textColorHint="#dddddd"
+            android:textCursorDrawable="@drawable/moco_cursor"
+            android:hint="Server URL"
+            android:textSize="18sp"
+            android:id="@+id/url" android:layout_column="1"/>
+        <EditText
+            android:singleLine="true"
+            android:lines="1"
+            android:maxLines="1"
+            android:drawableLeft="@drawable/ic_user_white"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:hint="Username"
+            android:textColorHint="#dddddd"
+            android:textCursorDrawable="@drawable/moco_cursor"
+            android:textSize="18sp"
+            android:id="@+id/username" android:layout_column="1"/>
+        <EditText
+            android:singleLine="true"
+            android:lines="1"
+            android:maxLines="1"
+            android:drawableLeft="@drawable/ic_lock_white"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:textColorHint="#dddddd"
+            android:textCursorDrawable="@drawable/moco_cursor"
+            android:hint="Kata Sandi"
+            android:inputType="textPassword"
+            android:textSize="18sp"
+            android:ems="10"
+            android:id="@+id/password" android:layout_column="1"/>
+        <Button
+            android:layout_marginTop="20dp"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:text="Masuk"
+            android:id="@+id/button"/>
+
+    </LinearLayout>
+    <LinearLayout
+        android:id="@+id/linlaHeaderProgress"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone"
+        >
+
+        <ProgressBar
+            android:id="@+id/pbHeaderProgress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" >
+        </ProgressBar>
+    </LinearLayout>
+</RelativeLayout>

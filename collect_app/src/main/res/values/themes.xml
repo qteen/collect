@@ -7,7 +7,7 @@
         <item name="imageButtonStyle">@style/Widget.Collect.ImageButton.Custom.Dark</item>
     </style>
 
-    <style name="Theme.Collect.Light" parent="Theme.Collect.BaseLight">
+    <style name="Theme.Collect.Light" parent="Theme.Collect.Moda">
         <item name="android:buttonStyle">@style/Widget.Collect.Button.Custom</item>
         <item name="imageButtonStyle">@style/Widget.Collect.ImageButton.Custom.Light</item>
     </style>

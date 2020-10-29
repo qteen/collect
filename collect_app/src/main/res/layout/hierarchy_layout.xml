@@ -18,12 +18,25 @@ the License.
 
     <include layout="@layout/app_bar_layout" />
 
-    <TextView
-        android:id="@+id/pathtext"
+    <LinearLayout
+        android:id="@+id/pathlayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@id/appBarLayout"
-        android:layout_margin="4dp" />
+        android:layout_margin="4dp"
+        android:orientation="horizontal"
+        android:background="?colorSurface">
+        <ImageView
+            android:id="@+id/pathicon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="8dp"
+            android:layout_gravity="center_vertical"/>
+        <TextView
+            android:id="@+id/pathtext"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
     <!-- would prefer not to use an extra LinearLayout here, but weights don't
         seem to work properly in RelativeLayout -->
     <LinearLayout
@@ -61,7 +74,7 @@ the License.
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_above="@id/buttonholder"
-        android:layout_below="@id/pathtext"
+        android:layout_below="@id/pathlayout"
         android:scrollbars="vertical" />
 
     <TextView
