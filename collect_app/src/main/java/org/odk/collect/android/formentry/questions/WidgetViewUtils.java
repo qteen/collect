@@ -5,6 +5,8 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TableLayout;
@@ -12,12 +14,13 @@ import android.widget.TextView;
 
 import androidx.annotation.IdRes;
 
+import com.google.android.material.button.MaterialButton;
+
 import org.odk.collect.android.R;
-import org.odk.collect.android.application.Collect;
+import org.odk.collect.android.utilities.MultiClickGuard;
 import org.odk.collect.android.utilities.ThemeUtils;
-import org.odk.collect.android.utilities.ViewIds;
 import org.odk.collect.android.widgets.QuestionWidget;
-import org.odk.collect.android.widgets.interfaces.ButtonWidget;
+import org.odk.collect.android.widgets.interfaces.ButtonClickListener;
 
 import static android.view.View.GONE;
 import static org.odk.collect.android.utilities.ViewUtils.dpFromPx;
@@ -62,7 +65,7 @@ public class WidgetViewUtils {
 
     public static ImageView createAnswerImageView(Context context, Bitmap bitmap) {
         final ImageView imageView = new ImageView(context);
-        imageView.setId(ViewIds.generateViewId());
+        imageView.setId(View.generateViewId());
         imageView.setTag("ImageView");
         imageView.setPadding(10, 10, 10, 10);
         imageView.setAdjustViewBounds(true);
@@ -70,8 +73,10 @@ public class WidgetViewUtils {
         return imageView;
     }
 
-    public static Button createSimpleButton(Context context, @IdRes final int withId, boolean readOnly, String text, int answerFontSize, QuestionWidget listener) {
-        final Button button = new Button(context);
+    public static Button createSimpleButton(Context context, @IdRes final int withId, boolean readOnly, String text, int answerFontSize, ButtonClickListener listener) {
+        final MaterialButton button = (MaterialButton) LayoutInflater
+                .from(context)
+                .inflate(R.layout.widget_answer_button, null, false);
 
         if (readOnly) {
             button.setVisibility(GONE);
@@ -79,7 +84,6 @@ public class WidgetViewUtils {
             button.setId(withId);
             button.setText(text);
             button.setTextSize(TypedValue.COMPLEX_UNIT_DIP, answerFontSize);
-            button.setPadding(20, 20, 20, 20);
 
             TableLayout.LayoutParams params = new TableLayout.LayoutParams();
             params.setMargins(7, 5, 7, 5);
@@ -87,8 +91,8 @@ public class WidgetViewUtils {
             button.setLayoutParams(params);
 
             button.setOnClickListener(v -> {
-                if (Collect.allowClick(QuestionWidget.class.getName())) {
-                    ((ButtonWidget) listener).onButtonClick(withId);
+                if (MultiClickGuard.allowClick(QuestionWidget.class.getName())) {
+                    listener.onButtonClick(withId);
                 }
             });
         }
@@ -96,11 +100,11 @@ public class WidgetViewUtils {
         return button;
     }
 
-    public static Button createSimpleButton(Context context, @IdRes int id, boolean readOnly, int answerFontSize, QuestionWidget listener) {
+    public static Button createSimpleButton(Context context, @IdRes int id, boolean readOnly, int answerFontSize, ButtonClickListener listener) {
         return createSimpleButton(context, id, readOnly, null, answerFontSize, listener);
     }
 
-    public static Button createSimpleButton(Context context, boolean readOnly, String text, int answerFontSize, QuestionWidget listener) {
+    public static Button createSimpleButton(Context context, boolean readOnly, String text, int answerFontSize, ButtonClickListener listener) {
         return createSimpleButton(context, R.id.simple_button, readOnly, text, answerFontSize, listener);
     }
 }

@@ -15,12 +15,18 @@
 package org.odk.collect.android.geo;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
+import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.Settings;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
+import androidx.appcompat.app.AlertDialog;
+import androidx.fragment.app.FragmentActivity;
 
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.maps.CameraUpdate;
@@ -42,9 +48,14 @@ import com.google.android.gms.maps.model.TileOverlay;
 import com.google.android.gms.maps.model.TileOverlayOptions;
 
 import org.odk.collect.android.R;
+import org.odk.collect.android.injection.DaggerUtils;
+import org.odk.collect.android.location.client.GoogleFusedLocationClient;
 import org.odk.collect.android.location.client.LocationClient;
-import org.odk.collect.android.location.client.LocationClients;
+import org.odk.collect.android.location.client.LocationClientProvider;
+import org.odk.collect.android.storage.StoragePathProvider;
+import org.odk.collect.android.utilities.GeoUtils;
 import org.odk.collect.android.utilities.IconUtils;
+import org.odk.collect.android.utilities.PlayServicesChecker;
 import org.odk.collect.android.utilities.ToastUtils;
 
 import java.io.File;
@@ -53,10 +64,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.annotation.VisibleForTesting;
-import androidx.fragment.app.FragmentActivity;
+import javax.inject.Inject;
+
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import timber.log.Timber;
 
@@ -68,8 +77,9 @@ public class GoogleMapFragment extends SupportMapFragment implements
 
     // Bundle keys understood by applyConfig().
     static final String KEY_MAP_TYPE = "MAP_TYPE";
-    static final String KEY_REFERENCE_LAYER = "REFERENCE_LAYER";
 
+    @Inject
+    MapProvider mapProvider;
     private GoogleMap map;
     private Marker locationCrosshairs;
     private Circle accuracyCircle;
@@ -144,22 +154,26 @@ public class GoogleMapFragment extends SupportMapFragment implements
         }
     }
 
+    @Override public void onAttach(@NonNull Context context) {
+        super.onAttach(context);
+        DaggerUtils.getComponent(context).inject(this);
+    }
+
     @Override public void onStart() {
         super.onStart();
-        MapProvider.onMapFragmentStart(this);
+        mapProvider.onMapFragmentStart(this);
         enableLocationUpdates(clientWantsLocationUpdates);
     }
 
     @Override public void onStop() {
         enableLocationUpdates(false);
-        MapProvider.onMapFragmentStop(this);
+        mapProvider.onMapFragmentStop(this);
         super.onStop();
     }
 
     @Override public void applyConfig(Bundle config) {
         mapType = config.getInt(KEY_MAP_TYPE, GoogleMap.MAP_TYPE_NORMAL);
-        String path = config.getString(KEY_REFERENCE_LAYER);
-        referenceLayerFile = path != null ? new File(path) : null;
+        referenceLayerFile = GeoUtils.getReferenceLayerFile(config, new StoragePathProvider());
         if (map != null) {
             map.setMapType(mapType);
             loadReferenceOverlay();
@@ -228,9 +242,9 @@ public class GoogleMapFragment extends SupportMapFragment implements
         }
     }
 
-    @Override public int addMarker(MapPoint point, boolean draggable) {
+    @Override public int addMarker(MapPoint point, boolean draggable, @IconAnchor String iconAnchor) {
         int featureId = nextFeatureId++;
-        features.put(featureId, new MarkerFeature(map, point, draggable));
+        features.put(featureId, new MarkerFeature(map, point, draggable, iconAnchor));
         return featureId;
     }
 
@@ -288,6 +302,7 @@ public class GoogleMapFragment extends SupportMapFragment implements
             }
         }
         features.clear();
+        nextFeatureId = 1;
     }
 
     @Override public void setClickListener(@Nullable PointListener listener) {
@@ -505,7 +520,8 @@ public class GoogleMapFragment extends SupportMapFragment implements
 
     private void enableLocationUpdates(boolean enable) {
         if (locationClient == null) {
-            locationClient = LocationClients.clientForContext(getActivity());
+            locationClient = LocationClientProvider.getClient(getActivity(), new PlayServicesChecker(),
+                    () -> new GoogleFusedLocationClient(getActivity().getApplication()));
             locationClient.setListener(this);
         }
         if (enable) {
@@ -572,7 +588,7 @@ public class GoogleMapFragment extends SupportMapFragment implements
         }
     }
 
-    private Marker createMarker(GoogleMap map, MapPoint point, boolean draggable) {
+    private Marker createMarker(GoogleMap map, MapPoint point, boolean draggable, @IconAnchor String iconAnchor) {
         if (map == null || getActivity() == null) {  // during Robolectric tests, map will be null
             return null;
         }
@@ -584,8 +600,25 @@ public class GoogleMapFragment extends SupportMapFragment implements
             .snippet(point.alt + ";" + point.sd)
             .draggable(draggable)
             .icon(getBitmapDescriptor(R.drawable.ic_map_point))
-            .anchor(0.5f, 0.5f)  // center the icon on the position
+            .anchor(getIconAnchorValueX(iconAnchor), getIconAnchorValueY(iconAnchor))  // center the icon on the position
         );
+    }
+
+    private float getIconAnchorValueX(@IconAnchor String iconAnchor) {
+        switch (iconAnchor) {
+            case BOTTOM:
+            default:
+                return 0.5f;
+        }
+    }
+
+    private float getIconAnchorValueY(@IconAnchor String iconAnchor) {
+        switch (iconAnchor) {
+            case BOTTOM:
+                return 1.0f;
+            default:
+                return 0.5f;
+        }
     }
 
     private BitmapDescriptor getBitmapDescriptor(int drawableId) {
@@ -629,8 +662,8 @@ public class GoogleMapFragment extends SupportMapFragment implements
     private class MarkerFeature implements MapFeature {
         private Marker marker;
 
-        MarkerFeature(GoogleMap map, MapPoint point, boolean draggable) {
-            marker = createMarker(map, point, draggable);
+        MarkerFeature(GoogleMap map, MapPoint point, boolean draggable, @IconAnchor String iconAnchor) {
+            marker = createMarker(map, point, draggable, iconAnchor);
         }
 
         public void setIcon(int drawableId) {
@@ -673,7 +706,7 @@ public class GoogleMapFragment extends SupportMapFragment implements
                 return;
             }
             for (MapPoint point : points) {
-                markers.add(createMarker(map, point, true));
+                markers.add(createMarker(map, point, true, CENTER));
             }
             update();
         }
@@ -729,7 +762,7 @@ public class GoogleMapFragment extends SupportMapFragment implements
             if (map == null) {  // during Robolectric tests, map will be null
                 return;
             }
-            markers.add(createMarker(map, point, true));
+            markers.add(createMarker(map, point, true, CENTER));
             update();
         }
 

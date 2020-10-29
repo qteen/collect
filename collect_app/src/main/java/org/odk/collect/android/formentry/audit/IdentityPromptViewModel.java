@@ -1,22 +1,35 @@
 package org.odk.collect.android.formentry.audit;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import org.odk.collect.android.formentry.RequiresFormController;
+import org.odk.collect.android.javarosawrapper.FormController;
+
 import static org.odk.collect.android.utilities.StringUtils.isBlank;
 
-public class IdentityPromptViewModel extends ViewModel {
+public class IdentityPromptViewModel extends ViewModel implements RequiresFormController {
 
     private final MutableLiveData<Boolean> formEntryCancelled = new MutableLiveData<>(false);
     private final MutableLiveData<Boolean> requiresIdentity = new MutableLiveData<>(false);
 
     @Nullable
     private AuditEventLogger auditEventLogger;
+
     private String identity = "";
+    private String formName;
 
     public IdentityPromptViewModel() {
+        updateRequiresIdentity();
+    }
+
+    @Override
+    public void formLoaded(@NonNull FormController formController) {
+        this.formName = formController.getFormTitle();
+        this.auditEventLogger = formController.getAuditEventLogger();
         updateRequiresIdentity();
     }
 
@@ -32,17 +45,15 @@ public class IdentityPromptViewModel extends ViewModel {
         return identity;
     }
 
-    public void setAuditEventLogger(AuditEventLogger auditEventLogger) {
-        this.auditEventLogger = auditEventLogger;
-        updateRequiresIdentity();
-    }
-
     public void setIdentity(String identity) {
         this.identity = identity;
     }
 
     public void done() {
-        auditEventLogger.setUser(identity);
+        if (auditEventLogger != null) {
+            auditEventLogger.setUser(identity);
+        }
+        
         updateRequiresIdentity();
     }
 
@@ -58,5 +69,9 @@ public class IdentityPromptViewModel extends ViewModel {
 
     private static boolean userIsValid(String user) {
         return user != null && !user.isEmpty() && !isBlank(user);
+    }
+
+    public String getFormTitle() {
+        return formName;
     }
 }

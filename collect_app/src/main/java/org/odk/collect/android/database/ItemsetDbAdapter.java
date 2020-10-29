@@ -15,6 +15,8 @@ import java.security.NoSuchAlgorithmException;
 
 import timber.log.Timber;
 
+import static org.odk.collect.utilities.PathUtils.getAbsoluteFilePath;
+
 public class ItemsetDbAdapter {
 
     private DatabaseHelper dbHelper;
@@ -25,8 +27,8 @@ public class ItemsetDbAdapter {
     private static final int DATABASE_VERSION = 2;
 
     private static final String ITEMSET_TABLE = "itemsets";
-    private static final String KEY_ITEMSET_HASH = "hash";
-    private static final String KEY_PATH = "path";
+    public static final String KEY_ITEMSET_HASH = "hash";
+    public static final String KEY_PATH = "path";
 
     private static final String CREATE_ITEMSET_TABLE =
             "CREATE TABLE IF NOT EXISTS " + ITEMSET_TABLE + " (_id integer primary key autoincrement, "
@@ -137,23 +139,6 @@ public class ItemsetDbAdapter {
         return true;
     }
 
-    public boolean tableExists(String tableName) {
-        // select name from sqlite_master where type = 'table'
-        String selection = "type=? and name=?";
-        String[] selectionArgs = {
-                "table", DATABASE_TABLE + tableName
-        };
-        Cursor c = db.query("sqlite_master", null, selection, selectionArgs,
-                null, null, null);
-        boolean exists = false;
-        if (c.getCount() == 1) {
-            exists = true;
-        }
-        c.close();
-        return exists;
-
-    }
-
     public void beginTransaction() {
         db.execSQL("BEGIN");
     }
@@ -187,13 +172,21 @@ public class ItemsetDbAdapter {
         return db.query(ITEMSET_TABLE, null, selection, selectionArgs, null, null, null);
     }
 
+    public Cursor getItemsets() {
+        return db.query(ITEMSET_TABLE, null, null, null, null, null, null);
+    }
+
+    public void update(ContentValues values, String where, String[] whereArgs) {
+        db.update(ITEMSET_TABLE, values, where, whereArgs);
+    }
+
     public void delete(String path) {
         StoragePathProvider storagePathProvider = new StoragePathProvider();
         Cursor c = getItemsets(path);
         if (c != null) {
             if (c.getCount() == 1) {
                 c.moveToFirst();
-                String table = getMd5FromString(storagePathProvider.getAbsoluteFormFilePath(c.getString(c.getColumnIndex(KEY_PATH))));
+                String table = getMd5FromString(getAbsoluteFilePath(storagePathProvider.getDirPath(StorageSubdirectory.FORMS), c.getString(c.getColumnIndex(KEY_PATH))));
                 db.execSQL("DROP TABLE IF EXISTS " + DATABASE_TABLE + table);
             }
             c.close();

@@ -33,7 +33,8 @@ import org.odk.collect.android.R;
 import org.odk.collect.android.application.Collect;
 import org.odk.collect.android.exception.ExternalDataException;
 import org.odk.collect.android.external.handler.ExternalDataHandlerSearch;
-import org.odk.collect.android.logic.FormController;
+import org.odk.collect.android.javarosawrapper.FormController;
+import org.odk.collect.android.utilities.TranslationHandler;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -58,7 +59,10 @@ import timber.log.Timber;
 public final class ExternalDataUtil {
 
     public static final String EXTERNAL_DATA_TABLE_NAME = "externalData";
+    public static final String EXTERNAL_METADATA_TABLE_NAME = "externalMetadata";
     public static final String SORT_COLUMN_NAME = "c_sortby";
+    public static final String COLUMN_DATASET_FILENAME = "dataSetFilename";
+    public static final String COLUMN_MD5_HASH = "md5Hash";
 
     public static final Pattern SEARCH_FUNCTION_REGEX = Pattern.compile("search\\(.+\\)");
     private static final String COLUMN_SEPARATOR = ",";
@@ -125,32 +129,32 @@ public final class ExternalDataUtil {
                             return xpathFuncExpr;
                         } else {
                             Toast.makeText(Collect.getInstance(),
-                                    Collect.getInstance().getString(R.string.ext_search_wrong_arguments_error),
+                                    TranslationHandler.getString(Collect.getInstance(), R.string.ext_search_wrong_arguments_error),
                                     Toast.LENGTH_SHORT).show();
-                            Timber.i(Collect.getInstance().getString(R.string.ext_search_wrong_arguments_error));
+                            Timber.i(TranslationHandler.getString(Collect.getInstance(), R.string.ext_search_wrong_arguments_error));
                             return null;
                         }
                     } else {
                         // this might mean a problem in the regex above. Unit tests required.
                         Toast.makeText(Collect.getInstance(),
-                                Collect.getInstance().getString(R.string.ext_search_wrong_function_error, xpathFuncExpr.id.name),
+                                TranslationHandler.getString(Collect.getInstance(), R.string.ext_search_wrong_function_error, xpathFuncExpr.id.name),
                                 Toast.LENGTH_SHORT).show();
-                        Timber.i(Collect.getInstance().getString(R.string.ext_search_wrong_function_error, xpathFuncExpr.id.name));
+                        Timber.i(TranslationHandler.getString(Collect.getInstance(), R.string.ext_search_wrong_function_error, xpathFuncExpr.id.name));
                         return null;
                     }
                 } else {
                     // this might mean a problem in the regex above. Unit tests required.
                     Toast.makeText(Collect.getInstance(),
-                            Collect.getInstance().getString(R.string.ext_search_bad_function_error, function),
+                            TranslationHandler.getString(Collect.getInstance(), R.string.ext_search_bad_function_error, function),
                             Toast.LENGTH_SHORT).show();
-                    Timber.i(Collect.getInstance().getString(R.string.ext_search_bad_function_error, function));
+                    Timber.i(TranslationHandler.getString(Collect.getInstance(), R.string.ext_search_bad_function_error, function));
                     return null;
                 }
             } catch (XPathSyntaxException e) {
                 Toast.makeText(Collect.getInstance(),
-                        Collect.getInstance().getString(R.string.ext_search_generic_error, appearance),
+                        TranslationHandler.getString(Collect.getInstance(), R.string.ext_search_generic_error, appearance),
                         Toast.LENGTH_SHORT).show();
-                Timber.i(Collect.getInstance().getString(R.string.ext_search_generic_error, appearance));
+                Timber.i(TranslationHandler.getString(Collect.getInstance(), R.string.ext_search_generic_error, appearance));
                 return null;
             }
         } else {
@@ -201,7 +205,7 @@ public final class ExternalDataUtil {
                         }
                     } else {
                         throw new ExternalDataException(
-                                Collect.getInstance().getString(R.string.ext_search_return_error,
+                                TranslationHandler.getString(Collect.getInstance(), R.string.ext_search_return_error,
                                         eval.getClass().getName()));
                     }
                 }

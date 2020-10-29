@@ -14,13 +14,11 @@
 
 package org.odk.collect.android.utilities;
 
-import android.annotation.SuppressLint;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Environment;
 import android.os.ParcelFileDescriptor;
 import android.provider.DocumentsContract;
@@ -35,6 +33,7 @@ import androidx.annotation.Nullable;
 import org.apache.commons.io.IOUtils;
 import org.odk.collect.android.application.Collect;
 import org.odk.collect.android.exception.GDriveConnectionException;
+import org.odk.collect.android.network.NetworkStateProvider;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -60,10 +59,6 @@ import timber.log.Timber;
  * @author paulburke
  */
 public class MediaUtils {
-
-    private MediaUtils() {
-        // static methods only
-    }
 
     protected static String escapePathForLikeSQLClause(String path) {
         String ep = path;
@@ -96,7 +91,7 @@ public class MediaUtils {
         }
     }
 
-    public static final int deleteImageFileFromMediaProvider(String imageFile) {
+    public int deleteImageFileFromMediaProvider(String imageFile) {
         ContentResolver cr = Collect.getInstance().getContentResolver();
         // images
         int count = 0;
@@ -417,37 +412,10 @@ public class MediaUtils {
      * media prompts. Beginning with KitKat, the responses use a different
      * mechanism and needs a lot of special handling.
      */
-    @SuppressLint("NewApi")
     public static String getPathFromUri(Context ctxt, Uri uri, String pathKey) {
-
-        if (Build.VERSION.SDK_INT >= 19) {
-            return getPath(ctxt, uri);
-        } else {
-            if (uri.toString().startsWith("file")) {
-                return uri.toString().substring(7);
-            } else {
-                String[] projection = {pathKey};
-                Cursor c = null;
-                try {
-                    c = ctxt.getContentResolver().query(uri, projection, null,
-                            null, null);
-                    int columnIndex = c.getColumnIndexOrThrow(pathKey);
-                    String path = null;
-                    if (c.getCount() > 0) {
-                        c.moveToFirst();
-                        path = c.getString(columnIndex);
-                    }
-                    return path;
-                } finally {
-                    if (c != null) {
-                        c.close();
-                    }
-                }
-            }
-        }
+        return getPath(ctxt, uri);
     }
 
-    @SuppressLint("NewApi")
     /**
      * Get a file path from a Uri. This will get the the path for Storage Access
      * Framework Documents, as well as the _data field for the MediaStore and
@@ -464,10 +432,8 @@ public class MediaUtils {
      */
     public static String getPath(final Context context, final Uri uri) {
 
-        final boolean isKitKat = Build.VERSION.SDK_INT >= 19;
-
         // DocumentProvider
-        if (isKitKat && DocumentsContract.isDocumentUri(context, uri)) {
+        if (DocumentsContract.isDocumentUri(context, uri)) {
 
             // ExternalStorageProvider
             if (isExternalStorageDocument(uri)) {
@@ -483,9 +449,12 @@ public class MediaUtils {
             } else if (isDownloadsDocument(uri)) {
                 // DownloadsProvider
 
-                final String id = DocumentsContract.getDocumentId(uri);
+                String id = DocumentsContract.getDocumentId(uri);
                 if (id.startsWith("raw:")) {
                     return id.replaceFirst("raw:", "");
+                }
+                if (id.startsWith("msf:")) {
+                    id = id.replaceFirst("msf:", "");
                 }
 
                 String[] contentUriPrefixesToTry = {
@@ -508,7 +477,7 @@ public class MediaUtils {
 
                 // path could not be retrieved using ContentResolver, therefore copy file to accessible cache using streams
                 // https://github.com/coltoscosmin/FileUtils/blob/master/FileUtils.java
-                String fileName = getFileName(context, uri);
+                String fileName = getFileNameFromUri(context, uri);
                 File cacheDir = getDocumentCacheDir(context);
                 File file = generateFileName(fileName, cacheDir);
                 String destinationPath = null;
@@ -556,20 +525,20 @@ public class MediaUtils {
         return null;
     }
 
-    public static File getFileFromUri(final Context context, final Uri uri, String pathKey) throws GDriveConnectionException {
+    public static File getFileFromUri(final Context context, final Uri uri, String pathKey, NetworkStateProvider connectivityProvider) throws GDriveConnectionException {
         File file = null;
         String filePath = getPathFromUri(context, uri, pathKey);
         if (filePath != null) {
             file = new File(filePath);
         } else if (isGoogleDriveDocument(uri)) {
-            file = getGoogleDriveFile(context, uri);
+            file = getGoogleDriveFile(context, uri, connectivityProvider);
         }
 
         return file;
     }
 
-    private static File getGoogleDriveFile(Context context, Uri uri) throws GDriveConnectionException {
-        if (!Collect.getInstance().isNetworkAvailable()) {
+    private static File getGoogleDriveFile(Context context, Uri uri, NetworkStateProvider connectivityProvider) throws GDriveConnectionException {
+        if (!connectivityProvider.isDeviceOnline()) {
             throw new GDriveConnectionException();
         }
         if (uri == null) {
@@ -683,29 +652,30 @@ public class MediaUtils {
         return null;
     }
 
-    private static String getFileName(@NonNull Context context, Uri uri) {
+    public static String getFileNameFromUri(@NonNull Context context, Uri uri) {
         String mimeType = context.getContentResolver().getType(uri);
-        String filename = null;
+        String fileName = null;
 
         if (mimeType == null) {
             String path = getPath(context, uri);
             if (path == null) {
-                filename = getName(uri.toString());
+                fileName = getName(uri.toString());
             } else {
                 File file = new File(path);
-                filename = file.getName();
+                fileName = file.getName();
             }
         } else {
-            Cursor returnCursor = context.getContentResolver().query(uri, null, null, null, null);
-            if (returnCursor != null) {
-                int nameIndex = returnCursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                returnCursor.moveToFirst();
-                filename = returnCursor.getString(nameIndex);
-                returnCursor.close();
+            try (Cursor returnCursor = context.getContentResolver().query(uri, null, null, null, null)) {
+                if (returnCursor != null && returnCursor.moveToFirst()) {
+                    int nameIndex = returnCursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    if (nameIndex != -1) {
+                        fileName = returnCursor.getString(nameIndex);
+                    }
+                }
             }
         }
 
-        return filename;
+        return fileName;
     }
 
     private static String getName(String filename) {

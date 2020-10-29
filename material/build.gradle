@@ -1,0 +1,45 @@
+apply plugin: 'com.android.library'
+
+apply from: '../config/quality.gradle'
+
+android {
+    compileSdkVersion rootProject.androidCompileSdk
+    buildToolsVersion "29.0.2"
+
+    defaultConfig {
+        minSdkVersion rootProject.androidMinSdk
+        targetSdkVersion rootProject.androidTargetSdk
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles 'consumer-rules.pro'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    testOptions {
+        unitTests {
+            includeAndroidResources = true
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.2.0'
+    implementation 'com.google.android.material:material:1.2.1'
+
+    testImplementation 'junit:junit:4.13'
+    testImplementation "org.robolectric:robolectric:4.4"
+    testImplementation "org.mockito:mockito-core:3.5.11"
+    testImplementation 'androidx.test.ext:junit:1.1.2'
+}

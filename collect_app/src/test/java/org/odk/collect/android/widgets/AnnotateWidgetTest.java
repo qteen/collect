@@ -20,6 +20,8 @@ import org.odk.collect.android.activities.DrawActivity;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.support.MockFormEntryPromptBuilder;
 import org.odk.collect.android.widgets.base.FileWidgetTest;
+import org.odk.collect.android.widgets.support.FakeQuestionMediaManager;
+import org.odk.collect.android.widgets.support.FakeWaitingForDataRegistry;
 
 import java.io.File;
 
@@ -44,7 +46,8 @@ public class AnnotateWidgetTest extends FileWidgetTest<AnnotateWidget> {
     @NonNull
     @Override
     public AnnotateWidget createWidget() {
-        return new AnnotateWidget(activity, new QuestionDetails(formEntryPrompt, "formAnalyticsID"));
+        return new AnnotateWidget(activity, new QuestionDetails(formEntryPrompt, "formAnalyticsID"),
+                new FakeQuestionMediaManager(), new FakeWaitingForDataRegistry());
     }
 
     @NonNull
@@ -87,9 +90,9 @@ public class AnnotateWidgetTest extends FileWidgetTest<AnnotateWidget> {
     public void usingReadOnlyOptionShouldMakeAllClickableElementsDisabled() {
         when(formEntryPrompt.isReadOnly()).thenReturn(true);
 
-        assertThat(getWidget().captureButton.getVisibility(), is(View.GONE));
-        assertThat(getWidget().chooseButton.getVisibility(), is(View.GONE));
-        assertThat(getWidget().annotateButton.getVisibility(), is(View.GONE));
+        assertThat(getSpyWidget().captureButton.getVisibility(), is(View.GONE));
+        assertThat(getSpyWidget().chooseButton.getVisibility(), is(View.GONE));
+        assertThat(getSpyWidget().annotateButton.getVisibility(), is(View.GONE));
     }
 
     @Test
@@ -111,5 +114,19 @@ public class AnnotateWidgetTest extends FileWidgetTest<AnnotateWidget> {
 
         String loadedImagePath = shadowOf(((BitmapDrawable) drawable).getBitmap()).getCreatedFromPath();
         assertThat(loadedImagePath, equalTo(defaultImagePath));
+    }
+
+    @Test
+    public void markupButtonShouldBeDisabledIfImageAbsent() throws Exception {
+        String wrongDefaultPath = "wrong_path";
+        overrideReferenceManager(setupFakeReferenceManager(asList(
+                new Pair<>("jr://images/referenceURI", wrongDefaultPath)
+        )));
+
+        formEntryPrompt = new MockFormEntryPromptBuilder()
+                .withAnswerDisplayText("jr://images/referenceURI")
+                .build();
+
+        assertThat(getWidget().annotateButton.isEnabled(), is(false));
     }
 }

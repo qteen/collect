@@ -17,26 +17,25 @@
 package org.odk.collect.android.utilities;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.os.Bundle;
 import android.widget.ListView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 
+import org.jetbrains.annotations.NotNull;
 import org.odk.collect.android.R;
-import org.odk.collect.android.application.Collect;
-import org.odk.collect.android.formentry.audit.AuditEvent;
-import org.odk.collect.android.logic.FormController;
 
 import timber.log.Timber;
 
-import static android.content.DialogInterface.BUTTON_NEGATIVE;
 import static android.content.DialogInterface.BUTTON_POSITIVE;
 
 /**
@@ -88,45 +87,6 @@ public final class DialogUtils {
     }
 
     /**
-     * Shows a confirm/cancel dialog for deleting the current repeat group.
-     */
-    public static void showDeleteRepeatConfirmDialog(Context context, Runnable onDeleted, Runnable onCanceled) {
-        FormController formController = Collect.getInstance().getFormController();
-        String name = formController.getLastRepeatedGroupName();
-        int repeatcount = formController.getLastRepeatedGroupRepeatCount();
-        if (repeatcount != -1) {
-            name += " (" + (repeatcount + 1) + ")";
-        }
-        androidx.appcompat.app.AlertDialog alertDialog = new androidx.appcompat.app.AlertDialog.Builder(context).create();
-        alertDialog.setTitle(context.getString(R.string.delete_repeat_ask));
-        alertDialog.setMessage(context.getString(R.string.delete_repeat_confirm, name));
-        DialogInterface.OnClickListener quitListener = (dialog, i) -> {
-            switch (i) {
-                case BUTTON_POSITIVE: // yes
-                    formController.getAuditEventLogger().logEvent(AuditEvent.AuditEventType.DELETE_REPEAT, true, System.currentTimeMillis());
-                    formController.deleteRepeat();
-
-                    if (onDeleted != null) {
-                        onDeleted.run();
-                    }
-
-                    break;
-
-                case BUTTON_NEGATIVE: // no
-                    if (onCanceled != null) {
-                        onCanceled.run();
-                    }
-
-                    break;
-            }
-        };
-        alertDialog.setCancelable(false);
-        alertDialog.setButton(BUTTON_POSITIVE, context.getString(R.string.discard_group), quitListener);
-        alertDialog.setButton(BUTTON_NEGATIVE, context.getString(R.string.delete_repeat_no), quitListener);
-        alertDialog.show();
-    }
-
-    /**
      * Creates an error dialog on an activity
      *
      * @param errorMsg   The message to show on the dialog box
@@ -146,33 +106,68 @@ public final class DialogUtils {
             }
         };
         alertDialog.setCancelable(false);
-        alertDialog.setButton(activity.getString(R.string.ok), errorListener);
+        alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, activity.getString(R.string.ok), errorListener);
 
         return alertDialog;
     }
 
-    public static <T extends DialogFragment> T showIfNotShowing(T newDialog, FragmentManager fragmentManager) {
-        String tag = newDialog.getClass().getName();
+    /**
+     * It can be a bad idea to interact with Fragment instances. As much as possible we
+     * should be using arguments (for static data the dialog needs), Dagger (for dependencies) or
+     * ViewModel (for non static data) to get things into fragments so as to avoid crashes or
+     * weirdness when they are recreated.
+     */
+    @Deprecated
+    @Nullable
+    public static <T extends DialogFragment> T getDialog(Class<T> dialogClass, FragmentManager fragmentManager) {
+        return (T) fragmentManager.findFragmentByTag(dialogClass.getName());
+    }
+
+    public static <T extends DialogFragment> void showIfNotShowing(Class<T> dialogClass, FragmentManager fragmentManager) {
+        showIfNotShowing(dialogClass, null, fragmentManager);
+    }
+
+    public static <T extends DialogFragment> void showIfNotShowing(Class<T> dialogClass, @Nullable Bundle args, FragmentManager fragmentManager) {
+        if (fragmentManager.isStateSaved()) {
+            return;
+        }
+
+        String tag = dialogClass.getName();
         T existingDialog = (T) fragmentManager.findFragmentByTag(tag);
 
         if (existingDialog == null) {
+            T newDialog = createNewInstance(dialogClass, args);
             newDialog.show(fragmentManager.beginTransaction(), tag);
 
             // We need to execute this transaction. Otherwise a follow up call to this method
             // could happen before the Fragment exists in the Fragment Manager and so the
             // call to findFragmentByTag would return null and result in second dialog being show.
             fragmentManager.executePendingTransactions();
-
-            return newDialog;
-        } else {
-            return existingDialog;
         }
     }
 
     public static void dismissDialog(Class dialogClazz, FragmentManager fragmentManager) {
         DialogFragment existingDialog = (DialogFragment) fragmentManager.findFragmentByTag(dialogClazz.getName());
         if (existingDialog != null) {
-            existingDialog.dismiss();
+            existingDialog.dismissAllowingStateLoss();
+
+            // We need to execute this transaction. Otherwise a next attempt to display a dialog
+            // could happen before the Fragment is dismissed in Fragment Manager and so the
+            // call to findFragmentByTag would return something (not null) and as a result the
+            // next dialog won't be displayed.
+            fragmentManager.executePendingTransactions();
+        }
+    }
+
+    @NotNull
+    private static <T extends DialogFragment> T createNewInstance(Class<T> dialogClass, Bundle args) {
+        try {
+            T instance = dialogClass.newInstance();
+            instance.setArguments(args);
+            return instance;
+        } catch (IllegalAccessException | InstantiationException e) {
+            // These would mean we have a non zero arg constructor for a Fragment
+            throw new RuntimeException(e);
         }
     }
 }

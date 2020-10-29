@@ -3,24 +3,25 @@ package org.odk.collect.android.regression;
 import android.Manifest;
 
 import androidx.test.rule.GrantPermissionRule;
-import androidx.test.runner.AndroidJUnit4;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
-import org.junit.rules.TestRule;
 import org.junit.runner.RunWith;
 import org.odk.collect.android.R;
+import org.odk.collect.android.support.CollectTestRule;
+import org.odk.collect.android.support.CopyFormRule;
+import org.odk.collect.android.support.ResetStateRule;
 import org.odk.collect.android.support.pages.FormEntryPage;
 import org.odk.collect.android.support.pages.MainMenuPage;
 import org.odk.collect.android.support.pages.SaveOrIgnoreDialog;
-import org.odk.collect.android.support.CopyFormRule;
-import org.odk.collect.android.support.ResetStateRule;
-import org.odk.collect.android.support.ScreenshotOnFailureTestRule;
 
 // Issue number NODK-211
 @RunWith(AndroidJUnit4.class)
-public class SignatureWidgetTest extends BaseRegressionTest {
+public class SignatureWidgetTest {
+
+    public CollectTestRule rule = new CollectTestRule();
 
     @Rule
     public RuleChain copyFormChain = RuleChain
@@ -30,10 +31,8 @@ public class SignatureWidgetTest extends BaseRegressionTest {
                     Manifest.permission.READ_PHONE_STATE)
             )
             .around(new ResetStateRule())
-            .around(new CopyFormRule("All_widgets.xml"));
-
-    @Rule
-    public TestRule screenshotFailRule = new ScreenshotOnFailureTestRule();
+            .around(new CopyFormRule("All_widgets.xml"))
+            .around(rule);
 
     @Test
     public void saveIgnoreDialog_ShouldUseBothOptions() {
@@ -43,12 +42,12 @@ public class SignatureWidgetTest extends BaseRegressionTest {
                 .startBlankForm("All widgets")
                 .clickGoToArrow()
                 .clickOnText("Image widgets")
-                .clickOnText("Signature widget")
+                .clickOnQuestion("Signature widget")
                 .clickWidgetButton()
                 .waitForRotationToEnd()
                 .pressBack(new SaveOrIgnoreDialog<>("Gather Signature", new FormEntryPage("All widgets", rule), rule))
                 .checkIsTranslationDisplayed("Exit Gather Signature", "Salir Adjuntar firma")
-                .checkIsStringDisplayed(R.string.keep_changes)
+                .assertText(R.string.keep_changes)
                 .clickIgnoreChanges()
                 .waitForRotationToEnd()
                 .clickWidgetButton()
@@ -69,7 +68,7 @@ public class SignatureWidgetTest extends BaseRegressionTest {
                 .startBlankForm("All widgets")
                 .clickGoToArrow()
                 .clickOnText("Image widgets")
-                .clickOnText("Signature widget")
+                .clickOnQuestion("Signature widget")
                 .clickWidgetButton()
                 .waitForRotationToEnd()
                 .clickOnId(R.id.fab_actions)

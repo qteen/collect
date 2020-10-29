@@ -2,72 +2,122 @@ package org.odk.collect.android.formentry.saving;
 
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.lifecycle.AbstractSavedStateViewModelFactory;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.SavedStateHandle;
 import androidx.lifecycle.ViewModel;
-import androidx.lifecycle.ViewModelProvider;
+import androidx.savedstate.SavedStateRegistryOwner;
 
+import org.javarosa.core.model.FormIndex;
+import org.javarosa.core.model.data.IAnswerData;
 import org.javarosa.form.api.FormEntryController;
+import org.jetbrains.annotations.NotNull;
+import org.odk.collect.android.analytics.Analytics;
+import org.odk.collect.android.application.Collect;
+import org.odk.collect.android.dao.helpers.InstancesDaoHelper;
+import org.odk.collect.android.exception.JavaRosaException;
+import org.odk.collect.android.external.ExternalDataManager;
+import org.odk.collect.android.formentry.RequiresFormController;
 import org.odk.collect.android.formentry.audit.AuditEvent;
-import org.odk.collect.android.formentry.audit.AuditEventLogger;
 import org.odk.collect.android.formentry.audit.AuditUtils;
-import org.odk.collect.android.logic.FormController;
 import org.odk.collect.android.fragments.dialogs.ProgressDialogFragment;
+import org.odk.collect.android.javarosawrapper.FormController;
 import org.odk.collect.android.tasks.SaveFormToDisk;
 import org.odk.collect.android.tasks.SaveToDiskResult;
+import org.odk.collect.android.utilities.FileUtils;
+import org.odk.collect.android.utilities.MediaUtils;
+import org.odk.collect.android.utilities.QuestionMediaManager;
 import org.odk.collect.utilities.Clock;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
+import timber.log.Timber;
 
 import static org.odk.collect.android.tasks.SaveFormToDisk.SAVED;
 import static org.odk.collect.android.tasks.SaveFormToDisk.SAVED_AND_EXIT;
 import static org.odk.collect.android.utilities.StringUtils.isBlank;
 
-public class FormSaveViewModel extends ViewModel implements ProgressDialogFragment.Cancellable {
+public class FormSaveViewModel extends ViewModel implements ProgressDialogFragment.Cancellable, RequiresFormController, QuestionMediaManager {
+    public static final String ORIGINAL_FILES = "originalFiles";
+    public static final String RECENT_FILES = "recentFiles";
 
+    private final SavedStateHandle stateHandle;
     private final Clock clock;
     private final FormSaver formSaver;
+    private final MediaUtils mediaUtils;
 
+    private final MutableLiveData<SaveResult> saveResult = new MutableLiveData<>(null);
     private String reason = "";
-    private MutableLiveData<SaveResult> saveResult = new MutableLiveData<>(null);
 
-    @Nullable
-    private AuditEventLogger auditEventLogger;
+    private Map<String, String> originalFiles = new HashMap<>();
+    private Map<String, String> recentFiles = new HashMap<>();
 
     @Nullable
     private FormController formController;
 
     @Nullable
-    private AsyncTask saveTask;
+    private AsyncTask<Void, String, SaveToDiskResult> saveTask;
 
-    public FormSaveViewModel(Clock clock, FormSaver formSaver) {
+    private final Analytics analytics;
+
+    public FormSaveViewModel(SavedStateHandle stateHandle, Clock clock, FormSaver formSaver, MediaUtils mediaUtils, Analytics analytics) {
+        this.stateHandle = stateHandle;
         this.clock = clock;
         this.formSaver = formSaver;
+        this.mediaUtils = mediaUtils;
+        this.analytics = analytics;
+
+        if (stateHandle.get(ORIGINAL_FILES) != null) {
+            originalFiles = stateHandle.get(ORIGINAL_FILES);
+        }
+        if (stateHandle.get(RECENT_FILES) != null) {
+            recentFiles = stateHandle.get(RECENT_FILES);
+        }
     }
 
-    public void setFormController(FormController formController) {
+    @Override
+    public void formLoaded(@NotNull FormController formController) {
         this.formController = formController;
-        this.auditEventLogger = formController.getAuditEventLogger();
     }
 
     public void editingForm() {
-        if (auditEventLogger != null) {
-            auditEventLogger.setEditing(true);
+        if (formController == null) {
+            return;
         }
+
+        formController.getAuditEventLogger().setEditing(true);
     }
 
-    public LiveData<SaveResult> saveForm(Uri instanceContentURI, boolean shouldFinalize, String updatedSaveName, boolean viewExiting) {
-        if (isSaving()) {
-            return new MutableLiveData<>(new SaveResult(SaveResult.State.ALREADY_SAVING, null));
+    public void saveAnswersForScreen(HashMap<FormIndex, IAnswerData> answers) {
+        if (formController == null) {
+            return;
         }
 
-        if (auditEventLogger != null) {
-            auditEventLogger.flush();
+        try {
+            formController.saveAllScreenAnswers(answers, false);
+        } catch (JavaRosaException ignored) {
+            // ignored
         }
+
+        formController.getAuditEventLogger().flush();
+    }
+
+    public void saveForm(Uri instanceContentURI, boolean shouldFinalize, String updatedSaveName, boolean viewExiting) {
+        if (isSaving() || formController == null) {
+            return;
+        }
+
+        formController.getAuditEventLogger().flush();
 
         SaveRequest saveRequest = new SaveRequest(instanceContentURI, viewExiting, updatedSaveName, shouldFinalize);
-        this.saveResult = new MutableLiveData<>(null);
 
         if (!requiresReasonToSave()) {
             this.saveResult.setValue(new SaveResult(SaveResult.State.SAVING, saveRequest));
@@ -75,8 +125,44 @@ public class FormSaveViewModel extends ViewModel implements ProgressDialogFragme
         } else {
             this.saveResult.setValue(new SaveResult(SaveResult.State.CHANGE_REASON_REQUIRED, saveRequest));
         }
+    }
 
-        return this.saveResult;
+    // Cleanup when user exits a form without saving
+    public void ignoreChanges() {
+        ExternalDataManager manager = Collect.getInstance().getExternalDataManager();
+        if (manager != null) {
+            manager.close();
+        }
+
+        if (formController != null) {
+            formController.getAuditEventLogger().logEvent(AuditEvent.AuditEventType.FORM_EXIT, true, System.currentTimeMillis());
+
+            if (formController.getInstanceFile() != null) {
+                SaveFormToDisk.removeSavepointFiles(formController.getInstanceFile().getName());
+
+                // if it's not already saved, erase everything
+                if (!InstancesDaoHelper.isInstanceAvailable(getAbsoluteInstancePath())) {
+                    // delete media first
+                    String instanceFolder = formController.getInstanceFile().getParent();
+                    Timber.i("Attempting to delete: %s", instanceFolder);
+                    File file = formController.getInstanceFile().getParentFile();
+                    int images = MediaUtils.deleteImagesInFolderFromMediaProvider(file);
+                    int audio = MediaUtils.deleteAudioInFolderFromMediaProvider(file);
+                    int video = MediaUtils.deleteVideoInFolderFromMediaProvider(file);
+
+                    Timber.i("Removed from content providers: %d image files, %d audio files and %d audio files.",
+                            images, audio, video);
+                    FileUtils.purgeMediaPath(instanceFolder);
+                }
+            }
+        }
+
+        clearMediaFiles();
+    }
+
+    @Nullable
+    public String getAbsoluteInstancePath() {
+        return formController != null ? formController.getAbsoluteInstancePath() : null;
     }
 
     public boolean isSaving() {
@@ -85,7 +171,11 @@ public class FormSaveViewModel extends ViewModel implements ProgressDialogFragme
 
     @Override
     public boolean cancel() {
-        return saveTask.cancel(true);
+        if (saveTask != null) {
+            return saveTask.cancel(true);
+        } else {
+            return false;
+        }
     }
 
     public void setReason(@NonNull String reason) {
@@ -93,13 +183,11 @@ public class FormSaveViewModel extends ViewModel implements ProgressDialogFragme
     }
 
     public boolean saveReason() {
-        if (reason == null || isBlank(reason)) {
+        if (reason == null || isBlank(reason) || formController == null) {
             return false;
         }
 
-        if (auditEventLogger != null) {
-            auditEventLogger.logEvent(AuditEvent.AuditEventType.CHANGE_REASON, null, true, null, clock.getCurrentTime(), reason);
-        }
+        formController.getAuditEventLogger().logEvent(AuditEvent.AuditEventType.CHANGE_REASON, null, true, null, clock.getCurrentTime(), reason);
 
         if (saveResult.getValue() != null) {
             SaveRequest request = saveResult.getValue().request;
@@ -115,7 +203,8 @@ public class FormSaveViewModel extends ViewModel implements ProgressDialogFragme
     }
 
     private void saveToDisk(SaveRequest saveRequest) {
-        saveTask = new SaveTask(saveRequest, formSaver, formController, new SaveTask.Listener() {
+
+        saveTask = new SaveTask(saveRequest, formSaver, formController, mediaUtils, new SaveTask.Listener() {
             @Override
             public void onProgressPublished(String progress) {
                 saveResult.setValue(new SaveResult(SaveResult.State.SAVING, saveRequest, progress));
@@ -124,27 +213,30 @@ public class FormSaveViewModel extends ViewModel implements ProgressDialogFragme
             @Override
             public void onComplete(SaveToDiskResult saveToDiskResult) {
                 handleTaskResult(saveToDiskResult, saveRequest);
+                clearMediaFiles();
             }
-        }).execute();
+        }, analytics, new ArrayList<>(originalFiles.values())).execute();
     }
 
     private void handleTaskResult(SaveToDiskResult taskResult, SaveRequest saveRequest) {
+        if (formController == null) {
+            return;
+        }
+
         switch (taskResult.getSaveResult()) {
             case SAVED:
             case SAVED_AND_EXIT: {
-                if (auditEventLogger != null) {
-                    auditEventLogger.logEvent(AuditEvent.AuditEventType.FORM_SAVE, false, clock.getCurrentTime());
+                formController.getAuditEventLogger().logEvent(AuditEvent.AuditEventType.FORM_SAVE, false, clock.getCurrentTime());
 
-                    if (saveRequest.viewExiting) {
-                        if (saveRequest.shouldFinalize) {
-                            auditEventLogger.logEvent(AuditEvent.AuditEventType.FORM_EXIT, false, clock.getCurrentTime());
-                            auditEventLogger.logEvent(AuditEvent.AuditEventType.FORM_FINALIZE, true, clock.getCurrentTime());
-                        } else {
-                            auditEventLogger.logEvent(AuditEvent.AuditEventType.FORM_EXIT, true, clock.getCurrentTime());
-                        }
+                if (saveRequest.viewExiting) {
+                    if (saveRequest.shouldFinalize) {
+                        formController.getAuditEventLogger().logEvent(AuditEvent.AuditEventType.FORM_EXIT, false, clock.getCurrentTime());
+                        formController.getAuditEventLogger().logEvent(AuditEvent.AuditEventType.FORM_FINALIZE, true, clock.getCurrentTime());
                     } else {
-                        AuditUtils.logCurrentScreen(formController, auditEventLogger, clock.getCurrentTime());
+                        formController.getAuditEventLogger().logEvent(AuditEvent.AuditEventType.FORM_EXIT, true, clock.getCurrentTime());
                     }
+                } else {
+                    AuditUtils.logCurrentScreen(formController, formController.getAuditEventLogger(), clock.getCurrentTime());
                 }
 
                 saveResult.setValue(new SaveResult(SaveResult.State.SAVED, saveRequest, taskResult.getSaveErrorMessage()));
@@ -152,44 +244,91 @@ public class FormSaveViewModel extends ViewModel implements ProgressDialogFragme
             }
 
             case SaveFormToDisk.SAVE_ERROR: {
-                if (auditEventLogger != null) {
-                    auditEventLogger.logEvent(AuditEvent.AuditEventType.SAVE_ERROR, true, clock.getCurrentTime());
-                }
-
+                formController.getAuditEventLogger().logEvent(AuditEvent.AuditEventType.SAVE_ERROR, true, clock.getCurrentTime());
                 saveResult.setValue(new SaveResult(SaveResult.State.SAVE_ERROR, saveRequest, taskResult.getSaveErrorMessage()));
                 break;
             }
 
             case SaveFormToDisk.ENCRYPTION_ERROR: {
-                if (auditEventLogger != null) {
-                    auditEventLogger.logEvent(AuditEvent.AuditEventType.FINALIZE_ERROR, true, clock.getCurrentTime());
-                }
-
+                formController.getAuditEventLogger().logEvent(AuditEvent.AuditEventType.FINALIZE_ERROR, true, clock.getCurrentTime());
                 saveResult.setValue(new SaveResult(SaveResult.State.FINALIZE_ERROR, saveRequest, taskResult.getSaveErrorMessage()));
                 break;
             }
 
             case FormEntryController.ANSWER_CONSTRAINT_VIOLATED:
             case FormEntryController.ANSWER_REQUIRED_BUT_EMPTY: {
-                if (auditEventLogger != null) {
-                    auditEventLogger.logEvent(AuditEvent.AuditEventType.CONSTRAINT_ERROR, true, clock.getCurrentTime());
-                }
-
+                formController.getAuditEventLogger().logEvent(AuditEvent.AuditEventType.CONSTRAINT_ERROR, true, clock.getCurrentTime());
                 saveResult.setValue(new SaveResult(SaveResult.State.CONSTRAINT_ERROR, saveRequest, taskResult.getSaveErrorMessage()));
                 break;
             }
         }
     }
 
+    public LiveData<SaveResult> getSaveResult() {
+        return saveResult;
+    }
+
+    public void resumeFormEntry() {
+        saveResult.setValue(null);
+    }
+
     private boolean requiresReasonToSave() {
-        return auditEventLogger != null
-                && auditEventLogger.isEditing()
-                && auditEventLogger.isChangeReasonRequired()
-                && auditEventLogger.isChangesMade();
+        return formController != null
+                && formController.getAuditEventLogger().isEditing()
+                && formController.getAuditEventLogger().isChangeReasonRequired()
+                && formController.getAuditEventLogger().isChangesMade();
+    }
+
+    public String getFormName() {
+        if (formController == null) {
+            return null;
+        }
+        return formController.getFormTitle();
+    }
+
+    @Override
+    public void deleteAnswerFile(String questionIndex, String fileName) {
+        if (questionIndex != null && fileName != null) {
+            // We don't want to delete the "original" answer file as we might need to restore it
+            // but we can delete any follow up deletions
+            if (originalFiles.containsKey(questionIndex)) {
+                mediaUtils.deleteImageFileFromMediaProvider(fileName);
+            } else {
+                originalFiles.put(questionIndex, fileName);
+                stateHandle.set(ORIGINAL_FILES, originalFiles);
+            }
+        }
+    }
+
+    @Override
+    public void replaceAnswerFile(String questionIndex, String fileName) {
+        if (questionIndex != null && fileName != null) {
+            // If we're replacing an answer's file for a second time we can just get rid of the
+            // first (replacement) file we were going to use
+            if (recentFiles.containsKey(questionIndex)) {
+                mediaUtils.deleteImageFileFromMediaProvider(recentFiles.get(questionIndex));
+            }
+            recentFiles.put(questionIndex, fileName);
+            stateHandle.set(RECENT_FILES, recentFiles);
+        }
+    }
+
+    @Override
+    @Nullable
+    public File getAnswerFile(String fileName) {
+        if (formController != null && formController.getInstanceFile() != null) {
+            return new File(formController.getInstanceFile().getParent(), fileName);
+        } else {
+            return null;
+        }
+    }
+
+    private void clearMediaFiles() {
+        originalFiles.clear();
+        recentFiles.clear();
     }
 
     public static class SaveResult {
-
         private final State state;
         private final String message;
         private final SaveRequest request;
@@ -218,8 +357,7 @@ public class FormSaveViewModel extends ViewModel implements ProgressDialogFragme
             SAVED,
             SAVE_ERROR,
             FINALIZE_ERROR,
-            CONSTRAINT_ERROR,
-            ALREADY_SAVING
+            CONSTRAINT_ERROR
         }
 
         public SaveRequest getRequest() {
@@ -227,7 +365,7 @@ public class FormSaveViewModel extends ViewModel implements ProgressDialogFragme
         }
     }
 
-    private static class SaveRequest {
+    public static class SaveRequest {
 
         private final boolean shouldFinalize;
         private final boolean viewExiting;
@@ -240,6 +378,14 @@ public class FormSaveViewModel extends ViewModel implements ProgressDialogFragme
             this.updatedSaveName = updatedSaveName;
             this.uri = instanceContentURI;
         }
+
+        public boolean shouldFinalize() {
+            return shouldFinalize;
+        }
+
+        public boolean viewExiting() {
+            return viewExiting;
+        }
     }
 
     private static class SaveTask extends AsyncTask<Void, String, SaveToDiskResult> {
@@ -249,20 +395,27 @@ public class FormSaveViewModel extends ViewModel implements ProgressDialogFragme
 
         private final Listener listener;
         private final FormController formController;
+        private final MediaUtils mediaUtils;
+        private final Analytics analytics;
+        private final ArrayList<String> tempFiles;
 
-        SaveTask(SaveRequest saveRequest, FormSaver formSaver, FormController formController, Listener listener) {
+        SaveTask(SaveRequest saveRequest, FormSaver formSaver, FormController formController, MediaUtils mediaUtils,
+                 Listener listener, Analytics analytics, ArrayList<String> tempFiles) {
             this.saveRequest = saveRequest;
             this.formSaver = formSaver;
             this.listener = listener;
             this.formController = formController;
+            this.mediaUtils = mediaUtils;
+            this.analytics = analytics;
+            this.tempFiles = tempFiles;
         }
 
         @Override
         protected SaveToDiskResult doInBackground(Void... voids) {
             return formSaver.save(saveRequest.uri, formController,
-                    saveRequest.shouldFinalize,
+                    mediaUtils, saveRequest.shouldFinalize,
                     saveRequest.viewExiting, saveRequest.updatedSaveName,
-                    this::publishProgress
+                    this::publishProgress, analytics, tempFiles
             );
         }
 
@@ -283,12 +436,18 @@ public class FormSaveViewModel extends ViewModel implements ProgressDialogFragme
         }
     }
 
-    public static class Factory implements ViewModelProvider.Factory {
+    public static class Factory extends AbstractSavedStateViewModelFactory {
+        private final Analytics analytics;
+
+        public Factory(@NonNull SavedStateRegistryOwner owner, @Nullable Bundle defaultArgs, Analytics analytics) {
+            super(owner, defaultArgs);
+            this.analytics = analytics;
+        }
 
         @NonNull
         @Override
-        public <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
-            return (T) new FormSaveViewModel(System::currentTimeMillis, new DiskFormSaver());
+        protected <T extends ViewModel> T create(@NonNull String key, @NonNull Class<T> modelClass, @NonNull SavedStateHandle handle) {
+            return (T) new FormSaveViewModel(handle, System::currentTimeMillis, new DiskFormSaver(), new MediaUtils(), analytics);
         }
     }
 }

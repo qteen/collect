@@ -12,16 +12,16 @@ import static androidx.test.espresso.Espresso.onData;
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.action.ViewActions.replaceText;
-import static androidx.test.espresso.action.ViewActions.scrollTo;
+import static androidx.test.espresso.assertion.ViewAssertions.doesNotExist;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
+import static androidx.test.espresso.matcher.CursorMatchers.withRowString;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
-import static androidx.test.espresso.matcher.ViewMatchers.withText;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.core.AllOf.allOf;
-import static org.odk.collect.android.test.CustomMatchers.withIndex;
+import static org.odk.collect.android.support.CustomMatchers.withIndex;
 
 public class FillBlankFormPage extends Page<FillBlankFormPage> {
 
@@ -31,7 +31,7 @@ public class FillBlankFormPage extends Page<FillBlankFormPage> {
 
     @Override
     public FillBlankFormPage assertOnPage() {
-        checkIsStringDisplayed(R.string.enter_data);
+        assertToolbarTitle(R.string.enter_data);
         return this;
     }
 
@@ -87,6 +87,46 @@ public class FillBlankFormPage extends Page<FillBlankFormPage> {
     }
 
     private void clickOnFormButton(String formName) {
-        onView(withText(formName)).perform(scrollTo(), click());
+        assertFormExists(formName);
+        onData(withRowString(FormsColumns.DISPLAY_NAME, formName)).perform(click());
+    }
+
+    public FormEndPage clickOnEmptyForm(String formName) {
+        clickOnFormButton(formName);
+        return new FormEndPage(formName, rule).assertOnPage();
+    }
+
+    public FillBlankFormPage clickRefresh() {
+        onView(withId(R.id.menu_refresh)).perform(click());
+        return this;
+    }
+
+    public FillBlankFormPage clickRefreshWithError() {
+        onView(withId(R.id.menu_refresh)).perform(click());
+        return this;
+    }
+
+    public ServerAuthDialog clickRefreshWithAuthError() {
+        onView(withId(R.id.menu_refresh)).perform(click());
+        return new ServerAuthDialog(rule).assertOnPage();
+    }
+
+    public FillBlankFormPage assertFormExists(String formName) {
+        // Seen problems with disk syncing not being waited for even though it's an AsyncTask
+        return waitFor(() -> {
+            assertTextNotDisplayed(R.string.no_items_display_forms);
+            onData(withRowString(FormsColumns.DISPLAY_NAME, formName)).check(matches(isDisplayed()));
+            return this;
+        });
+    }
+
+    public FillBlankFormPage assertFormDoesNotExist(String formName) {
+        onData(withRowString(FormsColumns.DISPLAY_NAME, formName)).check(doesNotExist());
+        return this;
+    }
+
+    public FillBlankFormPage assertNoForms() {
+        assertText(R.string.no_items_display_forms);
+        return this;
     }
 }

@@ -4,10 +4,10 @@ import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.os.Build;
+
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.DexterBuilder;
@@ -19,17 +19,8 @@ import com.karumi.dexter.listener.PermissionRequest;
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
 
 import org.odk.collect.android.R;
-import org.odk.collect.android.activities.CollectAbstractActivity;
-import org.odk.collect.android.activities.FormChooserListActivity;
-import org.odk.collect.android.activities.FormDownloadList;
-import org.odk.collect.android.activities.FormEntryActivity;
-import org.odk.collect.android.activities.InstanceChooserList;
-import org.odk.collect.android.activities.InstanceUploaderActivity;
-import org.odk.collect.android.activities.InstanceUploaderListActivity;
-import org.odk.collect.android.activities.SplashScreenActivity;
 import org.odk.collect.android.listeners.PermissionListener;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import timber.log.Timber;
@@ -41,6 +32,12 @@ import timber.log.Timber;
  */
 
 public class PermissionUtils {
+
+    private final int dialogTheme;
+
+    public PermissionUtils(int dialogTheme) {
+        this.dialogTheme = dialogTheme;
+    }
 
     public static boolean areStoragePermissionsGranted(Context context) {
         return isPermissionGranted(context,
@@ -68,7 +65,7 @@ public class PermissionUtils {
         return isPermissionGranted(context, Manifest.permission.GET_ACCOUNTS);
     }
 
-    public static boolean isReadPhoneStatePermissionGranted(Context context) {
+    public boolean isReadPhoneStatePermissionGranted(Context context) {
         return isPermissionGranted(context, Manifest.permission.READ_PHONE_STATE);
     }
 
@@ -84,39 +81,8 @@ public class PermissionUtils {
         return true;
     }
 
-    /**
-     * Checks to see if an activity is one of the entry points to the app i.e
-     * an activity that has a view action that can launch the app.
-     *
-     * @param activity that has permission requesting code.
-     * @return true if the activity is an entry point to the app.
-     */
-    public static boolean isEntryPointActivity(CollectAbstractActivity activity) {
-
-        List<Class<?>> activities = new ArrayList<>();
-        activities.add(FormEntryActivity.class);
-        activities.add(InstanceChooserList.class);
-        activities.add(FormChooserListActivity.class);
-        activities.add(InstanceUploaderListActivity.class);
-        activities.add(SplashScreenActivity.class);
-        activities.add(FormDownloadList.class);
-        activities.add(InstanceUploaderActivity.class);
-
-        for (Class<?> act : activities) {
-            if (activity.getClass().equals(act)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     public static void finishAllActivities(Activity activity) {
-        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            activity.finishAndRemoveTask();
-        } else {
-            activity.finishAffinity();
-        }
+        activity.finishAndRemoveTask();
     }
 
     /**
@@ -216,21 +182,6 @@ public class PermissionUtils {
         }, Manifest.permission.GET_ACCOUNTS);
     }
 
-    public void requestSendSMSPermission(Activity activity, @NonNull PermissionListener action) {
-        requestPermissions(activity, new PermissionListener() {
-            @Override
-            public void granted() {
-                action.granted();
-            }
-
-            @Override
-            public void denied() {
-                showAdditionalExplanation(activity, R.string.send_sms_runtime_permission_denied_title,
-                        R.string.send_sms_runtime_permission_denied_desc, R.drawable.ic_sms, action);
-            }
-        }, Manifest.permission.SEND_SMS);
-    }
-
     public void requestReadPhoneStatePermission(Activity activity, boolean displayPermissionDeniedDialog, @NonNull PermissionListener action) {
         requestPermissions(activity, new PermissionListener() {
             @Override
@@ -248,21 +199,6 @@ public class PermissionUtils {
                 }
             }
         }, Manifest.permission.READ_PHONE_STATE);
-    }
-
-    public void requestSendSMSAndReadPhoneStatePermissions(Activity activity, @NonNull PermissionListener action) {
-        requestPermissions(activity, new PermissionListener() {
-            @Override
-            public void granted() {
-                action.granted();
-            }
-
-            @Override
-            public void denied() {
-                showAdditionalExplanation(activity, R.string.send_sms_runtime_permission_denied_title,
-                        R.string.send_sms_runtime_permission_denied_desc, R.drawable.ic_sms, action);
-            }
-        }, Manifest.permission.SEND_SMS, Manifest.permission.READ_PHONE_STATE);
     }
 
     protected void requestPermissions(Activity activity, @NonNull PermissionListener listener, String... permissions) {
@@ -321,7 +257,7 @@ public class PermissionUtils {
     }
 
     protected void showAdditionalExplanation(Activity activity, int title, int message, int drawable, @NonNull PermissionListener action) {
-        AlertDialog alertDialog = new AlertDialog.Builder(activity, R.style.Theme_Collect_Dialog_PermissionAlert)
+        AlertDialog alertDialog = new AlertDialog.Builder(activity, dialogTheme)
                 .setTitle(title)
                 .setMessage(message)
                 .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> action.denied())

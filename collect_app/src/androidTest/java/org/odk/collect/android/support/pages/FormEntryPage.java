@@ -1,10 +1,13 @@
 package org.odk.collect.android.support.pages;
 
+import androidx.appcompat.widget.AppCompatImageButton;
 import androidx.test.espresso.Espresso;
 import androidx.test.rule.ActivityTestRule;
 
+import org.hamcrest.Matchers;
 import org.odk.collect.android.R;
 import org.odk.collect.android.support.ActivityHelpers;
+import org.odk.collect.android.utilities.FlingRegister;
 
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
@@ -12,22 +15,17 @@ import static androidx.test.espresso.action.ViewActions.longClick;
 import static androidx.test.espresso.action.ViewActions.replaceText;
 import static androidx.test.espresso.action.ViewActions.swipeLeft;
 import static androidx.test.espresso.action.ViewActions.swipeRight;
-import static androidx.test.espresso.assertion.ViewAssertions.doesNotExist;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
-import static androidx.test.espresso.matcher.ViewMatchers.isChecked;
-import static androidx.test.espresso.matcher.ViewMatchers.isDescendantOfA;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
-import static androidx.test.espresso.matcher.ViewMatchers.isNotChecked;
 import static androidx.test.espresso.matcher.ViewMatchers.withClassName;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
-import static androidx.test.espresso.matcher.ViewMatchers.withTagValue;
+import static androidx.test.espresso.matcher.ViewMatchers.withParent;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
-import static androidx.test.platform.app.InstrumentationRegistry.getInstrumentation;
 import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.is;
 import static org.hamcrest.core.StringEndsWith.endsWith;
-import static org.odk.collect.android.test.CustomMatchers.withIndex;
+import static org.odk.collect.android.support.CustomMatchers.withIndex;
 
 public class FormEntryPage extends Page<FormEntryPage> {
 
@@ -40,35 +38,39 @@ public class FormEntryPage extends Page<FormEntryPage> {
 
     @Override
     public FormEntryPage assertOnPage() {
-        onView(allOf(withText(formName), isDescendantOfA(withId(R.id.toolbar)))).check(matches(isDisplayed()));
+        assertToolbarTitle(formName);
         return this;
     }
 
-    public FormEntryPage clickJumpEndButton() {
-        onView(withId(R.id.jumpEndButton)).perform(click());
-        return this;
-    }
-
-    public MainMenuPage clickSaveAndExit() {
-        onView(withId(R.id.save_exit_button)).perform(click());
-        return new MainMenuPage(rule).assertOnPage();
-    }
-
-    public FormMapPage clickSaveAndExitBackToMap() {
-        onView(withId(R.id.save_exit_button)).perform(click());
-        return new FormMapPage(rule).assertOnPage();
-    }
-
-    public FormEntryPage clickSaveAndExitWithError() {
-        onView(withId(R.id.save_exit_button)).perform(click());
-        return this;
-    }
-
+    /**
+     * @deprecated use {@link #swipeToNextQuestion(String)} instead
+     */
+    @Deprecated
     public FormEntryPage swipeToNextQuestion() {
-        onView(withId(R.id.questionholder)).perform(swipeLeft());
+        flingLeft();
         return this;
     }
 
+    public FormEntryPage swipeToNextQuestion(String questionText) {
+        return swipeToNextQuestion(questionText, false);
+    }
+
+    public FormEntryPage swipeToNextQuestion(String questionText, boolean isRequired) {
+        flingLeft();
+
+        if (isRequired) {
+            waitForText("* " + questionText);
+        } else {
+            waitForText(questionText);
+        }
+
+        return this;
+    }
+
+    /**
+     * @deprecated use {@link #swipeToNextQuestion(String)} instead
+     */
+    @Deprecated
     public FormEntryPage swipeToNextQuestion(int repetitions) {
         for (int i = 0; i < repetitions; i++) {
             swipeToNextQuestion();
@@ -76,18 +78,25 @@ public class FormEntryPage extends Page<FormEntryPage> {
         return this;
     }
 
+    public FormEntryPage swipeToNextRepeat(String repeatLabel, int repeatNumber) {
+        waitForText(repeatLabel + " > " + (repeatNumber - 1));
+        flingLeft();
+        waitForText(repeatLabel + " > " + repeatNumber);
+        return this;
+    }
+
+    public FormEndPage swipeToEndScreen() {
+        flingLeft();
+        return waitFor(() -> new FormEndPage(formName, rule).assertOnPage());
+    }
+
     public ErrorDialog swipeToNextQuestionWithError() {
-        onView(withId(R.id.questionholder)).perform(swipeLeft());
-        return new ErrorDialog(rule);
+        flingLeft();
+        return new ErrorDialog(rule).assertOnPage();
     }
 
     public FormEntryPage clickOptionsIcon() {
         Espresso.openActionBarOverflowOrOptionsMenu(ActivityHelpers.getActivity());
-        return this;
-    }
-
-    public FormEntryPage clickOnLaunchButton() {
-        onView(withText(getTranslatedString(R.string.launch_app))).perform(click());
         return this;
     }
 
@@ -102,19 +111,23 @@ public class FormEntryPage extends Page<FormEntryPage> {
         return this;
     }
 
+    /**
+     * @deprecated use {@link #swipeToPreviousQuestion(String)} instead
+     */
     public FormEntryPage swipeToPreviousQuestion() {
         onView(withId(R.id.questionholder)).perform(swipeRight());
         return this;
     }
 
-    public FormEntryPage clickGoToArrow() {
-        onView(withId(R.id.menu_goto)).perform(click());
+    public FormEntryPage swipeToPreviousQuestion(String questionText) {
+        onView(withId(R.id.questionholder)).perform(swipeRight());
+        assertText(questionText);
         return this;
     }
 
-    public FormEntryPage swipeOnText(String text) {
-        onView(withClassName(endsWith("EditText"))).check(matches(withText(text))).perform(swipeLeft());
-        return this;
+    public FormHierarchyPage clickGoToArrow() {
+        onView(withId(R.id.menu_goto)).perform(click());
+        return new FormHierarchyPage(formName, rule).assertOnPage();
     }
 
     public FormEntryPage clickWidgetButton() {
@@ -132,11 +145,6 @@ public class FormEntryPage extends Page<FormEntryPage> {
         return this;
     }
 
-    public FormEntryPage clickSaveAndExitWhenValidationErrorIsExpected() {
-        onView(withId(R.id.save_exit_button)).perform(click());
-        return this;
-    }
-
     public FormEntryPage deleteGroup(String questionText) {
         onView(withText(questionText)).perform(longClick());
         onView(withText(R.string.delete_repeat)).perform(click());
@@ -144,30 +152,14 @@ public class FormEntryPage extends Page<FormEntryPage> {
         return this;
     }
 
-    public FormEntryPage deleteGroup() {
-        onView(withId(R.id.menu_delete_child)).perform(click());
-        onView(withText(R.string.delete_repeat)).perform(click());
-        return this;
-    }
-
-    public FormEntryPage clickGoUpIcon() {
-        onView(withId(R.id.menu_go_up)).perform(click());
-        return this;
-    }
-
-    public FormEntryPage showSpinnerMultipleDialog() {
-        onView(withText(getInstrumentation().getTargetContext().getString(R.string.select_answer))).perform(click());
-        return this;
-    }
-
-    public FormEntryPage clickGoToStart() {
-        onView(withId(R.id.jumpBeginningButton)).perform(click());
-        return this;
-    }
-
     public FormEntryPage clickForwardButton() {
         onView(withText(getTranslatedString(R.string.form_forward))).perform(click());
         return this;
+    }
+
+    public FormEndPage clickForwardButtonToEndScreen() {
+        onView(withText(getTranslatedString(R.string.form_forward))).perform(click());
+        return new FormEndPage(formName, rule).assertOnPage();
     }
 
     public FormEntryPage clickBackwardButton() {
@@ -180,33 +172,13 @@ public class FormEntryPage extends Page<FormEntryPage> {
         return this;
     }
 
+    public FormEndPage clickOnDoNotAddGroupEndingForm() {
+        clickOnString(R.string.dont_add_repeat);
+        return new FormEndPage(formName, rule).assertOnPage();
+    }
+
     public FormEntryPage clickOnAddGroup() {
         clickOnString(R.string.add_repeat);
-        return this;
-    }
-
-    public FormEntryPage assertMarkFinishedIsSelected() {
-        onView(withId(R.id.mark_finished)).check(matches(isChecked()));
-        return this;
-    }
-
-    public FormEntryPage assertMarkFinishedIsNotSelected() {
-        onView(withId(R.id.mark_finished)).check(matches(isNotChecked()));
-        return this;
-    }
-
-    public FormEntryPage clickMarkAsFinalized() {
-        onView(withId(R.id.mark_finished)).perform(click());
-        return this;
-    }
-
-    public FormEntryPage checkIfImageViewIsDisplayed() {
-        onView(withTagValue(is("ImageView"))).check(matches(isDisplayed()));
-        return this;
-    }
-
-    public FormEntryPage checkIfImageViewIsNotDisplayed() {
-        onView(withTagValue(is("ImageView"))).check(doesNotExist());
         return this;
     }
 
@@ -236,8 +208,76 @@ public class FormEntryPage extends Page<FormEntryPage> {
         return this;
     }
 
-    public FormEntryPage checkIsFormEndScreenVisible() {
-        onView(withText(R.string.quit_entry)).check(matches(isDisplayed()));
+    public AddNewRepeatDialog clickPlus(String repeatName) {
+        onView(withId(R.id.menu_add_repeat)).perform(click());
+        return new AddNewRepeatDialog(repeatName, rule).assertOnPage();
+    }
+
+    public FormEntryPage longPressOnView(int id, int index) {
+        onView(withIndex(withId(id), index)).perform(longClick());
+        return this;
+    }
+
+    public FormEntryPage longPressOnView(String text) {
+        onView(withText(text)).perform(longClick());
+        return this;
+    }
+
+    public FormEntryPage removeResponse() {
+        onView(withText(R.string.clear_answer)).perform(click());
+        onView(withText(R.string.discard_answer)).perform(click());
+        return this;
+    }
+
+    public AddNewRepeatDialog swipeToNextQuestionWithRepeatGroup(String repeatName) {
+        flingLeft();
+        return waitFor(() -> new AddNewRepeatDialog(repeatName, rule).assertOnPage());
+    }
+
+    public FormEntryPage answerQuestion(String question, String answer) {
+        assertText(question);
+        inputText(answer);
+        closeSoftKeyboard();
+        return this;
+    }
+
+    public FormEntryPage assertQuestion(String text) {
+        waitForText(text);
+        return this;
+    }
+
+    private void flingLeft() {
+        tryAgainOnFail(() -> {
+            FlingRegister.attemptingFling();
+            onView(withId(R.id.questionholder)).perform(swipeLeft());
+
+            waitFor(() -> {
+                if (FlingRegister.isFlingDetected()) {
+                    return true;
+                } else {
+                    throw new RuntimeException("Fling never detected!");
+                }
+            });
+        }, 5);
+    }
+
+    public FormEntryPage openSelectMinimalDialog() {
+        openSelectMinimalDialog(0);
+        return this;
+    }
+
+    public FormEntryPage openSelectMinimalDialog(int index) {
+        onView(withIndex(withClassName(Matchers.endsWith("TextInputEditText")), index)).perform(click());
+        return this;
+    }
+
+    public FormEntryPage closeSelectMinimalDialog() {
+        onView(allOf(instanceOf(AppCompatImageButton.class), withParent(withId(R.id.toolbar)))).perform(click());
+        return this;
+    }
+
+    public FormEntryPage assertSelectMinimalDialogAnswer(String answer) {
+        onView(withId(R.id.answer)).check(matches(withText(answer)));
         return this;
     }
 }

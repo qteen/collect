@@ -4,6 +4,7 @@ import androidx.core.util.Pair;
 
 import org.javarosa.core.model.FormIndex;
 import org.javarosa.core.model.IFormElement;
+import org.javarosa.core.model.QuestionDef;
 import org.javarosa.core.model.SelectChoice;
 import org.javarosa.core.model.data.IAnswerData;
 import org.javarosa.form.api.FormEntryPrompt;
@@ -56,6 +57,7 @@ public class MockFormEntryPromptBuilder {
     public MockFormEntryPromptBuilder withSelectChoices(List<SelectChoice> choices) {
         for (int i = 0; i < choices.size(); i++) {
             choices.get(i).setIndex(i);
+            when(prompt.getSelectChoiceText(choices.get(i))).thenReturn(choices.get(i).getValue());
         }
 
         when(prompt.getSelectChoices()).thenReturn(choices);
@@ -90,6 +92,18 @@ public class MockFormEntryPromptBuilder {
         when(prompt.getAnswerText()).thenReturn(text);
         when(prompt.getAnswerValue()).thenReturn(answer);
 
+        return this;
+    }
+
+    public MockFormEntryPromptBuilder withAnswer(IAnswerData answer) {
+        when(prompt.getAnswerValue()).thenReturn(answer);
+        when(prompt.getAnswerText()).thenCallRealMethod();
+
+        return this;
+    }
+
+    public MockFormEntryPromptBuilder withQuestion(QuestionDef questionDef) {
+        when(prompt.getQuestion()).thenReturn(questionDef);
         return this;
     }
 }

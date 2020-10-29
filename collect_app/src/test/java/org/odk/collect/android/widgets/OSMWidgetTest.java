@@ -18,8 +18,9 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.odk.collect.android.R;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
-import org.odk.collect.android.logic.FormController;
+import org.odk.collect.android.javarosawrapper.FormController;
 import org.odk.collect.android.widgets.base.BinaryWidgetTest;
+import org.odk.collect.android.widgets.support.FakeWaitingForDataRegistry;
 
 import java.io.File;
 
@@ -45,7 +46,7 @@ public class OSMWidgetTest extends BinaryWidgetTest<OSMWidget, StringData> {
     @NonNull
     @Override
     public OSMWidget createWidget() {
-        return new OSMWidget(activity, new QuestionDetails(formEntryPrompt, "formAnalyticsID"));
+        return new OSMWidget(activity, new QuestionDetails(formEntryPrompt, "formAnalyticsID"), new FakeWaitingForDataRegistry());
     }
 
     @NonNull
@@ -98,6 +99,6 @@ public class OSMWidgetTest extends BinaryWidgetTest<OSMWidget, StringData> {
     public void usingReadOnlyOptionShouldMakeAllClickableElementsDisabled() {
         when(formEntryPrompt.isReadOnly()).thenReturn(true);
 
-        assertThat(getWidget().launchOpenMapKitButton.getVisibility(), is(View.GONE));
+        assertThat(getSpyWidget().launchOpenMapKitButton.getVisibility(), is(View.GONE));
     }
 }

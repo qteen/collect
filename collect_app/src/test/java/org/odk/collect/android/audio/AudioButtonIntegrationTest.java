@@ -9,9 +9,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.odk.collect.android.support.FakeLifecycleOwner;
-import org.odk.collect.android.support.FakeScheduler;
-import org.odk.collect.android.support.LiveDataTester;
+import org.odk.collect.audioclips.Clip;
+import org.odk.collect.testshared.FakeLifecycleOwner;
+import org.odk.collect.testshared.FakeScheduler;
+import org.odk.collect.testshared.LiveDataTester;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.android.controller.ActivityController;
@@ -138,7 +139,7 @@ public class AudioButtonIntegrationTest {
 
         button.performClick();
         shadowOf(mediaPlayer).setCurrentPosition(1000);
-        fakeScheduler.runTask();
+        fakeScheduler.runForeground();
 
         activityController.pause();
         activityController.resume();

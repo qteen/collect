@@ -20,13 +20,15 @@ import org.odk.collect.android.R;
 import org.odk.collect.android.analytics.Analytics;
 import org.odk.collect.android.audio.AudioButton;
 import org.odk.collect.android.audio.AudioHelper;
-import org.odk.collect.android.audio.Clip;
 import org.odk.collect.android.formentry.media.AudioHelperFactory;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.injection.config.AppDependencyModule;
+import org.odk.collect.android.preferences.GeneralSharedPreferences;
 import org.odk.collect.android.support.MockFormEntryPromptBuilder;
 import org.odk.collect.android.support.RobolectricHelpers;
 import org.odk.collect.android.support.TestScreenContextActivity;
+import org.odk.collect.async.Scheduler;
+import org.odk.collect.audioclips.Clip;
 import org.robolectric.RobolectricTestRunner;
 
 import static java.util.Arrays.asList;
@@ -90,12 +92,12 @@ public class QuestionWidgetTest {
             }
 
             @Override
-            public AudioHelperFactory providesAudioHelperFactory() {
+            public AudioHelperFactory providesAudioHelperFactory(Scheduler scheduler) {
                 return context -> audioHelper;
             }
 
             @Override
-            public Analytics providesAnalytics(Application application) {
+            public Analytics providesAnalytics(Application application, GeneralSharedPreferences generalSharedPreferences) {
                 return analytics;
             }
         });

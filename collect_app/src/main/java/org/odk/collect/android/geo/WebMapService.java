@@ -1,8 +1,9 @@
 package org.odk.collect.android.geo;
 
 import org.odk.collect.android.application.Collect;
-import org.osmdroid.tileprovider.MapTile;
+import org.odk.collect.android.utilities.TranslationHandler;
 import org.osmdroid.tileprovider.tilesource.OnlineTileSourceBase;
+import org.osmdroid.util.MapTileIndex;
 
 import java.io.Serializable;
 
@@ -32,7 +33,7 @@ class WebMapService implements Serializable {
 
     @Deprecated WebMapService(int cacheNameStringId, int minZoomLevel,
         int maxZoomLevel, int tileSize, String copyright, String... urlTemplates) {
-        this(Collect.getInstance().getString(cacheNameStringId),
+        this(TranslationHandler.getString(Collect.getInstance(), cacheNameStringId),
             minZoomLevel, maxZoomLevel, tileSize, copyright, urlTemplates);
     }
 
@@ -43,11 +44,11 @@ class WebMapService implements Serializable {
             String extension = getExtension(urlTemplates[0]);
             onlineTileSource = new OnlineTileSourceBase(cacheName, minZoomLevel,
                 maxZoomLevel, tileSize, extension, urlTemplates, copyright) {
-                public String getTileURLString(MapTile tile) {
+                public String getTileURLString(long tileIndex) {
                     String urlTemplate = urlTemplates[random.nextInt(urlTemplates.length)];
-                    return urlTemplate.replace("{x}", String.valueOf(tile.getX()))
-                        .replace("{y}", String.valueOf(tile.getY()))
-                        .replace("{z}", String.valueOf(tile.getZoomLevel()));
+                    return urlTemplate.replace("{x}", String.valueOf(MapTileIndex.getX(tileIndex)))
+                        .replace("{y}", String.valueOf(MapTileIndex.getY(tileIndex)))
+                        .replace("{z}", String.valueOf(MapTileIndex.getZoom(tileIndex)));
                 }
             };
         }

@@ -23,19 +23,27 @@ import android.view.Window;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.VisibleForTesting;
+
 import org.odk.collect.android.R;
 import org.odk.collect.android.geo.MapFragment;
 import org.odk.collect.android.geo.MapPoint;
 import org.odk.collect.android.geo.MapProvider;
+import org.odk.collect.android.injection.DaggerUtils;
 import org.odk.collect.android.preferences.MapsPreferences;
 import org.odk.collect.android.utilities.GeoUtils;
 import org.odk.collect.android.utilities.ToastUtils;
-import org.odk.collect.android.widgets.GeoPointWidget;
 
 import java.text.DecimalFormat;
 
-import androidx.annotation.VisibleForTesting;
+import javax.inject.Inject;
+
 import timber.log.Timber;
+
+import static org.odk.collect.android.widgets.utilities.ActivityGeoDataRequester.DRAGGABLE_ONLY;
+import static org.odk.collect.android.widgets.utilities.ActivityGeoDataRequester.LOCATION;
+import static org.odk.collect.android.widgets.utilities.ActivityGeoDataRequester.READ_ONLY;
 
 /**
  * Allow the user to indicate a location by placing a marker on a map, either
@@ -62,6 +70,8 @@ public class GeoPointMapActivity extends BaseGeoMapActivity {
     public static final String LOCATION_STATUS_VISIBILITY_KEY = "location_status_visibility";
     public static final String LOCATION_INFO_VISIBILITY_KEY = "location_info_visibility";
 
+    @Inject
+    MapProvider mapProvider;
     private MapFragment map;
     private int featureId = -1;  // will be a positive featureId once map is ready
 
@@ -100,6 +110,7 @@ public class GeoPointMapActivity extends BaseGeoMapActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        DaggerUtils.getComponent(this).inject(this);
 
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         try {
@@ -117,7 +128,7 @@ public class GeoPointMapActivity extends BaseGeoMapActivity {
         zoomButton = findViewById(R.id.zoom);
 
         Context context = getApplicationContext();
-        MapProvider.createMapFragment(context)
+        mapProvider.createMapFragment(context)
             .addTo(this, R.id.map_container, this::initMap, this::finish);
     }
 
@@ -182,8 +193,11 @@ public class GeoPointMapActivity extends BaseGeoMapActivity {
 
         placeMarkerButton.setEnabled(false);
         placeMarkerButton.setOnClickListener(v -> {
-            placeMarker(map.getGpsLocation());
-            zoomToMarker(true);
+            MapPoint mapPoint = map.getGpsLocation();
+            if (mapPoint != null) {
+                placeMarker(mapPoint);
+                zoomToMarker(true);
+            }
         });
 
         // Focuses on marked location
@@ -211,20 +225,20 @@ public class GeoPointMapActivity extends BaseGeoMapActivity {
 
         Intent intent = getIntent();
         if (intent != null && intent.getExtras() != null) {
-            intentDraggable = intent.getBooleanExtra(GeoPointWidget.DRAGGABLE_ONLY, false);
+            intentDraggable = intent.getBooleanExtra(DRAGGABLE_ONLY, false);
             if (!intentDraggable) {
                 // Not Draggable, set text for Map else leave as placement-map text
                 locationInfo.setText(getString(R.string.geopoint_no_draggable_instruction));
             }
 
-            intentReadOnly = intent.getBooleanExtra(GeoPointWidget.READ_ONLY, false);
+            intentReadOnly = intent.getBooleanExtra(READ_ONLY, false);
             if (intentReadOnly) {
                 captureLocation = true;
                 clearButton.setEnabled(false);
             }
 
-            if (intent.hasExtra(GeoPointWidget.LOCATION)) {
-                double[] point = intent.getDoubleArrayExtra(GeoPointWidget.LOCATION);
+            if (intent.hasExtra(LOCATION)) {
+                double[] point = intent.getDoubleArrayExtra(LOCATION);
 
                 // If the point is initially set from the intent, the "place marker"
                 // button, dragging, and long-pressing are all initially disabled.
@@ -325,12 +339,9 @@ public class GeoPointMapActivity extends BaseGeoMapActivity {
         return String.format("%s %s %s %s", point.lat, point.lon, point.alt, point.sd);
     }
 
-    public String formatLocationStatus(String provider, double sd) {
-        return getString(
-            R.string.location_provider_accuracy,
-            GeoUtils.capitalizeGps(provider),
-            new DecimalFormat("#.##").format(sd)
-        );
+    public String formatLocationStatus(String provider, double accuracyRadius) {
+        return getString(R.string.location_accuracy, new DecimalFormat("#.##").format(accuracyRadius))
+                + " " + getString(R.string.location_provider, GeoUtils.capitalizeGps(provider));
     }
 
     public void onDragEnd(int draggedFeatureId) {
@@ -372,23 +383,17 @@ public class GeoPointMapActivity extends BaseGeoMapActivity {
     }
 
     /** Places the marker and enables the button to remove it. */
-    private void placeMarker(MapPoint point) {
+    private void placeMarker(@NonNull MapPoint point) {
         map.clearFeatures();
-        featureId = map.addMarker(point, intentDraggable && !intentReadOnly && !isPointLocked);
-        clearButton.setEnabled(true);
+        featureId = map.addMarker(point, intentDraggable && !intentReadOnly && !isPointLocked, MapFragment.CENTER);
+        if (!intentReadOnly) {
+            clearButton.setEnabled(true);
+        }
         captureLocation = true;
         setClear = false;
     }
 
-    public void setCaptureLocation(boolean captureLocation) {
-        this.captureLocation = captureLocation;
-    }
-
     @VisibleForTesting public String getLocationStatus() {
         return locationStatus.getText().toString();
-    }
-
-    @VisibleForTesting public MapFragment getMapFragment() {
-        return map;
     }
 }

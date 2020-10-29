@@ -2,12 +2,19 @@ package org.odk.collect.android.support;
 
 import android.graphics.drawable.Drawable;
 import android.media.MediaMetadataRetriever;
+import android.os.Environment;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.FragmentActivity;
+import androidx.lifecycle.ViewModel;
+import androidx.lifecycle.ViewModelProvider;
+import androidx.lifecycle.ViewModelProviders;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.test.core.app.ApplicationProvider;
 
 import org.odk.collect.android.R;
 import org.odk.collect.android.application.Collect;
@@ -17,10 +24,12 @@ import org.odk.collect.android.injection.config.DaggerAppDependencyComponent;
 import org.robolectric.Robolectric;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.android.controller.ActivityController;
+import org.robolectric.shadows.ShadowEnvironment;
 import org.robolectric.shadows.ShadowMediaMetadataRetriever;
 import org.robolectric.shadows.ShadowMediaPlayer;
 import org.robolectric.shadows.util.DataSource;
 
+import static org.mockito.Mockito.mock;
 import static org.robolectric.Shadows.shadowOf;
 
 public class RobolectricHelpers {
@@ -39,15 +48,19 @@ public class RobolectricHelpers {
         return ((Collect) RuntimeEnvironment.application).getComponent();
     }
 
+    public static void createThemedContext() {
+        ApplicationProvider.getApplicationContext().setTheme(R.style.Theme_Collect_Light);
+    }
+
     public static <T extends FragmentActivity> T createThemedActivity(Class<T> clazz) {
         return createThemedActivity(clazz, R.style.Theme_Collect_Light);
     }
 
     public static <T extends FragmentActivity> T createThemedActivity(Class<T> clazz, int theme) {
-        T activity = Robolectric.setupActivity(clazz);
-        activity.setTheme(theme); // Needed so attrs are available
+        ActivityController<T> activity = Robolectric.buildActivity(clazz);
+        activity.get().setTheme(theme);
 
-        return activity;
+        return activity.setup().get();
     }
 
     public static FragmentActivity createThemedActivity() {
@@ -56,7 +69,7 @@ public class RobolectricHelpers {
 
     public static <T extends FragmentActivity> ActivityController<T> buildThemedActivity(Class<T> clazz) {
         ActivityController<T> activity = Robolectric.buildActivity(clazz);
-        activity.get().setTheme(R.style.Theme_Collect_Light); // Needed so attrs are available
+        activity.get().setTheme(R.style.Theme_Collect_Light);
 
         return activity;
     }
@@ -80,6 +93,10 @@ public class RobolectricHelpers {
         return dataSource;
     }
 
+    public static void mountExternalStorage() {
+        ShadowEnvironment.setExternalStorageState(Environment.MEDIA_MOUNTED);
+    }
+
     public static <T extends ViewGroup> T populateRecyclerView(T view) {
         for (int i = 0; i < view.getChildCount(); i++) {
             View child = view.getChildAt(i);
@@ -94,5 +111,25 @@ public class RobolectricHelpers {
         }
 
         return view;
+    }
+
+    public static <V> ViewModelProvider mockViewModelProvider(AppCompatActivity activity, final Class<V> viewModelClass) {
+        return ViewModelProviders.of(activity, new ViewModelProvider.Factory() {
+            @NonNull
+            @Override
+            public <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
+                return (T) mock(viewModelClass);
+            }
+        });
+    }
+
+    public static <V> ViewModelProvider mockViewModelProvider(FragmentActivity activity, final Class<V> viewModelClass) {
+        return ViewModelProviders.of(activity, new ViewModelProvider.Factory() {
+            @NonNull
+            @Override
+            public <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
+                return (T) mock(viewModelClass);
+            }
+        });
     }
 }

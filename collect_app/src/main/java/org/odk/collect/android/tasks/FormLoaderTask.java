@@ -42,9 +42,10 @@ import org.odk.collect.android.external.ExternalDataReader;
 import org.odk.collect.android.external.ExternalDataReaderImpl;
 import org.odk.collect.android.external.handler.ExternalDataHandlerPull;
 import org.odk.collect.android.listeners.FormLoaderListener;
-import org.odk.collect.android.logic.FormController;
+import org.odk.collect.android.javarosawrapper.FormController;
 import org.odk.collect.android.utilities.FileUtils;
 import org.odk.collect.android.utilities.FormDefCache;
+import org.odk.collect.android.utilities.TranslationHandler;
 import org.odk.collect.android.utilities.ZipUtils;
 
 import java.io.File;
@@ -82,7 +83,7 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
     private ExternalDataManager externalDataManager;
     private FormDef formDef;
 
-    protected static class FECWrapper {
+    public static class FECWrapper {
         FormController controller;
         boolean usedSavepoint;
 
@@ -91,7 +92,7 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
             this.usedSavepoint = usedSavepoint;
         }
 
-        protected FormController getController() {
+        public FormController getController() {
             return controller;
         }
 
@@ -137,7 +138,7 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
             formDef = createFormDefFromCacheOrXml(formPath, formXml);
         } catch (StackOverflowError e) {
             Timber.e(e);
-            errorMsg = Collect.getInstance().getString(R.string.too_complex_form);
+            errorMsg = TranslationHandler.getString(Collect.getInstance(), R.string.too_complex_form);
         } catch (Exception | Error e) {
             Timber.w(e);
             errorMsg = e.getMessage();
@@ -187,8 +188,7 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
                 // the data are imported, the survey will be unusable
                 // but we should give the option to the user to edit the form
                 // otherwise the survey will be TOTALLY inaccessible.
-                Timber.w("We have a syntactically correct instance, but the data threw an "
-                                + "exception inside JR. We should allow editing.");
+                Timber.w("We have a syntactically correct instance, but the data threw an exception inside JR. We should allow editing.");
             } else {
                 errorMsg = e.getMessage();
                 return null;
@@ -215,7 +215,7 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
 
     private FormDef createFormDefFromCacheOrXml(String formPath, File formXml) {
         publishProgress(
-                Collect.getInstance().getString(R.string.survey_loading_reading_form_message));
+                TranslationHandler.getString(Collect.getInstance(), R.string.survey_loading_reading_form_message));
 
         final FormDef formDefFromCache = FormDefCache.readCache(formXml);
         if (formDefFromCache != null) {
@@ -306,7 +306,7 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
                 // This order is important. Import data, then initialize.
                 try {
                     Timber.i("Importing data");
-                    publishProgress(Collect.getInstance().getString(R.string.survey_loading_reading_data_message));
+                    publishProgress(TranslationHandler.getString(Collect.getInstance(), R.string.survey_loading_reading_data_message));
                     importData(instanceXml, fec);
                     formDef.initialize(false, instanceInit);
                 } catch (IOException | RuntimeException e) {
@@ -396,6 +396,7 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
         }
     }
 
+    // Copied from XFormParser.loadXmlInstance in order to set ExternalAnswerResolver for search()
     public static void importData(File instanceFile, FormEntryController fec) throws IOException, RuntimeException {
         // convert files into a byte array
         byte[] fileBytes = org.apache.commons.io.FileUtils.readFileToByteArray(instanceFile);
@@ -419,6 +420,11 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
         XFormParser.setAnswerResolver(new ExternalAnswerResolver());
         templateRoot.populate(savedRoot, fec.getModel().getForm());
         XFormParser.setAnswerResolver(new DefaultAnswerResolver());
+
+        // FormInstanceParser.parseInstance is responsible for initial creation of instances. It explicitly sets the
+        // main instance name to null so we force this again on deserialization because some code paths rely on the main
+        // instance not having a name. Must be before the call on setRoot because setRoot also sets the root's name.
+        fec.getModel().getForm().getInstance().setName(null);
 
         // populated model to current form
         fec.getModel().getForm().getInstance().setRoot(templateRoot);

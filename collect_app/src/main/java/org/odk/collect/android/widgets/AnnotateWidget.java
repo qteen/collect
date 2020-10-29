@@ -21,7 +21,6 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
-import androidx.core.content.FileProvider;
 import android.view.View;
 import android.widget.Button;
 
@@ -32,8 +31,12 @@ import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.formentry.questions.WidgetViewUtils;
 import org.odk.collect.android.listeners.PermissionListener;
 import org.odk.collect.android.storage.StoragePathProvider;
+import org.odk.collect.android.utilities.ContentUriProvider;
 import org.odk.collect.android.utilities.FileUtils;
+import org.odk.collect.android.utilities.QuestionMediaManager;
 import org.odk.collect.android.utilities.WidgetAppearanceUtils;
+import org.odk.collect.android.widgets.interfaces.ButtonClickListener;
+import org.odk.collect.android.widgets.utilities.WaitingForDataRegistry;
 
 import java.io.File;
 import java.util.Locale;
@@ -53,18 +56,19 @@ import static org.odk.collect.android.utilities.ApplicationConstants.RequestCode
  * @author Yaw Anokwa (yanokwa@gmail.com)
  */
 @SuppressLint("ViewConstructor")
-public class AnnotateWidget extends BaseImageWidget {
+public class AnnotateWidget extends BaseImageWidget implements ButtonClickListener {
 
     Button captureButton;
     Button chooseButton;
     Button annotateButton;
 
-    public AnnotateWidget(Context context, QuestionDetails prompt) {
-        super(context, prompt);
+    public AnnotateWidget(Context context, QuestionDetails prompt, QuestionMediaManager questionMediaManager, WaitingForDataRegistry waitingForDataRegistry) {
+        super(context, prompt, questionMediaManager, waitingForDataRegistry);
         imageClickHandler = new DrawImageClickHandler(DrawActivity.OPTION_ANNOTATE, RequestCodes.ANNOTATE_IMAGE, R.string.annotate_image);
         imageCaptureHandler = new ImageCaptureHandler();
         setUpLayout();
         addCurrentImageToLayout();
+        adjustAnnotateButtonAvailability();
         addAnswerView(answerLayout, WidgetViewUtils.getStandardMargin(context));
     }
 
@@ -76,9 +80,7 @@ public class AnnotateWidget extends BaseImageWidget {
         chooseButton = createSimpleButton(getContext(), R.id.choose_image, getFormEntryPrompt().isReadOnly(), getContext().getString(R.string.choose_image), getAnswerFontSize(), this);
 
         annotateButton = createSimpleButton(getContext(), R.id.markup_image, getFormEntryPrompt().isReadOnly(), getContext().getString(R.string.markup_image), getAnswerFontSize(), this);
-        if (binaryName == null) {
-            annotateButton.setEnabled(false);
-        }
+
         annotateButton.setOnClickListener(v -> imageClickHandler.clickImage("annotateButton"));
 
         answerLayout.addView(captureButton);
@@ -108,8 +110,6 @@ public class AnnotateWidget extends BaseImageWidget {
 
         // reset buttons
         captureButton.setText(getContext().getString(R.string.capture_image));
-
-        widgetValueChanged();
     }
 
     @Override
@@ -149,6 +149,12 @@ public class AnnotateWidget extends BaseImageWidget {
         }
     }
 
+    private void adjustAnnotateButtonAvailability() {
+        if (binaryName == null || imageView == null || imageView.getVisibility() == GONE) {
+            annotateButton.setEnabled(false);
+        }
+    }
+
     private void hideButtonsIfNeeded() {
         if (getFormEntryPrompt().getAppearanceHint() != null
                 && getFormEntryPrompt().getAppearanceHint().toLowerCase(Locale.ENGLISH).contains(WidgetAppearanceUtils.NEW)) {
@@ -178,7 +184,7 @@ public class AnnotateWidget extends BaseImageWidget {
         // the size. boo.
 
         try {
-            Uri uri = FileProvider.getUriForFile(getContext(),
+            Uri uri = ContentUriProvider.getUriForFile(getContext(),
                     BuildConfig.APPLICATION_ID + ".provider",
                     new File(new StoragePathProvider().getTmpFilePath()));
             // if this gets modified, the onActivityResult in
@@ -193,8 +199,8 @@ public class AnnotateWidget extends BaseImageWidget {
     }
 
     @Override
-    public void setBinaryData(Object newImageObj) {
-        super.setBinaryData(newImageObj);
+    public void setData(Object newImageObj) {
+        super.setData(newImageObj);
 
         annotateButton.setEnabled(binaryName != null);
     }

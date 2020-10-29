@@ -3,21 +3,24 @@ package org.odk.collect.android.regression;
 import android.Manifest;
 
 import androidx.test.rule.GrantPermissionRule;
-import androidx.test.runner.AndroidJUnit4;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.runner.RunWith;
+import org.odk.collect.android.support.CollectTestRule;
+import org.odk.collect.android.support.CopyFormRule;
+import org.odk.collect.android.support.ResetStateRule;
 import org.odk.collect.android.support.pages.FormEntryPage;
 import org.odk.collect.android.support.pages.GeneralSettingsPage;
 import org.odk.collect.android.support.pages.MainMenuPage;
-import org.odk.collect.android.support.CopyFormRule;
-import org.odk.collect.android.support.ResetStateRule;
 
 //Issue NODK-247
 @RunWith(AndroidJUnit4.class)
-public class FillBlankFormWithRepeatGroupTest extends BaseRegressionTest {
+public class FillBlankFormWithRepeatGroupTest {
+
+    public CollectTestRule rule = new CollectTestRule();
 
     @Rule
     public RuleChain copyFormChain = RuleChain
@@ -41,7 +44,8 @@ public class FillBlankFormWithRepeatGroupTest extends BaseRegressionTest {
             .around(new CopyFormRule("basic.xml"))
             .around(new CopyFormRule("repeat_group_form.xml"))
             .around(new CopyFormRule("repeat_group_new.xml"))
-            .around(new CopyFormRule("RepeatTitles_1648.xml"));
+            .around(new CopyFormRule("RepeatTitles_1648.xml"))
+            .around(rule);
 
     @Test
     public void whenNoRepeatGroupAdded_ShouldNotDoubleLastQuestion() {
@@ -59,7 +63,7 @@ public class FillBlankFormWithRepeatGroupTest extends BaseRegressionTest {
                 .clickForwardButton()
                 .clickOnDoNotAddGroup()
                 .clickOnDoNotAddGroup()
-                .clickForwardButton()
+                .clickForwardButtonToEndScreen()
                 .clickSaveAndExit();
     }
 
@@ -81,7 +85,7 @@ public class FillBlankFormWithRepeatGroupTest extends BaseRegressionTest {
                 .assertText("gr1 > 1 > Person: 25")
                 .clickGoToArrow()
                 .assertText("gr1 > 1 > Person: 25")
-                .clickOnText("Photo")
+                .clickOnQuestion("Photo")
                 .swipeToNextQuestion()
                 .clickOnDoNotAddGroup()
                 .inputText("SecondPart")
@@ -90,10 +94,10 @@ public class FillBlankFormWithRepeatGroupTest extends BaseRegressionTest {
                 .assertText("Part1 > 1 > Xxx: SecondPart")
                 .clickGoToArrow()
                 .assertText("Part1 > 1 > Xxx: SecondPart")
-                .clickOnText("Date")
+                .clickOnQuestion("Date")
                 .swipeToNextQuestion()
                 .swipeToNextQuestion()
-                .clickOnDoNotAddGroup()
+                .clickOnDoNotAddGroupEndingForm()
                 .clickSaveAndExit();
     }
 
@@ -104,19 +108,19 @@ public class FillBlankFormWithRepeatGroupTest extends BaseRegressionTest {
         new MainMenuPage(rule)
                 .startBlankForm("form1")
                 .swipeToNextQuestion()
-                .swipeToNextQuestion()
+                .swipeToEndScreen()
                 .clickSaveAndExit();
 
         new MainMenuPage(rule)
                 .startBlankForm("form2")
                 .closeSoftKeyboard()
-                .swipeToNextQuestion()
+                .swipeToEndScreen()
                 .clickSaveAndExit();
 
         new MainMenuPage(rule)
                 .startBlankForm("form3")
                 .closeSoftKeyboard()
-                .swipeToNextQuestion()
+                .swipeToEndScreen()
                 .clickSaveAndExit();
 
         new MainMenuPage(rule)
@@ -129,7 +133,7 @@ public class FillBlankFormWithRepeatGroupTest extends BaseRegressionTest {
                 .swipeToNextQuestion()
                 .inputText("T3")
                 .closeSoftKeyboard()
-                .swipeToNextQuestion()
+                .swipeToEndScreen()
                 .clickSaveAndExit();
 
         new MainMenuPage(rule)
@@ -142,7 +146,7 @@ public class FillBlankFormWithRepeatGroupTest extends BaseRegressionTest {
                 .swipeToNextQuestion()
                 .inputText("T3")
                 .closeSoftKeyboard()
-                .swipeToNextQuestion()
+                .swipeToEndScreen()
                 .clickSaveAndExit();
 
         new MainMenuPage(rule)
@@ -155,24 +159,24 @@ public class FillBlankFormWithRepeatGroupTest extends BaseRegressionTest {
                 .swipeToNextQuestion()
                 .inputText("T3")
                 .closeSoftKeyboard()
-                .swipeToNextQuestion()
+                .swipeToEndScreen()
                 .clickSaveAndExit();
 
         new MainMenuPage(rule)
                 .startBlankForm("form7")
-                .swipeToNextQuestion()
+                .swipeToEndScreen()
                 .clickSaveAndExit();
 
         new MainMenuPage(rule)
                 .startBlankForm("form8")
                 .closeSoftKeyboard()
-                .swipeToNextQuestion()
+                .swipeToEndScreen()
                 .clickSaveAndExit();
 
         new MainMenuPage(rule)
                 .startBlankForm("form9")
                 .closeSoftKeyboard()
-                .swipeToNextQuestion()
+                .swipeToEndScreen()
                 .clickSaveAndExit();
     }
 
@@ -194,7 +198,7 @@ public class FillBlankFormWithRepeatGroupTest extends BaseRegressionTest {
                 .clickBackwardButton()
                 .clickOnDoNotAddGroup()
                 .closeSoftKeyboard()
-                .swipeToNextQuestion()
+                .swipeToEndScreen()
                 .clickSaveAndExit();
     }
 
@@ -229,7 +233,7 @@ public class FillBlankFormWithRepeatGroupTest extends BaseRegressionTest {
                 .swipeToPreviousQuestion()
                 .assertText("3")
                 .swipeToNextQuestion()
-                .clickOnDoNotAddGroup()
+                .clickOnDoNotAddGroupEndingForm()
                 .clickSaveAndExit();
     }
 

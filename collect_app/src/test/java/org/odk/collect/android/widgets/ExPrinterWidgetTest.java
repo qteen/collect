@@ -9,6 +9,7 @@ import org.javarosa.core.model.data.StringData;
 import org.junit.Test;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.widgets.base.QuestionWidgetTest;
+import org.odk.collect.android.widgets.support.FakeWaitingForDataRegistry;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
@@ -20,7 +21,7 @@ public class ExPrinterWidgetTest extends QuestionWidgetTest<ExPrinterWidget, IAn
     @NonNull
     @Override
     public ExPrinterWidget createWidget() {
-        return new ExPrinterWidget(activity, new QuestionDetails(formEntryPrompt, "formAnalyticsID"));
+        return new ExPrinterWidget(activity, new QuestionDetails(formEntryPrompt, "formAnalyticsID"), new FakeWaitingForDataRegistry());
     }
 
     @NonNull
@@ -39,7 +40,7 @@ public class ExPrinterWidgetTest extends QuestionWidgetTest<ExPrinterWidget, IAn
     @Override
     // ExPrintWidget is and exceptional widget that doesn't return any answer
     public void getAnswerShouldReturnExistingAnswerIfPromptHasExistingAnswer() {
-        IAnswerData newAnswer = getWidget().getAnswer();
+        IAnswerData newAnswer = getSpyWidget().getAnswer();
         assertNull(newAnswer);
     }
 
@@ -47,6 +48,6 @@ public class ExPrinterWidgetTest extends QuestionWidgetTest<ExPrinterWidget, IAn
     public void usingReadOnlyOptionShouldMakeAllClickableElementsDisabled() {
         when(formEntryPrompt.isReadOnly()).thenReturn(true);
 
-        assertThat(getWidget().launchIntentButton.getVisibility(), is(View.GONE));
+        assertThat(getSpyWidget().launchIntentButton.getVisibility(), is(View.GONE));
     }
 }

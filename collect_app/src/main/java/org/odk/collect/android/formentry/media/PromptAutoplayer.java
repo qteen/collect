@@ -6,13 +6,14 @@ import org.javarosa.core.reference.ReferenceManager;
 import org.javarosa.form.api.FormEntryPrompt;
 import org.odk.collect.android.analytics.Analytics;
 import org.odk.collect.android.audio.AudioHelper;
-import org.odk.collect.android.audio.Clip;
 import org.odk.collect.android.utilities.WidgetAppearanceUtils;
+import org.odk.collect.audioclips.Clip;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static java.util.Collections.emptyList;
+import static org.odk.collect.android.analytics.AnalyticsEvents.PROMPT;
 import static org.odk.collect.android.formentry.media.FormMediaUtils.getClipID;
 import static org.odk.collect.android.formentry.media.FormMediaUtils.getPlayableAudioURI;
 import static org.odk.collect.android.utilities.WidgetAppearanceUtils.NO_BUTTONS;
@@ -43,13 +44,13 @@ public class PromptAutoplayer {
             Clip promptClip = getPromptClip(prompt);
             if (promptClip != null) {
                 clipsToPlay.add(promptClip);
-                analytics.logEvent("Prompt", "AutoplayAudioLabel", formIdentifierHash);
+                analytics.logEvent(PROMPT, "AutoplayAudioLabel", formIdentifierHash);
             }
 
             List<Clip> selectClips = getSelectClips(prompt);
             if (!selectClips.isEmpty()) {
                 clipsToPlay.addAll(selectClips);
-                analytics.logEvent("Prompt", "AutoplayAudioChoice", formIdentifierHash);
+                analytics.logEvent(PROMPT, "AutoplayAudioChoice", formIdentifierHash);
             }
 
             if (clipsToPlay.isEmpty()) {

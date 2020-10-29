@@ -22,6 +22,8 @@ import android.text.TextWatcher;
 import android.text.method.TextKeyListener;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 
 import androidx.annotation.NonNull;
@@ -30,11 +32,11 @@ import org.javarosa.core.model.QuestionDef;
 import org.javarosa.core.model.data.IAnswerData;
 import org.javarosa.core.model.data.StringData;
 import org.javarosa.form.api.FormEntryPrompt;
+import org.odk.collect.android.R;
 import org.odk.collect.android.activities.FormEntryActivity;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.formentry.questions.WidgetViewUtils;
 import org.odk.collect.android.utilities.SoftKeyboardUtils;
-import org.odk.collect.android.utilities.ViewIds;
 
 import timber.log.Timber;
 
@@ -63,6 +65,7 @@ public class StringWidget extends QuestionWidget {
     @Override
     public void clearAnswer() {
         answerText.setText(null);
+        widgetValueChanged();
     }
 
     @Override
@@ -110,10 +113,17 @@ public class StringWidget extends QuestionWidget {
      * to long-press to paste or perform other text editing functions.
      */
     @Override
-    protected void registerToClearAnswerOnLongPress(FormEntryActivity activity) {
-        for (int i = 0; i < getChildCount(); i++) {
-            if (!(getChildAt(i) instanceof EditText)) {
-                activity.registerForContextMenu(getChildAt(i));
+    protected void registerToClearAnswerOnLongPress(FormEntryActivity activity, ViewGroup viewGroup) {
+        for (int i = 0; i < viewGroup.getChildCount(); i++) {
+            View child = viewGroup.getChildAt(i);
+            if (child.getId() == R.id.help_layout) {
+                child.setId(getId());
+                activity.registerForContextMenu(child);
+            } else if (child instanceof ViewGroup) {
+                registerToClearAnswerOnLongPress(activity, (ViewGroup) child);
+            } else if (!(child instanceof EditText)) {
+                child.setId(getId());
+                activity.registerForContextMenu(child);
             }
         }
     }
@@ -129,7 +139,7 @@ public class StringWidget extends QuestionWidget {
 
     private EditText getAnswerEditText(boolean readOnly, FormEntryPrompt prompt) {
         EditText answerEditText = new EditText(getContext());
-        answerEditText.setId(ViewIds.generateViewId());
+        answerEditText.setId(View.generateViewId());
         answerEditText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, getAnswerFontSize());
         answerEditText.setKeyListener(new TextKeyListener(TextKeyListener.Capitalize.SENTENCES, false));
 

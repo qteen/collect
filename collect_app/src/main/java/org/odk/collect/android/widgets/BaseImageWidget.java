@@ -40,15 +40,16 @@ import org.javarosa.core.model.data.StringData;
 import org.javarosa.core.reference.InvalidReferenceException;
 import org.odk.collect.android.R;
 import org.odk.collect.android.activities.DrawActivity;
-import org.odk.collect.android.application.Collect;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.storage.StoragePathProvider;
 import org.odk.collect.android.utilities.ApplicationConstants;
+import org.odk.collect.android.utilities.MultiClickGuard;
 import org.odk.collect.android.utilities.FileUtils;
-import org.odk.collect.android.utilities.MediaManager;
 import org.odk.collect.android.utilities.MediaUtils;
-import org.odk.collect.android.utilities.ViewIds;
+import org.odk.collect.android.utilities.QuestionMediaManager;
+import org.odk.collect.android.widgets.interfaces.WidgetDataReceiver;
 import org.odk.collect.android.widgets.interfaces.FileWidget;
+import org.odk.collect.android.widgets.utilities.WaitingForDataRegistry;
 
 import java.io.File;
 
@@ -56,7 +57,8 @@ import timber.log.Timber;
 
 import static org.odk.collect.android.formentry.questions.WidgetViewUtils.createAnswerImageView;
 
-public abstract class BaseImageWidget extends QuestionWidget implements FileWidget {
+public abstract class BaseImageWidget extends QuestionWidget implements FileWidget, WidgetDataReceiver {
+
     @Nullable
     protected ImageView imageView;
     protected String binaryName;
@@ -66,8 +68,13 @@ public abstract class BaseImageWidget extends QuestionWidget implements FileWidg
     protected ImageClickHandler imageClickHandler;
     protected ExternalImageCaptureHandler imageCaptureHandler;
 
-    public BaseImageWidget(Context context, QuestionDetails prompt) {
+    private final WaitingForDataRegistry waitingForDataRegistry;
+    private final QuestionMediaManager questionMediaManager;
+
+    public BaseImageWidget(Context context, QuestionDetails prompt, QuestionMediaManager questionMediaManager, WaitingForDataRegistry waitingForDataRegistry) {
         super(context, prompt);
+        this.questionMediaManager = questionMediaManager;
+        this.waitingForDataRegistry = waitingForDataRegistry;
     }
 
     @Override
@@ -88,15 +95,13 @@ public abstract class BaseImageWidget extends QuestionWidget implements FileWidg
 
     @Override
     public void deleteFile() {
-        MediaManager
-                .INSTANCE
-                .markOriginalFileOrDelete(getFormEntryPrompt().getIndex().toString(),
+        questionMediaManager.deleteAnswerFile(getFormEntryPrompt().getIndex().toString(),
                         getInstanceFolder() + File.separator + binaryName);
         binaryName = null;
     }
 
     @Override
-    public void setBinaryData(Object newImageObj) {
+    public void setData(Object newImageObj) {
         // you are replacing an answer. delete the previous image using the
         // content provider.
         if (binaryName != null) {
@@ -114,9 +119,7 @@ public abstract class BaseImageWidget extends QuestionWidget implements FileWidg
             values.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");
             values.put(MediaStore.Images.Media.DATA, newImage.getAbsolutePath());
 
-            MediaManager
-                    .INSTANCE
-                    .replaceRecentFileForQuestion(getFormEntryPrompt().getIndex().toString(), newImage.getAbsolutePath());
+            questionMediaManager.replaceAnswerFile(getFormEntryPrompt().getIndex().toString(), newImage.getAbsolutePath());
 
             Uri imageURI = getContext().getContentResolver().insert(
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
@@ -179,7 +182,7 @@ public abstract class BaseImageWidget extends QuestionWidget implements FileWidg
 
     protected void setUpLayout() {
         errorTextView = new TextView(getContext());
-        errorTextView.setId(ViewIds.generateViewId());
+        errorTextView.setId(View.generateViewId());
         errorTextView.setText(R.string.selected_invalid_image);
 
         answerLayout = new LinearLayout(getContext());
@@ -246,7 +249,7 @@ public abstract class BaseImageWidget extends QuestionWidget implements FileWidg
 
         @Override
         public void clickImage(String context) {
-            if (Collect.allowClick(getClass().getName())) {
+            if (MultiClickGuard.allowClick(getClass().getName())) {
                 launchDrawActivity();
             }
         }
@@ -301,13 +304,13 @@ public abstract class BaseImageWidget extends QuestionWidget implements FileWidg
      */
     protected void launchActivityForResult(Intent intent, final int resourceCode, final int errorStringResource) {
         try {
-            waitForData();
+            waitingForDataRegistry.waitForData(getFormEntryPrompt().getIndex());
             ((Activity) getContext()).startActivityForResult(intent, resourceCode);
         } catch (ActivityNotFoundException e) {
             Toast.makeText(getContext(),
                     getContext().getString(R.string.activity_not_found, getContext().getString(errorStringResource)),
                     Toast.LENGTH_SHORT).show();
-            cancelWaitingForData();
+            waitingForDataRegistry.cancelWaitingForData();
         }
     }
 

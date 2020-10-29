@@ -16,12 +16,9 @@ package org.odk.collect.android.utilities;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Environment;
 
 import org.apache.commons.io.IOUtils;
@@ -37,6 +34,7 @@ import org.javarosa.core.model.instance.TreeReference;
 import org.javarosa.xform.util.XFormUtils;
 import org.odk.collect.android.R;
 import org.odk.collect.android.application.Collect;
+import org.odk.collect.android.storage.StorageStateProvider;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -281,7 +279,11 @@ public class FileUtils {
 
         fields.put(TITLE, formDef.getTitle());
         fields.put(FORMID, formDef.getMainInstance().getRoot().getAttributeValue(null, "id"));
-        fields.put(VERSION, formDef.getMainInstance().getRoot().getAttributeValue(null, "version"));
+        String version = formDef.getMainInstance().getRoot().getAttributeValue(null, "version");
+        if (version != null && version.trim().isEmpty()) {
+            version = null;
+        }
+        fields.put(VERSION, version);
 
         if (formDef.getSubmissionProfile() != null) {
             fields.put(SUBMISSIONURI, formDef.getSubmissionProfile().getAction());
@@ -452,12 +454,11 @@ public class FileUtils {
      */
     public static void checkMediaPath(File mediaDir) {
         if (mediaDir.exists() && mediaDir.isFile()) {
-            Timber.e("The media folder is already there and it is a FILE!! We will need to delete "
-                    + "it and create a folder instead");
+            Timber.e("The media folder is already there and it is a FILE!! We will need to delete it and create a folder instead");
             boolean deleted = mediaDir.delete();
             if (!deleted) {
                 throw new RuntimeException(
-                        Collect.getInstance().getString(R.string.fs_delete_media_path_if_file_error,
+                        TranslationHandler.getString(Collect.getInstance(), R.string.fs_delete_media_path_if_file_error,
                                 mediaDir.getAbsolutePath()));
             }
         }
@@ -466,7 +467,7 @@ public class FileUtils {
         boolean createdOrExisted = createFolder(mediaDir.getAbsolutePath());
         if (!createdOrExisted) {
             throw new RuntimeException(
-                    Collect.getInstance().getString(R.string.fs_create_media_folder_error,
+                    TranslationHandler.getString(Collect.getInstance(), R.string.fs_create_media_folder_error,
                             mediaDir.getAbsolutePath()));
         }
     }
@@ -474,13 +475,14 @@ public class FileUtils {
     public static void purgeMediaPath(String mediaPath) {
         File tempMediaFolder = new File(mediaPath);
         File[] tempMediaFiles = tempMediaFolder.listFiles();
-        if (tempMediaFiles == null || tempMediaFiles.length == 0) {
-            deleteAndReport(tempMediaFolder);
-        } else {
+
+        if (tempMediaFiles != null) {
             for (File tempMediaFile : tempMediaFiles) {
                 deleteAndReport(tempMediaFile);
             }
         }
+
+        deleteAndReport(tempMediaFolder);
     }
 
     public static void moveMediaFiles(String tempMediaPath, File formMediaPath) throws IOException {
@@ -517,6 +519,7 @@ public class FileUtils {
         if (newOptions.inSampleSize <= 0) {
             newOptions.inSampleSize = 1;
         }
+
         Bitmap bitmap;
         try {
             bitmap = BitmapFactory.decodeFile(path, originalOptions);
@@ -545,7 +548,6 @@ public class FileUtils {
 
         try (FileOutputStream fos = new FileOutputStream(file)) {
             fos.write(data);
-            fos.close();
         } catch (IOException e) {
             Timber.e(e);
         }
@@ -572,34 +574,9 @@ public class FileUtils {
         return fileName.substring(dotIndex + 1).toLowerCase(Locale.ROOT);
     }
 
-    /**
-     * Grants read and write permissions to a content URI added to the specified intent.
-     *
-     * For Android > 4.4, the permissions expire when the receiving app's stack is finished. For
-     * Android <= 4.4, the permissions are granted to all applications that can respond to the
-     * intent.
-     *
-     * For true security, the permissions for Android <= 4.4 should be revoked manually but we don't
-     * revoke them because we don't have many users on lower API levels and prior to targeting API
-     * 24+, all apps always had access to the files anyway.
-     */
     public static void grantFilePermissions(Intent intent, Uri uri, Context context) {
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-
-        // The preferred flag-based strategy does not work with all intent types for Android <= 4.4
-        // bug report: https://issuetracker.google.com/issues/37005552
-        // workaround: https://stackoverflow.com/a/18332000/137744
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.KITKAT) {
-            List<ResolveInfo> resInfoList = context.getPackageManager()
-                    .queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
-
-            for (ResolveInfo resolveInfo : resInfoList) {
-                String packageName = resolveInfo.activityInfo.packageName;
-                context.grantUriPermission(packageName, uri,
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-            }
-        }
     }
 
     /**
@@ -609,42 +586,42 @@ public class FileUtils {
      */
     public static void grantFileReadPermissions(Intent intent, Uri uri, Context context) {
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-
-        // The preferred flag-based strategy does not work with all intent types for Android <= 4.4
-        // bug report: https://issuetracker.google.com/issues/37005552
-        // workaround: https://stackoverflow.com/a/18332000/137744
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.KITKAT) {
-            List<ResolveInfo> resInfoList = context.getPackageManager()
-                    .queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
-
-            for (ResolveInfo resolveInfo : resInfoList) {
-                String packageName = resolveInfo.activityInfo.packageName;
-                context.grantUriPermission(packageName, uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            }
-        }
     }
 
     /** Uses the /sdcard symlink to shorten a path, if it's valid to do so. */
     @SuppressWarnings("PMD.DoNotHardCodeSDCard")
-    public static File simplifyPath(File file) {
-        // The symlink at /sdcard points to the same location as the storage
-        // path returned by getExternalStorageDirectory() on every Android
-        // device and emulator as far as we know; but, just to be certain
-        // that we don't lie to the user, we'll confirm that's really true.
-        if (!isSdcardSymlinkChecked) {
-            checkIfSdcardSymlinkSameAsExternalStorageDirectory();
-            isSdcardSymlinkChecked = true;  // this check is expensive; only do it once
-        }
-        if (isSdcardSymlinkSameAsExternalStorageDirectory) {
-            // They point to the same place, so it's safe to replace the longer
-            // storage path with the short symlink.
-            String storagePath = Environment.getExternalStorageDirectory().getAbsolutePath();
-            String path = file.getAbsolutePath();
-            if (path.startsWith(storagePath + "/")) {
-                return new File("/sdcard" + path.substring(storagePath.length()));
+    public static String simplifyPath(File file) {
+        if (new StorageStateProvider().isScopedStorageUsed()) {
+            return file.getAbsolutePath();
+        } else {
+            // The symlink at /sdcard points to the same location as the storage
+            // path returned by getExternalStorageDirectory() on every Android
+            // device and emulator as far as we know; but, just to be certain
+            // that we don't lie to the user, we'll confirm that's really true.
+            if (!isSdcardSymlinkChecked) {
+                checkIfSdcardSymlinkSameAsExternalStorageDirectory();
+                isSdcardSymlinkChecked = true;  // this check is expensive; only do it once
             }
+            if (isSdcardSymlinkSameAsExternalStorageDirectory) {
+                // They point to the same place, so it's safe to replace the longer
+                // storage path with the short symlink.
+                String storagePath = Environment.getExternalStorageDirectory().getAbsolutePath();
+                String path = file.getAbsolutePath();
+                if (path.startsWith(storagePath + "/")) {
+                    return "/sdcard" + path.substring(storagePath.length());
+                }
+            }
+            return file.getAbsolutePath();
         }
-        return file;
+    }
+
+    @SuppressWarnings("PMD.DoNotHardCodeSDCard")
+    public static String simplifyScopedStoragePath(String path) {
+        if (path != null && path.startsWith("/storage/emulated/0/")) {
+            return "/sdcard/" + path.substring("/storage/emulated/0/".length());
+        }
+
+        return path;
     }
 
     /** Checks whether /sdcard points to the same place as getExternalStorageDirectory(). */

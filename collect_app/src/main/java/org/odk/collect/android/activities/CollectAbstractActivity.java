@@ -17,6 +17,8 @@
 package org.odk.collect.android.activities;
 
 import android.content.Context;
+import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Bundle;
 
 import org.odk.collect.android.R;
@@ -28,9 +30,12 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+
 import static org.odk.collect.android.utilities.PermissionUtils.areStoragePermissionsGranted;
 import static org.odk.collect.android.utilities.PermissionUtils.finishAllActivities;
-import static org.odk.collect.android.utilities.PermissionUtils.isEntryPointActivity;
 
 public abstract class CollectAbstractActivity extends AppCompatActivity {
 
@@ -83,7 +88,32 @@ public abstract class CollectAbstractActivity extends AppCompatActivity {
 
     @Override
     protected void attachBaseContext(Context base) {
-        super.attachBaseContext(new LocaleHelper().updateLocale(base));
+        super.attachBaseContext(base);
+        applyOverrideConfiguration(new Configuration());
+    }
+
+    @Override
+    public void applyOverrideConfiguration(Configuration newConfig) {
+        super.applyOverrideConfiguration(updateConfigurationIfSupported(newConfig));
+    }
+
+    private Configuration updateConfigurationIfSupported(Configuration config) {
+        if (Build.VERSION.SDK_INT >= 24) {
+            if (!config.getLocales().isEmpty()) {
+                return config;
+            }
+        } else {
+            if (config.locale != null) {
+                return config;
+            }
+        }
+
+        Locale locale = new LocaleHelper().getLocale(this);
+        if (locale != null) {
+            config.setLocale(locale);
+            config.setLayoutDirection(locale);
+        }
+        return config;
     }
 
     public void initToolbar(CharSequence title) {
@@ -92,5 +122,32 @@ public abstract class CollectAbstractActivity extends AppCompatActivity {
             toolbar.setTitle(title);
             setSupportActionBar(toolbar);
         }
+    }
+
+    /**
+     * Checks to see if an activity is one of the entry points to the app i.e
+     * an activity that has a view action that can launch the app.
+     *
+     * @param activity that has permission requesting code.
+     * @return true if the activity is an entry point to the app.
+     */
+    public static boolean isEntryPointActivity(CollectAbstractActivity activity) {
+
+        List<Class<?>> activities = new ArrayList<>();
+        activities.add(FormEntryActivity.class);
+        activities.add(InstanceChooserList.class);
+        activities.add(FillBlankFormActivity.class);
+        activities.add(InstanceUploaderListActivity.class);
+        activities.add(SplashScreenActivity.class);
+        activities.add(FormDownloadListActivity.class);
+        activities.add(InstanceUploaderActivity.class);
+
+        for (Class<?> act : activities) {
+            if (activity.getClass().equals(act)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

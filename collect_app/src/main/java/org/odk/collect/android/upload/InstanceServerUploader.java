@@ -29,6 +29,7 @@ import org.odk.collect.android.openrosa.OpenRosaConstants;
 import org.odk.collect.android.openrosa.OpenRosaHttpInterface;
 import org.odk.collect.android.preferences.GeneralKeys;
 import org.odk.collect.android.utilities.ResponseMessageParser;
+import org.odk.collect.android.utilities.TranslationHandler;
 import org.odk.collect.android.utilities.WebCredentialsUtils;
 
 import java.io.File;
@@ -76,7 +77,7 @@ public class InstanceServerUploader extends InstanceUploader {
         // the proper scheme.
         if (uriRemap.containsKey(submissionUri)) {
             submissionUri = uriRemap.get(submissionUri);
-            Timber.i("Using Uri remap for submission %s. Now: %s", instance.getDatabaseId(),
+            Timber.i("Using Uri remap for submission %s. Now: %s", instance.getId(),
                     submissionUri.toString());
         } else {
             if (submissionUri.getHost() == null) {
@@ -90,7 +91,7 @@ public class InstanceServerUploader extends InstanceUploader {
             } catch (IllegalArgumentException e) {
                 saveFailedStatusToDatabase(instance);
                 Timber.d(e.getMessage() != null ? e.getMessage() : e.toString());
-                throw new UploadException(Collect.getInstance().getString(R.string.url_error));
+                throw new UploadException(TranslationHandler.getString(Collect.getInstance(), R.string.url_error));
             }
 
             HttpHeadResult headResult;
@@ -116,7 +117,7 @@ public class InstanceServerUploader extends InstanceUploader {
 
             if (headResult.getStatusCode() == HttpsURLConnection.HTTP_UNAUTHORIZED) {
                 saveFailedStatusToDatabase(instance);
-                throw new UploadAuthRequestedException(Collect.getInstance().getString(R.string.server_auth_credentials, submissionUri.getHost()),
+                throw new UploadAuthRequestedException(TranslationHandler.getString(Collect.getInstance(), R.string.server_auth_credentials, submissionUri.getHost()),
                         submissionUri);
             } else if (headResult.getStatusCode() == HttpsURLConnection.HTTP_NO_CONTENT) {
                 // Redirect header received
@@ -204,9 +205,11 @@ public class InstanceServerUploader extends InstanceUploader {
                 } else {
                     if (messageParser.isValid()) {
                         exception = new UploadException(FAIL + messageParser.getMessageResponse());
+                    } else if (responseCode == HttpsURLConnection.HTTP_BAD_REQUEST) {
+                        Timber.w(FAIL + postResult.getReasonPhrase() + " (" + responseCode + ") at " + urlString);
+                        exception = new UploadException("Failed to upload. Please make sure the form is configured to accept submissions on the server");
                     } else {
-                        exception = new UploadException(FAIL + postResult.getReasonPhrase()
-                                + " (" + responseCode + ") at " + urlString);
+                        exception = new UploadException(FAIL + postResult.getReasonPhrase() + " (" + responseCode + ") at " + urlString);
                     }
 
                 }
@@ -261,7 +264,7 @@ public class InstanceServerUploader extends InstanceUploader {
      *
      * If the upload was triggered by an external app and specified an override URL, use that one.
      * Otherwise, use the submission URL configured in the form
-     * (https://opendatakit.github.io/xforms-spec/#submission-attributes). Finally, default to the
+     * (https://getodk.github.io/xforms-spec/#submission-attributes). Finally, default to the
      * URL configured at the app level.
      */
     @Override

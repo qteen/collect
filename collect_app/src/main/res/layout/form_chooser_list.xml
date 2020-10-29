@@ -18,19 +18,13 @@ the License.
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-    <include layout="@layout/toolbar"/>
-
-    <include
-            layout="@layout/toolbar_action_bar_shadow"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_below="@id/toolbar"/>
+    <include layout="@layout/app_bar_layout"/>
 
     <LinearLayout
             android:id="@+id/llParent"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_below="@id/toolbar"
+            android:layout_below="@id/appBarLayout"
             android:orientation="vertical">
 
         <ListView
@@ -42,7 +36,7 @@ the License.
                 android:paddingBottom="8dp"
                 android:clipToPadding="false"
                 android:scrollbarStyle="outsideOverlay"
-                android:divider="?dividerCompat"/>
+                android:divider="@drawable/list_item_divider"/>
 
         <TextView
                 android:id="@android:id/empty"

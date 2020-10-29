@@ -26,9 +26,9 @@ import android.widget.TextView;
 
 import org.odk.collect.android.R;
 import org.odk.collect.android.dao.FormsDao;
+import org.odk.collect.android.instances.Instance;
 import org.odk.collect.android.provider.FormsProviderAPI.FormsColumns;
 import org.odk.collect.android.provider.InstanceProvider;
-import org.odk.collect.android.provider.InstanceProviderAPI;
 import org.odk.collect.android.provider.InstanceProviderAPI.InstanceColumns;
 
 import java.text.SimpleDateFormat;
@@ -157,14 +157,14 @@ public class InstanceListCursorAdapter extends SimpleCursorAdapter {
 
     public static int getFormStateImageResourceIdForStatus(String formStatus) {
         switch (formStatus) {
-            case InstanceProviderAPI.STATUS_INCOMPLETE:
-                return R.drawable.form_state_saved;
-            case InstanceProviderAPI.STATUS_COMPLETE:
-                return R.drawable.form_state_finalized;
-            case InstanceProviderAPI.STATUS_SUBMITTED:
-                return R.drawable.form_state_submitted;
-            case InstanceProviderAPI.STATUS_SUBMISSION_FAILED:
-                return R.drawable.form_state_submission_failed;
+            case Instance.STATUS_INCOMPLETE:
+                return R.drawable.form_state_saved_circle;
+            case Instance.STATUS_COMPLETE:
+                return R.drawable.form_state_finalized_circle;
+            case Instance.STATUS_SUBMITTED:
+                return R.drawable.form_state_submitted_circle;
+            case Instance.STATUS_SUBMISSION_FAILED:
+                return R.drawable.form_state_submission_failed_circle;
         }
 
         return -1;

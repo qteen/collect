@@ -31,7 +31,7 @@ import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 
-import org.javarosa.core.model.FormIndex;
+import org.javarosa.core.reference.InvalidReferenceException;
 import org.javarosa.core.reference.ReferenceManager;
 import org.javarosa.form.api.FormEntryPrompt;
 import org.odk.collect.android.R;
@@ -39,12 +39,12 @@ import org.odk.collect.android.activities.FormEntryActivity;
 import org.odk.collect.android.analytics.Analytics;
 import org.odk.collect.android.application.Collect;
 import org.odk.collect.android.audio.AudioHelper;
-import org.odk.collect.android.formentry.QuestionTextSizeHelper;
 import org.odk.collect.android.formentry.media.AudioHelperFactory;
 import org.odk.collect.android.formentry.questions.AudioVideoImageTextLabel;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
+import org.odk.collect.android.formentry.questions.QuestionTextSizeHelper;
+import org.odk.collect.android.javarosawrapper.FormController;
 import org.odk.collect.android.listeners.WidgetValueChangedListener;
-import org.odk.collect.android.logic.FormController;
 import org.odk.collect.android.preferences.GeneralKeys;
 import org.odk.collect.android.preferences.GeneralSharedPreferences;
 import org.odk.collect.android.preferences.GuidanceHint;
@@ -56,7 +56,9 @@ import org.odk.collect.android.utilities.StringUtils;
 import org.odk.collect.android.utilities.ThemeUtils;
 import org.odk.collect.android.utilities.ViewUtils;
 import org.odk.collect.android.widgets.interfaces.Widget;
+import org.odk.collect.android.widgets.items.SelectImageMapWidget;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -67,6 +69,7 @@ import javax.inject.Inject;
 
 import timber.log.Timber;
 
+import static org.odk.collect.android.analytics.AnalyticsEvents.PROMPT;
 import static org.odk.collect.android.formentry.media.FormMediaUtils.getClipID;
 import static org.odk.collect.android.formentry.media.FormMediaUtils.getPlayColor;
 import static org.odk.collect.android.formentry.media.FormMediaUtils.getPlayableAudioURI;
@@ -76,7 +79,6 @@ public abstract class QuestionWidget
         extends FrameLayout
         implements Widget {
 
-    private final int questionFontSize;
     private final FormEntryPrompt formEntryPrompt;
     private final AudioVideoImageTextLabel audioVideoImageTextLabel;
     private final QuestionDetails questionDetails;
@@ -90,7 +92,7 @@ public abstract class QuestionWidget
     private AtomicBoolean expanded;
     private Bundle state;
     protected final ThemeUtils themeUtils;
-    protected final AudioHelper audioHelper;
+    protected AudioHelper audioHelper;
     private final ViewGroup containerView;
     private final QuestionTextSizeHelper questionTextSizeHelper = new QuestionTextSizeHelper();
 
@@ -106,18 +108,21 @@ public abstract class QuestionWidget
     public Analytics analytics;
 
     public QuestionWidget(Context context, QuestionDetails questionDetails) {
+        this(context, questionDetails, true);
+    }
+
+    public QuestionWidget(Context context, QuestionDetails questionDetails, boolean registerForContextMenu) {
         super(context);
         getComponent(context).inject(this);
+        setId(View.generateViewId());
         this.audioHelper = audioHelperFactory.create(context);
 
         themeUtils = new ThemeUtils(context);
 
         if (context instanceof FormEntryActivity) {
             state = ((FormEntryActivity) context).getState();
-            permissionUtils = new PermissionUtils();
+            permissionUtils = new PermissionUtils(R.style.Theme_Collect_Dialog_PermissionAlert);
         }
-
-        questionFontSize = Collect.getQuestionFontsize();
 
         this.questionDetails = questionDetails;
         formEntryPrompt = questionDetails.getPrompt();
@@ -134,10 +139,33 @@ public abstract class QuestionWidget
         helpTextView = setupHelpText(helpTextLayout.findViewById(R.id.help_text_view), formEntryPrompt);
         setupGuidanceTextAndLayout(helpTextLayout.findViewById(R.id.guidance_text_view), formEntryPrompt);
 
-        if (context instanceof FormEntryActivity && !getFormEntryPrompt().isReadOnly()) {
-            registerToClearAnswerOnLongPress((FormEntryActivity) context);
+        View answerView = onCreateAnswerView(context, getFormEntryPrompt(), getAnswerFontSize());
+        if (answerView != null) {
+            addAnswerView(answerView);
+        }
+
+        if (registerForContextMenu && context instanceof FormEntryActivity && !getFormEntryPrompt().isReadOnly()) {
+            registerToClearAnswerOnLongPress((FormEntryActivity) context, this);
         }
     }
+
+    /**
+     * Returns the `View` object that represents the interface for answering the question. This
+     * will be rendered underneath the question's `label`, `hint` and `guidance_hint`. This method
+     * is passed the question itself (as a `FormEntryPrompt`) which will often be needed in
+     * rendering the widget. It is also passed the size to be used for question text.
+     */
+    @SuppressWarnings("PMD.EmptyMethodInAbstractClassShouldBeAbstract")
+    protected View onCreateAnswerView(Context context, FormEntryPrompt prompt, int answerFontSize) {
+        return null;
+    }
+
+    /**
+     * Used to make sure clickable views in the widget work with the long click feature (shows
+     * the "Edit Prompt" menu). The passed listener should be set as the long click listener on
+     * clickable views in the widget.
+     */
+    public abstract void setOnLongClickListener(OnLongClickListener l);
 
     protected int getLayout() {
         return R.layout.question_widget;
@@ -150,17 +178,23 @@ public abstract class QuestionWidget
         String imageURI = this instanceof SelectImageMapWidget ? null : prompt.getImageText();
         String videoURI = prompt.getSpecialFormQuestionText("video");
         String bigImageURI = prompt.getSpecialFormQuestionText("big-image");
-        label.setImageVideo(
-                imageURI,
-                videoURI,
-                bigImageURI,
-                getReferenceManager()
-        );
-
         String playableAudioURI = getPlayableAudioURI(prompt, referenceManager);
-        if (playableAudioURI != null) {
-            label.setAudio(playableAudioURI, audioHelper);
-            analytics.logEvent("Prompt", "AudioLabel", questionDetails.getFormAnalyticsID());
+        try {
+            if (imageURI != null) {
+                audioVideoImageTextLabel.setImage(new File(referenceManager.deriveReference(imageURI).getLocalURI()));
+            }
+            if (bigImageURI != null) {
+                audioVideoImageTextLabel.setBigImage(new File(referenceManager.deriveReference(bigImageURI).getLocalURI()));
+            }
+            if (videoURI != null) {
+                audioVideoImageTextLabel.setVideo(new File(referenceManager.deriveReference(videoURI).getLocalURI()));
+            }
+            if (playableAudioURI != null) {
+                label.setAudio(playableAudioURI, audioHelper);
+                analytics.logEvent(PROMPT, "AudioLabel", questionDetails.getFormAnalyticsID());
+            }
+        } catch (InvalidReferenceException e) {
+            Timber.d(e, "Invalid media reference due to %s ", e.getMessage());
         }
 
         label.setPlayTextColor(getPlayColor(formEntryPrompt, themeUtils));
@@ -297,8 +331,6 @@ public abstract class QuestionWidget
         SoftKeyboardUtils.hideSoftKeyboard(this);
     }
 
-    public abstract void setOnLongClickListener(OnLongClickListener l);
-
     /**
      * Override this to implement fling gesture suppression (e.g. for embedded WebView treatments).
      *
@@ -361,10 +393,15 @@ public abstract class QuestionWidget
         }
     }
 
+    @Deprecated
     protected final void addAnswerView(View v) {
         addAnswerView(v, null);
     }
 
+    /**
+     * Widget should use {@link #onCreateAnswerView} to define answer view
+     */
+    @Deprecated
     protected final void addAnswerView(View v, Integer margin) {
         ViewGroup answerContainer = findViewById(R.id.answer_container);
 
@@ -377,14 +414,14 @@ public abstract class QuestionWidget
         }
 
         answerContainer.addView(v, params);
-}
+    }
 
     /**
      * Register this widget's child views to pop up a context menu to clear the widget when the
      * user long presses on it. Widget subclasses may override this if some or all of their
      * components need to intercept long presses.
      */
-    protected void registerToClearAnswerOnLongPress(FormEntryActivity activity) {
+    protected void registerToClearAnswerOnLongPress(FormEntryActivity activity, ViewGroup viewGroup) {
         activity.registerForContextMenu(this);
     }
 
@@ -392,6 +429,7 @@ public abstract class QuestionWidget
      * Every subclassed widget should override this, adding any views they may contain, and calling
      * super.cancelLongPress()
      */
+    @Override
     public void cancelLongPress() {
         super.cancelLongPress();
         if (getAudioVideoImageTextLabel() != null) {
@@ -407,57 +445,15 @@ public abstract class QuestionWidget
         warningText.setText(warningBody);
     }
 
-    //region Data waiting
-
-    @Override
-    public final void waitForData() {
-        Collect collect = Collect.getInstance();
-        if (collect == null) {
-            throw new IllegalStateException("Collect application instance is null.");
-        }
-
-        FormController formController = collect.getFormController();
-        if (formController == null) {
-            return;
-        }
-
-        formController.setIndexWaitingForData(getFormEntryPrompt().getIndex());
-    }
-
-    @Override
-    public final void cancelWaitingForData() {
-        Collect collect = Collect.getInstance();
-        if (collect == null) {
-            throw new IllegalStateException("Collect application instance is null.");
-        }
-
-        FormController formController = collect.getFormController();
-        if (formController == null) {
-            return;
-        }
-
-        formController.setIndexWaitingForData(null);
-    }
-
-    @Override
-    public final boolean isWaitingForData() {
-        Collect collect = Collect.getInstance();
-        if (collect == null) {
-            throw new IllegalStateException("Collect application instance is null.");
-        }
-
-        FormController formController = collect.getFormController();
-        if (formController == null) {
-            return false;
-        }
-
-        FormIndex index = getFormEntryPrompt().getIndex();
-        return index.equals(formController.getIndexWaitingForData());
-    }
-
     //region Accessors
 
+    /**
+     * @deprecated widgets shouldn't need to know about the instance folder. They can use
+     * {@link org.odk.collect.android.utilities.QuestionMediaManager} to access media attached
+     * to the instance.
+     */
     @Nullable
+    @Deprecated
     public final String getInstanceFolder() {
         Collect collect = Collect.getInstance();
         if (collect == null) {
@@ -473,7 +469,7 @@ public abstract class QuestionWidget
     }
 
     public int getAnswerFontSize() {
-        return questionFontSize + 2;
+        return (int) questionTextSizeHelper.getHeadline6();
     }
 
     public View getHelpTextLayout() {

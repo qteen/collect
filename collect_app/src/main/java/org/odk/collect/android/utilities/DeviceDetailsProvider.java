@@ -1,13 +1,19 @@
 package org.odk.collect.android.utilities;
 
+import androidx.annotation.Nullable;
+
 public interface DeviceDetailsProvider {
 
     @Deprecated
-    String getDeviceId();
+    @Nullable
+    String getDeviceId() throws SecurityException;
 
-    String getLine1Number();
+    @Nullable
+    String getLine1Number() throws SecurityException;
 
-    String getSubscriberId();
+    @Nullable
+    String getSubscriberId() throws SecurityException;
 
-    String getSimSerialNumber();
+    @Nullable
+    String getSimSerialNumber() throws SecurityException;
 }

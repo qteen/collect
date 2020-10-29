@@ -16,112 +16,48 @@ package org.odk.collect.android.application;
 
 import android.app.Application;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.res.Configuration;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.os.Build;
-import android.os.Bundle;
-import android.os.SystemClock;
-import android.preference.PreferenceManager;
-import android.util.Log;
+import android.os.StrictMode;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatDelegate;
 import androidx.multidex.MultiDex;
 
-import com.crashlytics.android.Crashlytics;
-import com.evernote.android.job.JobManager;
-import com.evernote.android.job.JobManagerCreateException;
-import com.google.android.gms.common.GoogleApiAvailability;
-import com.google.android.gms.security.ProviderInstaller;
-import com.google.firebase.analytics.FirebaseAnalytics;
-import com.squareup.leakcanary.LeakCanary;
-import com.squareup.leakcanary.RefWatcher;
-
-import net.danlew.android.joda.JodaTimeAndroid;
-
 import org.odk.collect.android.BuildConfig;
-import org.odk.collect.android.R;
+import org.odk.collect.android.application.initialization.ApplicationInitializer;
 import org.odk.collect.android.dao.FormsDao;
 import org.odk.collect.android.external.ExternalDataManager;
 import org.odk.collect.android.injection.config.AppDependencyComponent;
 import org.odk.collect.android.injection.config.DaggerAppDependencyComponent;
-import org.odk.collect.android.jobs.CollectJobCreator;
-import org.odk.collect.android.logic.FormController;
-import org.odk.collect.android.logic.PropertyManager;
-import org.odk.collect.android.preferences.AdminSharedPreferences;
-import org.odk.collect.android.preferences.AutoSendPreferenceMigrator;
-import org.odk.collect.android.preferences.FormMetadataMigrator;
-import org.odk.collect.android.preferences.GeneralKeys;
-import org.odk.collect.android.preferences.GeneralSharedPreferences;
-import org.odk.collect.android.preferences.PrefMigrator;
+import org.odk.collect.android.javarosawrapper.FormController;
+import org.odk.collect.android.preferences.PreferencesProvider;
 import org.odk.collect.android.storage.StoragePathProvider;
-import org.odk.collect.android.storage.StorageSubdirectory;
-import org.odk.collect.android.tasks.sms.SmsNotificationReceiver;
-import org.odk.collect.android.tasks.sms.SmsSentBroadcastReceiver;
 import org.odk.collect.android.utilities.FileUtils;
-import org.odk.collect.android.utilities.LocaleHelper;
-import org.odk.collect.android.utilities.NotificationUtils;
-import org.odk.collect.android.utilities.PRNGFixes;
-import org.odk.collect.utilities.UserAgentProvider;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
-import java.util.Locale;
 
 import javax.inject.Inject;
 
-import timber.log.Timber;
+import static org.odk.collect.android.preferences.MetaKeys.KEY_GOOGLE_BUG_154855417_FIXED;
 
-import static org.odk.collect.android.logic.PropertyManager.PROPMGR_USERNAME;
-import static org.odk.collect.android.logic.PropertyManager.SCHEME_USERNAME;
-import static org.odk.collect.android.preferences.GeneralKeys.KEY_APP_LANGUAGE;
-import static org.odk.collect.android.preferences.GeneralKeys.KEY_FONT_SIZE;
-import static org.odk.collect.android.preferences.GeneralKeys.KEY_USERNAME;
-import static org.odk.collect.android.tasks.sms.SmsNotificationReceiver.SMS_NOTIFICATION_ACTION;
-import static org.odk.collect.android.tasks.sms.SmsSender.SMS_SEND_ACTION;
-
-/**
- * The Open Data Kit Collect application.
- *
- * @author carlhartung
- */
 public class Collect extends Application {
-
-    public static final String DEFAULT_FONTSIZE = "21";
-    public static final int DEFAULT_FONTSIZE_INT = 21;
-
-    public static final int CLICK_DEBOUNCE_MS = 1000;
-
     public static String defaultSysLanguage;
     private static Collect singleton;
-    private static long lastClickTime;
-    private static String lastClickName;
 
     @Nullable
     private FormController formController;
     private ExternalDataManager externalDataManager;
-    private FirebaseAnalytics firebaseAnalytics;
     private AppDependencyComponent applicationComponent;
 
     @Inject
-    UserAgentProvider userAgentProvider;
+    ApplicationInitializer applicationInitializer;
+
+    @Inject
+    PreferencesProvider preferencesProvider;
 
     public static Collect getInstance() {
         return singleton;
-    }
-
-    public static int getQuestionFontsize() {
-        // For testing:
-        Collect instance = Collect.getInstance();
-        if (instance == null) {
-            return Collect.DEFAULT_FONTSIZE_INT;
-        }
-
-        return Integer.parseInt(String.valueOf(GeneralSharedPreferences.getInstance().get(KEY_FONT_SIZE)));
     }
 
     /**
@@ -135,8 +71,8 @@ public class Collect extends Application {
          */
         String dirPath = directory.getAbsolutePath();
         StoragePathProvider storagePathProvider = new StoragePathProvider();
-        if (dirPath.startsWith(storagePathProvider.getDirPath(StorageSubdirectory.ODK))) {
-            dirPath = dirPath.substring(storagePathProvider.getDirPath(StorageSubdirectory.ODK).length());
+        if (dirPath.startsWith(storagePathProvider.getStorageRootDirPath())) {
+            dirPath = dirPath.substring(storagePathProvider.getStorageRootDirPath().length());
             String[] parts = dirPath.split(File.separatorChar == '\\' ? "\\\\" : File.separator);
             // [appName, instances, tableId, instanceId ]
             if (parts.length == 4 && parts[1].equals("instances")) {
@@ -163,26 +99,6 @@ public class Collect extends Application {
         this.externalDataManager = externalDataManager;
     }
 
-    public String getVersionedAppName() {
-        String versionName = BuildConfig.VERSION_NAME;
-        versionName = " " + versionName.replaceFirst("-", "\n");
-        return getString(R.string.app_name) + versionName;
-    }
-
-    /**
-     * Get a User-Agent string that provides the platform details followed by the application ID
-     * and application version name: {@code Dalvik/<version> (platform info) org.odk.collect.android/v<version>}.
-     *
-     * This deviates from the recommended format as described in https://github.com/opendatakit/collect/issues/3253.
-     */
-
-    public boolean isNetworkAvailable() {
-        ConnectivityManager manager = (ConnectivityManager) getInstance()
-                .getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo currentNetworkInfo = manager.getActiveNetworkInfo();
-        return currentNetworkInfo != null && currentNetworkInfo.isConnected();
-    }
-
     /*
         Adds support for multidex support library. For more info check out the link below,
         https://developer.android.com/studio/build/multidex.html
@@ -197,63 +113,32 @@ public class Collect extends Application {
     public void onCreate() {
         super.onCreate();
         singleton = this;
-        firebaseAnalytics = FirebaseAnalytics.getInstance(this);
 
-        installTls12();
         setupDagger();
+        applicationInitializer.initialize();
+        
+        fixGoogleBug154855417();
 
-        NotificationUtils.createNotificationChannel(singleton);
-
-        registerReceiver(new SmsSentBroadcastReceiver(), new IntentFilter(SMS_SEND_ACTION));
-        registerReceiver(new SmsNotificationReceiver(), new IntentFilter(SMS_NOTIFICATION_ACTION));
-
-        try {
-            JobManager
-                    .create(this)
-                    .addJobCreator(new CollectJobCreator());
-        } catch (JobManagerCreateException e) {
-            Timber.e(e);
-        }
-
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        FormMetadataMigrator.migrate(prefs);
-        PrefMigrator.migrateSharedPrefs();
-        AutoSendPreferenceMigrator.migrate();
-
-        reloadSharedPreferences();
-
-        PRNGFixes.apply();
-        AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
-        JodaTimeAndroid.init(this);
-
-        defaultSysLanguage = Locale.getDefault().getLanguage();
-        new LocaleHelper().updateLocale(this);
-
-        initializeJavaRosa();
-
-        if (BuildConfig.BUILD_TYPE.equals("odkCollectRelease")) {
-            Timber.plant(new CrashReportingTree());
-        } else {
-            Timber.plant(new Timber.DebugTree());
-        }
-
-        setupRemoteAnalytics();
-        setupLeakCanary();
-        setupOSMDroid();
-
-        // Force inclusion of scoped storage strings so they can be translated
-        Timber.i("%s %s", getString(R.string.scoped_storage_banner_text),
-                                   getString(R.string.scoped_storage_learn_more));
+        setupStrictMode();
     }
 
-    private void setupRemoteAnalytics() {
-        SharedPreferences settings = PreferenceManager.getDefaultSharedPreferences(this);
-        boolean isAnalyticsEnabled = settings.getBoolean(GeneralKeys.KEY_ANALYTICS, true);
-        setAnalyticsCollectionEnabled(isAnalyticsEnabled);
-    }
-
-    protected void setupOSMDroid() {
-        org.osmdroid.config.Configuration.getInstance().setUserAgentValue(userAgentProvider.getUserAgent());
+    /**
+     * Enable StrictMode and log violations to the system log.
+     * This catches disk and network access on the main thread, as well as leaked SQLite
+     * cursors and unclosed resources.
+     */
+    private void setupStrictMode() {
+        if (BuildConfig.DEBUG) {
+            StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
+                    .detectAll()
+                    .permitDiskReads()  // shared preferences are being read on main thread
+                    .penaltyLog()
+                    .build());
+            StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
+                    .detectAll()
+                    .penaltyLog()
+                    .build());
+        }
     }
 
     private void setupDagger() {
@@ -264,97 +149,12 @@ public class Collect extends Application {
         applicationComponent.inject(this);
     }
 
-    private void installTls12() {
-        if (Build.VERSION.SDK_INT <= 20) {
-            ProviderInstaller.installIfNeededAsync(getApplicationContext(), new ProviderInstaller.ProviderInstallListener() {
-                @Override
-                public void onProviderInstalled() {
-                }
-
-                @Override
-                public void onProviderInstallFailed(int i, Intent intent) {
-                    GoogleApiAvailability
-                            .getInstance()
-                            .showErrorNotification(getApplicationContext(), i);
-                }
-            });
-        }
-    }
-
-    protected RefWatcher setupLeakCanary() {
-        if (LeakCanary.isInAnalyzerProcess(this)) {
-            return RefWatcher.DISABLED;
-        }
-        return LeakCanary.install(this);
-    }
-
     @Override
     public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
 
         //noinspection deprecation
         defaultSysLanguage = newConfig.locale.getLanguage();
-        boolean isUsingSysLanguage = GeneralSharedPreferences.getInstance().get(KEY_APP_LANGUAGE).equals("");
-        if (!isUsingSysLanguage) {
-            new LocaleHelper().updateLocale(this);
-        }
-    }
-
-    public void logRemoteAnalytics(String event, String action, String label) {
-        Bundle bundle = new Bundle();
-        bundle.putString("action", action);
-        bundle.putString("label", label);
-        firebaseAnalytics.logEvent(event, bundle);
-    }
-
-    public void setAnalyticsCollectionEnabled(boolean isAnalyticsEnabled) {
-        firebaseAnalytics.setAnalyticsCollectionEnabled(isAnalyticsEnabled);
-    }
-
-    private static class CrashReportingTree extends Timber.Tree {
-        @Override
-        protected void log(int priority, String tag, String message, Throwable t) {
-            if (priority == Log.VERBOSE || priority == Log.DEBUG || priority == Log.INFO) {
-                return;
-            }
-
-            Crashlytics.log(priority, tag, message);
-
-            if (t != null && priority == Log.ERROR) {
-                Crashlytics.logException(t);
-            }
-        }
-    }
-
-    public void initializeJavaRosa() {
-        PropertyManager mgr = new PropertyManager(this);
-
-        // Use the server username by default if the metadata username is not defined
-        if (mgr.getSingularProperty(PROPMGR_USERNAME) == null || mgr.getSingularProperty(PROPMGR_USERNAME).isEmpty()) {
-            mgr.putProperty(PROPMGR_USERNAME, SCHEME_USERNAME, (String) GeneralSharedPreferences.getInstance().get(KEY_USERNAME));
-        }
-
-        FormController.initializeJavaRosa(mgr);
-    }
-
-    // This method reloads shared preferences in order to load default values for new preferences
-    private void reloadSharedPreferences() {
-        GeneralSharedPreferences.getInstance().reloadPreferences();
-        AdminSharedPreferences.getInstance().reloadPreferences();
-    }
-
-    // Debounce multiple clicks within the same screen
-    public static boolean allowClick(String className) {
-        long elapsedRealtime = SystemClock.elapsedRealtime();
-        boolean isSameClass = className.equals(lastClickName);
-        boolean isBeyondThreshold = elapsedRealtime - lastClickTime > CLICK_DEBOUNCE_MS;
-        boolean isBeyondTestThreshold = lastClickTime == 0 || lastClickTime == elapsedRealtime; // just for tests
-        boolean allowClick = !isSameClass || isBeyondThreshold || isBeyondTestThreshold;
-        if (allowClick) {
-            lastClickTime = elapsedRealtime;
-            lastClickName = className;
-        }
-        return allowClick;
     }
 
     public AppDependencyComponent getComponent() {
@@ -372,17 +172,12 @@ public class Collect extends Application {
      * @return md5 hash of the form title, a space, the form ID
      */
     public static String getCurrentFormIdentifierHash() {
-        String formIdentifier = "";
         FormController formController = getInstance().getFormController();
         if (formController != null) {
-            if (formController.getFormDef() != null) {
-                String formID = formController.getFormDef().getMainInstance()
-                        .getRoot().getAttributeValue("", "id");
-                formIdentifier = formController.getFormTitle() + " " + formID;
-            }
+            return formController.getCurrentFormIdentifierHash();
         }
 
-        return FileUtils.getMd5Hash(new ByteArrayInputStream(formIdentifier.getBytes()));
+        return "";
     }
 
     /**
@@ -396,7 +191,24 @@ public class Collect extends Application {
         return FileUtils.getMd5Hash(new ByteArrayInputStream(formIdentifier.getBytes()));
     }
 
-    public void logNullFormControllerEvent(String action) {
-        logRemoteAnalytics("NullFormControllerEvent", action, null);
+    // https://issuetracker.google.com/issues/154855417
+    private void fixGoogleBug154855417() {
+        try {
+            SharedPreferences metaSharedPreferences = preferencesProvider.getMetaSharedPreferences();
+
+            boolean hasFixedGoogleBug154855417 = metaSharedPreferences.getBoolean(KEY_GOOGLE_BUG_154855417_FIXED, false);
+
+            if (!hasFixedGoogleBug154855417) {
+                File corruptedZoomTables = new File(getFilesDir(), "ZoomTables.data");
+                corruptedZoomTables.delete();
+
+                metaSharedPreferences
+                        .edit()
+                        .putBoolean(KEY_GOOGLE_BUG_154855417_FIXED, true)
+                        .apply();
+            }
+        } catch (Exception ignored) {
+            // ignored
+        }
     }
 }

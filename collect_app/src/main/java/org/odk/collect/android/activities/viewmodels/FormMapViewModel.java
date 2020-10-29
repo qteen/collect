@@ -8,9 +8,9 @@ import org.json.JSONObject;
 import org.odk.collect.android.forms.Form;
 import org.odk.collect.android.instances.Instance;
 import org.odk.collect.android.instances.InstancesRepository;
-import org.odk.collect.android.provider.InstanceProviderAPI;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import timber.log.Timber;
@@ -25,6 +25,7 @@ public class FormMapViewModel extends ViewModel {
      * The count of all filled instances of this form, including unmappable ones.
      */
     private int totalInstanceCount;
+    private int selectedSubmissionId = -1;
 
     /**
      * The filled instances of this form that can be mapped.
@@ -55,15 +56,19 @@ public class FormMapViewModel extends ViewModel {
     }
 
     private void initializeFormInstances() {
-        List<Instance> instances = instancesRepository.getAllBy(form.getJrFormId());
+        List<Instance> instances = instancesRepository.getAllByJrFormId(form.getJrFormId());
 
-        // Note: there is currently no way to delete instances from FormMapActivity so this works
-        // because a change in size means a refresh is needed. Compromise because we don't currently
-        // have an easy way to observe database changes.
-        if (mappableFormInstances == null || instances.size() != totalInstanceCount) {
-            totalInstanceCount = instances.size();
-            mappableFormInstances = getMappableFormInstances(instances);
-        }
+        // Ideally we could observe database changes instead of re-computing this every time.
+        totalInstanceCount = instances.size();
+        mappableFormInstances = getMappableFormInstances(instances);
+    }
+
+    public int getSelectedSubmissionId() {
+        return selectedSubmissionId;
+    }
+
+    public void setSelectedSubmissionId(int selectedSubmissionId) {
+        this.selectedSubmissionId = selectedSubmissionId;
     }
 
     /**
@@ -88,8 +93,10 @@ public class FormMapViewModel extends ViewModel {
                             Double lat = coordinates.getDouble(1);
 
                             mappableFormInstances.add(new MappableFormInstance(
-                                    instance.getDatabaseId(),
+                                    instance.getId(),
                                     lat, lon,
+                                    instance.getDisplayName(),
+                                    instance.getLastStatusChangeDate(),
                                     instance.getStatus(),
                                     getClickActionForInstance(instance)
                             ));
@@ -109,13 +116,13 @@ public class FormMapViewModel extends ViewModel {
                 return ClickAction.DELETED_TOAST;
             }
 
-            if ((instance.getStatus().equals(InstanceProviderAPI.STATUS_COMPLETE)
-                    || instance.getStatus().equals(InstanceProviderAPI.STATUS_SUBMITTED)
-                    || instance.getStatus().equals(InstanceProviderAPI.STATUS_SUBMISSION_FAILED))
+            if ((instance.getStatus().equals(Instance.STATUS_COMPLETE)
+                    || instance.getStatus().equals(Instance.STATUS_SUBMITTED)
+                    || instance.getStatus().equals(Instance.STATUS_SUBMISSION_FAILED))
                     && !instance.canEditWhenComplete()) {
                 return ClickAction.NOT_VIEWABLE_TOAST;
-            } else if (instance.getDatabaseId() != null) {
-                if (instance.getStatus().equals(InstanceProviderAPI.STATUS_SUBMITTED)) {
+            } else if (instance.getId() != null) {
+                if (instance.getStatus().equals(Instance.STATUS_SUBMITTED)) {
                     return ClickAction.OPEN_READ_ONLY;
                 }
                 return ClickAction.OPEN_EDIT;
@@ -126,7 +133,7 @@ public class FormMapViewModel extends ViewModel {
     }
 
     public long getDeletedDateOf(long databaseId) {
-        return instancesRepository.getBy(databaseId).getDeletedDate();
+        return instancesRepository.get(databaseId).getDeletedDate();
     }
 
     public enum ClickAction {
@@ -137,13 +144,18 @@ public class FormMapViewModel extends ViewModel {
         private final long databaseId;
         private final Double latitude;
         private final Double longitude;
+        private final String instanceName;
+        private final Long lastStatusChangeDate;
         private final String status;
         private final ClickAction clickAction;
 
-        MappableFormInstance(long databaseId, Double latitude, Double longitude, String status, ClickAction clickAction) {
+        MappableFormInstance(long databaseId, Double latitude, Double longitude, String instanceName,
+                             Long lastStatusChangeDate, String status, ClickAction clickAction) {
             this.databaseId = databaseId;
             this.latitude = latitude;
             this.longitude = longitude;
+            this.instanceName = instanceName;
+            this.lastStatusChangeDate = lastStatusChangeDate;
             this.status = status;
             this.clickAction = clickAction;
         }
@@ -158,6 +170,14 @@ public class FormMapViewModel extends ViewModel {
 
         public Double getLongitude() {
             return longitude;
+        }
+
+        public String getInstanceName() {
+            return instanceName;
+        }
+
+        public Date getLastStatusChangeDate() {
+            return new Date(lastStatusChangeDate);
         }
 
         public String getStatus() {

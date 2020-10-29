@@ -22,7 +22,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CompoundButton;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
 import android.widget.RadioButton;
 
 import androidx.annotation.NonNull;
@@ -34,39 +33,36 @@ import org.javarosa.core.reference.ReferenceManager;
 import org.javarosa.form.api.FormEntryPrompt;
 import org.odk.collect.android.R;
 import org.odk.collect.android.audio.AudioHelper;
-import org.odk.collect.android.widgets.AbstractSelectOneWidget;
+import org.odk.collect.android.formentry.questions.AudioVideoImageTextLabel;
+import org.odk.collect.android.listeners.SelectItemClickListener;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
-public class SelectOneListAdapter extends AbstractSelectListAdapter
-        implements View.OnClickListener, CompoundButton.OnCheckedChangeListener {
-
+public class SelectOneListAdapter extends AbstractSelectListAdapter implements CompoundButton.OnCheckedChangeListener {
+    private final String originallySelectedValue;
     private String selectedValue;
-    private final int playColor;
-    private final Boolean autoAdvance;
     private RadioButton selectedRadioButton;
     private View selectedItem;
+    private SelectItemClickListener listener;
 
     @SuppressWarnings("PMD.ExcessiveParameterList")
-    public SelectOneListAdapter(List<SelectChoice> items, String selectedValue, AbstractSelectOneWidget widget, int numColumns, FormEntryPrompt formEntryPrompt, ReferenceManager referenceManager, int answerFontSize, AudioHelper audioHelper, int playColor, Context context, Boolean autoAdvance) {
-        super(items, widget, numColumns, formEntryPrompt, referenceManager, answerFontSize, audioHelper, context);
+    public SelectOneListAdapter(String selectedValue, SelectItemClickListener listener, Context context,
+                                List<SelectChoice> items, FormEntryPrompt prompt, ReferenceManager referenceManager,
+                                AudioHelper audioHelper, int playColor, int numColumns, boolean noButtonsMode) {
+        super(context, items, prompt, referenceManager, audioHelper, playColor, numColumns, noButtonsMode);
+        this.originallySelectedValue = selectedValue;
         this.selectedValue = selectedValue;
-        this.playColor = playColor;
-        this.autoAdvance = autoAdvance;
+        this.listener = listener;
     }
 
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        if (noButtonsMode) {
-            return new ViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.select_item_layout, null));
-        } else {
-            return new ViewHolder(LayoutInflater.from(parent.getContext()).inflate(R.layout.quick_select_layout, null));
-        }
-    }
-
-    @Override
-    public void onClick(View v) {
-        ((AbstractSelectOneWidget) widget).onClick();
+        return new ViewHolder(noButtonsMode
+                ? new FrameLayout(parent.getContext())
+                : new AudioVideoImageTextLabel(context));
     }
 
     @Override
@@ -74,33 +70,39 @@ public class SelectOneListAdapter extends AbstractSelectListAdapter
         if (isChecked) {
             if (selectedRadioButton != null && buttonView != selectedRadioButton) {
                 selectedRadioButton.setChecked(false);
-                ((AbstractSelectOneWidget) widget).clearNextLevelsOfCascadingSelect();
             }
             selectedRadioButton = (RadioButton) buttonView;
             selectedValue = items.get((int) selectedRadioButton.getTag()).getValue();
         }
     }
 
-    class ViewHolder extends AbstractSelectListAdapter.ViewHolder {
-        ImageView autoAdvanceIcon;
+    public void setSelectItemClickListener(SelectItemClickListener listener) {
+        this.listener = listener;
+    }
 
+    class ViewHolder extends AbstractSelectListAdapter.ViewHolder {
         ViewHolder(View v) {
             super(v);
             if (noButtonsMode) {
                 view = (FrameLayout) v;
             } else {
-                autoAdvanceIcon = v.findViewById(R.id.auto_advance_icon);
-                autoAdvanceIcon.setVisibility(autoAdvance ? View.VISIBLE : View.GONE);
-                audioVideoImageTextLabel = v.findViewById(R.id.mediaLayout);
+                audioVideoImageTextLabel = (AudioVideoImageTextLabel) v;
                 audioVideoImageTextLabel.setPlayTextColor(playColor);
+                audioVideoImageTextLabel.setItemClickListener(listener);
             }
         }
 
         void bind(final int index) {
             super.bind(index);
-            if (noButtonsMode && filteredItems.get(index).getValue().equals(selectedValue)) {
-                view.getChildAt(0).setBackground(ContextCompat.getDrawable(view.getContext(), R.drawable.select_item_border));
-                selectedItem = view.getChildAt(0);
+            if (noButtonsMode) {
+                if (filteredItems.get(index).getValue().equals(selectedValue)) {
+                    view.setBackground(ContextCompat.getDrawable(view.getContext(), R.drawable.select_item_border));
+                    selectedItem = view;
+                } else {
+                    view.setBackground(null);
+                }
+            } else {
+                adjustAudioVideoImageTextLabelForFlexAppearance();
             }
         }
     }
@@ -109,13 +111,13 @@ public class SelectOneListAdapter extends AbstractSelectListAdapter
     RadioButton createButton(final int index, ViewGroup parent) {
         RadioButton radioButton = (RadioButton) LayoutInflater.from(parent.getContext()).inflate(R.layout.select_one_item, null);
         setUpButton(radioButton, index);
-        radioButton.setOnClickListener(this);
         radioButton.setOnCheckedChangeListener(this);
 
-        if (filteredItems.get(index).getValue().equals(selectedValue)) {
+        String value = filteredItems.get(index).getValue();
+
+        if (value != null && value.equals(selectedValue)) {
             radioButton.setChecked(true);
         }
-
         return radioButton;
     }
 
@@ -128,10 +130,19 @@ public class SelectOneListAdapter extends AbstractSelectListAdapter
             view.setBackground(ContextCompat.getDrawable(view.getContext(), R.drawable.select_item_border));
             selectedItem = view;
             selectedValue = selection.getValue();
+            playAudio(selection.choice);
         }
-        ((AbstractSelectOneWidget) widget).onClick();
+        listener.onItemClicked();
     }
 
+    @Override
+    public List<Selection> getSelectedItems() {
+        return getSelectedItem() == null
+                ? new ArrayList<>()
+                : Collections.singletonList(getSelectedItem());
+    }
+
+    @Override
     public void clearAnswer() {
         if (selectedRadioButton != null) {
             selectedRadioButton.setChecked(false);
@@ -141,17 +152,21 @@ public class SelectOneListAdapter extends AbstractSelectListAdapter
             selectedItem.setBackground(null);
             selectedItem = null;
         }
-        ((AbstractSelectOneWidget) widget).clearNextLevelsOfCascadingSelect();
     }
 
-    public SelectChoice getSelectedItem() {
+    public Selection getSelectedItem() {
         if (selectedValue != null) {
             for (SelectChoice item : items) {
                 if (selectedValue.equalsIgnoreCase(item.getValue())) {
-                    return item;
+                    return item.selection();
                 }
             }
         }
         return null;
+    }
+
+    @Override
+    public boolean hasAnswerChanged() {
+        return !Objects.equals(originallySelectedValue, selectedValue);
     }
 }

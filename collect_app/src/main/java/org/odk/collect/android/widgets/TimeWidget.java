@@ -35,7 +35,7 @@ import org.joda.time.DateTime;
 import org.odk.collect.android.R;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.formentry.questions.WidgetViewUtils;
-import org.odk.collect.android.widgets.interfaces.ButtonWidget;
+import org.odk.collect.android.widgets.interfaces.ButtonClickListener;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -52,7 +52,7 @@ import static org.odk.collect.android.formentry.questions.WidgetViewUtils.create
  * @author Carl Hartung (carlhartung@gmail.com)
  */
 @SuppressLint("ViewConstructor")
-public class TimeWidget extends QuestionWidget implements ButtonWidget, TimePickerDialog.OnTimeSetListener {
+public class TimeWidget extends QuestionWidget implements ButtonClickListener, TimePickerDialog.OnTimeSetListener {
     private TimePickerDialog timePickerDialog;
 
     Button timeButton;
@@ -64,8 +64,11 @@ public class TimeWidget extends QuestionWidget implements ButtonWidget, TimePick
     private boolean nullAnswer;
 
     public TimeWidget(Context context, final QuestionDetails prompt) {
-        super(context, prompt);
+        this(context, prompt, false);
+    }
 
+    public TimeWidget(Context context, QuestionDetails prompt, boolean isPartOfDateTimeWidget) {
+        super(context, prompt, !isPartOfDateTimeWidget);
         createTimeButton();
         timeTextView = createAnswerTextView(getContext(), getAnswerFontSize());
         createTimePickerDialog();
@@ -174,9 +177,11 @@ public class TimeWidget extends QuestionWidget implements ButtonWidget, TimePick
     }
 
     @Override
-    public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
-        this.hourOfDay = hourOfDay;
-        this.minuteOfHour = minute;
+    public void onTimeSet(TimePicker timePicker, int hourOfDay, int minute) {
+        timePicker.clearFocus();
+
+        this.hourOfDay = timePicker.getCurrentHour();
+        this.minuteOfHour = timePicker.getCurrentMinute();
 
         setTimeLabel();
         widgetValueChanged();

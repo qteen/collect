@@ -53,7 +53,7 @@ public class FormDefCache {
             Timber.i("Deleting no-longer-wanted temp cache file %s for form %s",
                     tempCacheFile.getName(), formDef.getTitle());
             if (!tempCacheFile.delete()) {
-                Timber.e("Unable to delete " + tempCacheFile.getName());
+                Timber.e("Unable to delete %s", tempCacheFile.getName());
             }
         } else {
             if (tempCacheFile.renameTo(cachedFormDefFile)) {
@@ -109,17 +109,13 @@ public class FormDefCache {
     }
 
     private static FormDef deserializeFormDef(File serializedFormDef) {
-        FileInputStream fis;
         FormDef fd;
-        try {
+        try (DataInputStream dis = new DataInputStream(new FileInputStream(serializedFormDef))) {
             // create new form def
             fd = new FormDef();
-            fis = new FileInputStream(serializedFormDef);
-            DataInputStream dis = new DataInputStream(fis);
 
             // read serialized formdef into new formdef
             fd.readExternal(dis, ExtUtil.defaultPrototypes());
-            dis.close();
         } catch (Exception e) {
             Timber.e(e);
             fd = null;

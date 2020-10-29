@@ -16,11 +16,14 @@ package org.odk.collect.android.geo;
 
 import android.os.Bundle;
 
-import java.util.List;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.StringDef;
 import androidx.fragment.app.FragmentActivity;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.util.List;
 
 /**
  * Interface for a Fragment that renders a map view.  The plan is to have one
@@ -46,6 +49,15 @@ public interface MapFragment {
     MapPoint INITIAL_CENTER = new MapPoint(0, -30);
     float INITIAL_ZOOM = 2;
     float POINT_ZOOM = 16;
+
+    String KEY_REFERENCE_LAYER = "REFERENCE_LAYER";
+
+    @Retention(RetentionPolicy.SOURCE)
+    @StringDef({BOTTOM, CENTER})
+    @interface IconAnchor {}
+
+    String CENTER = "center";
+    String BOTTOM = "bottom";
 
     /**
      * Configures the map according to settings such as styling preferences and
@@ -111,7 +123,7 @@ public interface MapFragment {
      * By default, the marker icon will be R.drawable.ic_map_point.
      * Returns a positive integer, the featureId for the newly added shape.
      */
-    int addMarker(MapPoint point, boolean draggable);
+    int addMarker(MapPoint point, boolean draggable, @IconAnchor String iconAnchor);
 
     /** Sets the icon for a marker. */
     void setMarkerIcon(int featureId, int drawableId);

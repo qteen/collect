@@ -46,7 +46,8 @@ import org.odk.collect.android.fragments.dialogs.MyanmarDatePickerDialog;
 import org.odk.collect.android.fragments.dialogs.PersianDatePickerDialog;
 import org.odk.collect.android.logic.DatePickerDetails;
 import org.odk.collect.android.utilities.DateTimeUtils;
-import org.odk.collect.android.widgets.interfaces.BinaryWidget;
+import org.odk.collect.android.widgets.interfaces.WidgetDataReceiver;
+import org.odk.collect.android.widgets.interfaces.ButtonClickListener;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -66,7 +67,7 @@ import static org.odk.collect.android.fragments.dialogs.CustomDatePickerDialog.D
  * @author Yaw Anokwa (yanokwa@gmail.com)
  */
 @SuppressLint("ViewConstructor")
-public class DateWidget extends QuestionWidget implements DatePickerDialog.OnDateSetListener, BinaryWidget {
+public class DateWidget extends QuestionWidget implements DatePickerDialog.OnDateSetListener, WidgetDataReceiver, ButtonClickListener {
     Button dateButton;
     TextView dateTextView;
 
@@ -77,7 +78,11 @@ public class DateWidget extends QuestionWidget implements DatePickerDialog.OnDat
     private DatePickerDetails datePickerDetails;
 
     public DateWidget(Context context, QuestionDetails prompt) {
-        super(context, prompt);
+        this(context, prompt, false);
+    }
+
+    public DateWidget(Context context, QuestionDetails prompt, boolean isPartOfDateTimeWidget) {
+        super(context, prompt, !isPartOfDateTimeWidget);
         createWidget(context);
     }
 
@@ -126,7 +131,7 @@ public class DateWidget extends QuestionWidget implements DatePickerDialog.OnDat
     }
 
     @Override
-    public void setBinaryData(Object answer) {
+    public void setData(Object answer) {
         if (answer instanceof LocalDateTime) {
             date = (LocalDateTime) answer;
             setDateLabel();
@@ -221,9 +226,7 @@ public class DateWidget extends QuestionWidget implements DatePickerDialog.OnDat
 
     private int getTheme() {
         int theme = 0;
-        // https://github.com/opendatakit/collect/issues/1424
-        // https://github.com/opendatakit/collect/issues/1367
-        if (!isBrokenSamsungDevice() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+        if (!isBrokenSamsungDevice()) {
             theme = themeUtils.getMaterialDialogTheme();
         }
         if (!datePickerDetails.isCalendarMode() || isBrokenSamsungDevice()) {
@@ -236,7 +239,6 @@ public class DateWidget extends QuestionWidget implements DatePickerDialog.OnDat
     // https://stackoverflow.com/questions/28618405/datepicker-crashes-on-my-device-when-clicked-with-personal-app
     private boolean isBrokenSamsungDevice() {
         return Build.MANUFACTURER.equalsIgnoreCase("samsung")
-                && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP
                 && Build.VERSION.SDK_INT <= Build.VERSION_CODES.LOLLIPOP_MR1;
     }
 

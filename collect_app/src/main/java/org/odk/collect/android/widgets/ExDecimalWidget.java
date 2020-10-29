@@ -14,6 +14,7 @@
 
 package org.odk.collect.android.widgets;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -22,11 +23,11 @@ import android.content.Intent;
 import org.javarosa.core.model.data.DecimalData;
 import org.javarosa.core.model.data.IAnswerData;
 import org.odk.collect.android.R;
-import org.odk.collect.android.activities.FormEntryActivity;
 import org.odk.collect.android.external.ExternalAppsUtils;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.widgets.utilities.StringWidgetUtils;
 import org.odk.collect.android.utilities.ToastUtils;
+import org.odk.collect.android.widgets.utilities.WaitingForDataRegistry;
 
 import timber.log.Timber;
 
@@ -38,10 +39,11 @@ import static org.odk.collect.android.utilities.ApplicationConstants.RequestCode
  * <p>
  * See {@link org.odk.collect.android.widgets.ExStringWidget} for usage.
  */
+@SuppressLint("ViewConstructor")
 public class ExDecimalWidget extends ExStringWidget {
 
-    public ExDecimalWidget(Context context, QuestionDetails questionDetails) {
-        super(context, questionDetails);
+    public ExDecimalWidget(Context context, QuestionDetails questionDetails, WaitingForDataRegistry waitingForDataRegistry) {
+        super(context, questionDetails, waitingForDataRegistry);
         StringWidgetUtils.adjustEditTextAnswerToDecimalWidget(answerText, questionDetails.getPrompt());
     }
 
@@ -61,11 +63,8 @@ public class ExDecimalWidget extends ExStringWidget {
         return StringWidgetUtils.getDecimalData(answerText.getText().toString(), getFormEntryPrompt());
     }
 
-    /**
-     * Allows answer to be set externally in {@link FormEntryActivity}.
-     */
     @Override
-    public void setBinaryData(Object answer) {
+    public void setData(Object answer) {
         DecimalData decimalData = ExternalAppsUtils.asDecimalData(answer);
         answerText.setText(decimalData == null ? null : decimalData.getValue().toString());
         widgetValueChanged();

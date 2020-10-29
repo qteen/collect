@@ -21,8 +21,10 @@ import android.net.Uri;
 import android.os.Bundle;
 
 import org.odk.collect.android.R;
-import org.odk.collect.android.application.Collect;
+import org.odk.collect.android.forms.FormsRepository;
 import org.odk.collect.android.fragments.dialogs.SimpleDialog;
+import org.odk.collect.android.injection.DaggerUtils;
+import org.odk.collect.android.instances.InstancesRepository;
 import org.odk.collect.android.listeners.InstanceUploaderListener;
 import org.odk.collect.android.listeners.PermissionListener;
 import org.odk.collect.android.storage.StorageInitializer;
@@ -38,6 +40,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Set;
+
+import javax.inject.Inject;
 
 import timber.log.Timber;
 
@@ -74,18 +78,24 @@ public class InstanceUploaderActivity extends CollectAbstractActivity implements
     private String password;
     private Boolean deleteInstanceAfterUpload;
 
+    @Inject
+    InstancesRepository instancesRepository;
+
+    @Inject
+    FormsRepository formsRepository;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Timber.i("onCreate: %s", savedInstanceState == null ? "creating" : "re-initializing");
+        DaggerUtils.getComponent(this).inject(this);
 
         // This activity is accessed directly externally
-        new PermissionUtils().requestStoragePermissions(this, new PermissionListener() {
+        new PermissionUtils(R.style.Theme_Collect_Dialog_PermissionAlert).requestStoragePermissions(this, new PermissionListener() {
             @Override
             public void granted() {
                 // must be at the beginning of any activity that can be called from an external intent
                 try {
-                    new StorageInitializer().createODKDirs();
+                    new StorageInitializer().createOdkDirsOnStorage();
                 } catch (RuntimeException e) {
                     DialogUtils.showDialog(DialogUtils.createErrorDialog(InstanceUploaderActivity.this,
                             e.getMessage(), EXIT), InstanceUploaderActivity.this);
@@ -173,7 +183,7 @@ public class InstanceUploaderActivity extends CollectAbstractActivity implements
             instanceServerUploaderTask = new InstanceServerUploaderTask();
 
             if (url != null) {
-                instanceServerUploaderTask.setCompleteDestinationUrl(url + Collect.getInstance().getString(R.string.default_odk_submission));
+                instanceServerUploaderTask.setCompleteDestinationUrl(url + getString(R.string.default_odk_submission));
 
                 if (deleteInstanceAfterUpload != null) {
                     instanceServerUploaderTask.setDeleteInstanceAfterSubmission(deleteInstanceAfterUpload);
@@ -191,6 +201,7 @@ public class InstanceUploaderActivity extends CollectAbstractActivity implements
 
             // register this activity with the new uploader task
             instanceServerUploaderTask.setUploaderListener(this);
+            instanceServerUploaderTask.setRepositories(instancesRepository, formsRepository);
             instanceServerUploaderTask.execute(instancesToSend);
         }
     }
@@ -249,7 +260,7 @@ public class InstanceUploaderActivity extends CollectAbstractActivity implements
 
         // If the activity is paused or in the process of pausing, don't show the dialog
         if (!isInstanceStateSaved()) {
-            createUploadInstancesResultDialog(InstanceUploaderUtils.getUploadResultMessage(this, result));
+            createUploadInstancesResultDialog(InstanceUploaderUtils.getUploadResultMessage(instancesRepository, this, result));
         } else {
             // Clean up
             finish();
@@ -364,8 +375,9 @@ public class InstanceUploaderActivity extends CollectAbstractActivity implements
         // TODO: is this really needed here? When would the task not have gotten a server set in
         // init already?
         if (url != null) {
-            instanceServerUploaderTask.setCompleteDestinationUrl(url + Collect.getInstance().getString(R.string.default_odk_submission), false);
+            instanceServerUploaderTask.setCompleteDestinationUrl(url + getString(R.string.default_odk_submission), false);
         }
+        instanceServerUploaderTask.setRepositories(instancesRepository, formsRepository);
         instanceServerUploaderTask.execute(instancesToSend);
     }
 

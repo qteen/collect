@@ -14,6 +14,7 @@
 
 package org.odk.collect.android.widgets;
 
+import android.annotation.SuppressLint;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
@@ -25,10 +26,11 @@ import android.widget.Toast;
 
 import org.javarosa.core.model.data.IAnswerData;
 import org.odk.collect.android.R;
-import org.odk.collect.android.activities.FormEntryActivity;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.formentry.questions.WidgetViewUtils;
-import org.odk.collect.android.widgets.interfaces.BinaryWidget;
+import org.odk.collect.android.widgets.interfaces.WidgetDataReceiver;
+import org.odk.collect.android.widgets.interfaces.ButtonClickListener;
+import org.odk.collect.android.widgets.utilities.WaitingForDataRegistry;
 
 import static org.odk.collect.android.formentry.questions.WidgetViewUtils.createSimpleButton;
 
@@ -115,12 +117,15 @@ import static org.odk.collect.android.formentry.questions.WidgetViewUtils.create
  *
  * @author mitchellsundt@gmail.com
  */
-public class ExPrinterWidget extends QuestionWidget implements BinaryWidget {
+@SuppressLint("ViewConstructor")
+public class ExPrinterWidget extends QuestionWidget implements WidgetDataReceiver, ButtonClickListener {
 
     final Button launchIntentButton;
+    private final WaitingForDataRegistry waitingForDataRegistry;
 
-    public ExPrinterWidget(Context context, QuestionDetails prompt) {
+    public ExPrinterWidget(Context context, QuestionDetails prompt, WaitingForDataRegistry waitingForDataRegistry) {
         super(context, prompt);
+        this.waitingForDataRegistry = waitingForDataRegistry;
 
         String v = getFormEntryPrompt().getSpecialFormQuestionText("buttonText");
         String buttonText = (v != null) ? v : context.getString(R.string.launch_printer);
@@ -181,6 +186,7 @@ public class ExPrinterWidget extends QuestionWidget implements BinaryWidget {
 
     @Override
     public void clearAnswer() {
+        widgetValueChanged();
     }
 
     @Override
@@ -188,11 +194,8 @@ public class ExPrinterWidget extends QuestionWidget implements BinaryWidget {
         return getFormEntryPrompt().getAnswerValue();
     }
 
-    /**
-     * Allows answer to be set externally in {@link FormEntryActivity}.
-     */
     @Override
-    public void setBinaryData(Object answer) {
+    public void setData(Object answer) {
     }
 
     @Override
@@ -227,10 +230,10 @@ public class ExPrinterWidget extends QuestionWidget implements BinaryWidget {
         String v = getFormEntryPrompt().getSpecialFormQuestionText("noPrinterErrorString");
         errorString = (v != null) ? v : getContext().getString(R.string.no_printer);
         try {
-            waitForData();
+            waitingForDataRegistry.waitForData(getFormEntryPrompt().getIndex());
             firePrintingActivity(intentName);
         } catch (ActivityNotFoundException e) {
-            cancelWaitingForData();
+            waitingForDataRegistry.cancelWaitingForData();
             Toast.makeText(getContext(),
                     errorString, Toast.LENGTH_SHORT)
                     .show();

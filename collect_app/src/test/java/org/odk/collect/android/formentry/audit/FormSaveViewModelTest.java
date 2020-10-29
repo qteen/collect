@@ -3,6 +3,9 @@ package org.odk.collect.android.formentry.audit;
 import android.net.Uri;
 
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.SavedStateHandle;
+
+import com.google.common.io.Files;
 
 import org.javarosa.form.api.FormEntryController;
 import org.javarosa.form.api.FormEntryPrompt;
@@ -10,20 +13,25 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InOrder;
+import org.odk.collect.android.analytics.Analytics;
 import org.odk.collect.android.formentry.saving.FormSaveViewModel;
 import org.odk.collect.android.formentry.saving.FormSaver;
-import org.odk.collect.android.logic.FormController;
+import org.odk.collect.android.javarosawrapper.FormController;
 import org.odk.collect.android.support.MockFormEntryPromptBuilder;
 import org.odk.collect.android.tasks.SaveFormToDisk;
 import org.odk.collect.android.tasks.SaveToDiskResult;
+import org.odk.collect.android.utilities.MediaUtils;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 
+import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.is;
 import static org.javarosa.form.api.FormEntryController.EVENT_GROUP;
 import static org.javarosa.form.api.FormEntryController.EVENT_QUESTION;
 import static org.javarosa.form.api.FormEntryController.EVENT_REPEAT;
@@ -33,7 +41,6 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.odk.collect.android.formentry.saving.FormSaveViewModel.SaveResult.State.ALREADY_SAVING;
 import static org.odk.collect.android.formentry.saving.FormSaveViewModel.SaveResult.State.CHANGE_REASON_REQUIRED;
 import static org.odk.collect.android.formentry.saving.FormSaveViewModel.SaveResult.State.CONSTRAINT_ERROR;
 import static org.odk.collect.android.formentry.saving.FormSaveViewModel.SaveResult.State.FINALIZE_ERROR;
@@ -43,11 +50,14 @@ import static org.odk.collect.android.formentry.saving.FormSaveViewModel.SaveRes
 
 @RunWith(RobolectricTestRunner.class)
 public class FormSaveViewModelTest {
-
     private static final long CURRENT_TIME = 123L;
+
+    private final SavedStateHandle savedStateHandle = new SavedStateHandle();
+    private final FakeFormSaver formSaver = new FakeFormSaver();
+
     private AuditEventLogger logger;
     private FormSaveViewModel viewModel;
-    private FormSaver formSaver;
+    private MediaUtils mediaUtils;
     private FormController formController;
 
     @Before
@@ -57,49 +67,58 @@ public class FormSaveViewModelTest {
 
         formController = mock(FormController.class);
         logger = mock(AuditEventLogger.class);
-        formSaver = mock(FormSaver.class);
+        mediaUtils = mock(MediaUtils.class);
+        Analytics analytics = mock(Analytics.class);
 
         when(formController.getAuditEventLogger()).thenReturn(logger);
         when(logger.isChangeReasonRequired()).thenReturn(false);
 
-        viewModel = new FormSaveViewModel(() -> CURRENT_TIME, formSaver);
-        viewModel.setFormController(formController);
+        viewModel = new FormSaveViewModel(savedStateHandle, () -> CURRENT_TIME, formSaver, mediaUtils, analytics);
+        viewModel.formLoaded(formController);
     }
 
     @Test
-    public void saveForm_returnsNewSaveResult_inSavingState() {
-        LiveData<FormSaveViewModel.SaveResult> saveResult1 = viewModel.saveForm(Uri.parse("file://form"), true, "", false);
-        assertThat(saveResult1.getValue().getState(), equalTo(SAVING));
+    public void saveAnswersForScreen_flushesAuditLoggerAfterSaving() throws Exception {
+        viewModel.saveAnswersForScreen(new HashMap<>());
 
-        LiveData<FormSaveViewModel.SaveResult> saveResult2 = viewModel.saveForm(Uri.parse("file://form"), true, "", false);
-        assertThat(saveResult2, not(equalTo(saveResult1)));
+        InOrder verifier = inOrder(formController, logger);
+        verifier.verify(formController).saveAllScreenAnswers(any(), anyBoolean());
+        verifier.verify(logger).flush();
+    }
+
+    @Test
+    public void saveForm_returnsSaveResult_inSavingState() {
+        viewModel.saveForm(Uri.parse("file://form"), true, "", false);
+        FormSaveViewModel.SaveResult saveResult1 = viewModel.getSaveResult().getValue();
+        assertThat(saveResult1.getState(), equalTo(SAVING));
     }
 
     @Test
     public void saveForm_wontRunMultipleSavesAtOnce() {
-        LiveData<FormSaveViewModel.SaveResult> saveResult1 = viewModel.saveForm(Uri.parse("file://form"), true, "", false);
-        LiveData<FormSaveViewModel.SaveResult> saveResult2 = viewModel.saveForm(Uri.parse("file://form"), true, "", false);
-
-        assertThat(saveResult1.getValue().getState(), equalTo(SAVING));
-        assertThat(saveResult2.getValue().getState(), equalTo(ALREADY_SAVING));
-        assertThat(Robolectric.getBackgroundThreadScheduler().size(), equalTo(1));
+        viewModel.saveForm(Uri.parse("file://form"), true, "", false);
+        viewModel.saveForm(Uri.parse("file://form"), true, "", false);
 
         whenFormSaverFinishes(SaveFormToDisk.SAVED);
-        assertThat(saveResult1.getValue().getState(), equalTo(SAVED));
-        assertThat(saveResult2.getValue().getState(), equalTo(ALREADY_SAVING));
+        assertThat(formSaver.numberOfTimesCalled, equalTo(1));
+
+        Robolectric.getBackgroundThreadScheduler().advanceToLastPostedRunnable(); // Run any other queued tasks
+
+        assertThat(formSaver.numberOfTimesCalled, equalTo(1));
     }
 
     @Test
     public void saveForm_whenReasonRequiredToSave_returnsSaveResult_inChangeReasonRequiredState() {
         whenReasonRequiredToSave();
 
-        LiveData<FormSaveViewModel.SaveResult> saveResult = viewModel.saveForm(Uri.parse("file://form"), true, "", false);
+        LiveData<FormSaveViewModel.SaveResult> saveResult = viewModel.getSaveResult();
+        viewModel.saveForm(Uri.parse("file://form"), true, "", false);
         assertThat(saveResult.getValue().getState(), equalTo(CHANGE_REASON_REQUIRED));
     }
 
     @Test
     public void whenFormSaverFinishes_saved_setsSaveResultState_toSaved() {
-        LiveData<FormSaveViewModel.SaveResult> saveResult = viewModel.saveForm(Uri.parse("file://form"), true, "", false);
+        viewModel.saveForm(Uri.parse("file://form"), true, "", false);
+        LiveData<FormSaveViewModel.SaveResult> saveResult = viewModel.getSaveResult();
 
         whenFormSaverFinishes(SaveFormToDisk.SAVED);
         assertThat(saveResult.getValue().getState(), equalTo(SAVED));
@@ -227,7 +246,8 @@ public class FormSaveViewModelTest {
 
     @Test
     public void whenFormSaverFinishes_savedAndExit_setsSaveResultState_toSaved() {
-        LiveData<FormSaveViewModel.SaveResult> saveResult = viewModel.saveForm(Uri.parse("file://form"), false, "", false);
+        viewModel.saveForm(Uri.parse("file://form"), false, "", false);
+        LiveData<FormSaveViewModel.SaveResult> saveResult = viewModel.getSaveResult();
 
         whenFormSaverFinishes(SaveFormToDisk.SAVED_AND_EXIT);
         assertThat(saveResult.getValue().getState(), equalTo(SAVED));
@@ -235,7 +255,8 @@ public class FormSaveViewModelTest {
 
     @Test
     public void whenFormSaverFinishes_saveError_setSaveResultState_toSaveErrorWithMessage() {
-        LiveData<FormSaveViewModel.SaveResult> saveResult = viewModel.saveForm(Uri.parse("file://form"), false, "", false);
+        viewModel.saveForm(Uri.parse("file://form"), false, "", false);
+        LiveData<FormSaveViewModel.SaveResult> saveResult = viewModel.getSaveResult();
 
         whenFormSaverFinishes(SaveFormToDisk.SAVE_ERROR, "OH NO");
         assertThat(saveResult.getValue().getState(), equalTo(SAVE_ERROR));
@@ -255,7 +276,8 @@ public class FormSaveViewModelTest {
 
     @Test
     public void whenFormSaverFinishes_encryptionError_setSaveResultState_toFinalizeErrorWithMessage() {
-        LiveData<FormSaveViewModel.SaveResult> saveResult = viewModel.saveForm(Uri.parse("file://form"), false, "", false);
+        viewModel.saveForm(Uri.parse("file://form"), false, "", false);
+        LiveData<FormSaveViewModel.SaveResult> saveResult = viewModel.getSaveResult();
 
         whenFormSaverFinishes(SaveFormToDisk.ENCRYPTION_ERROR, "OH NO");
         assertThat(saveResult.getValue().getState(), equalTo(FINALIZE_ERROR));
@@ -275,7 +297,8 @@ public class FormSaveViewModelTest {
 
     @Test
     public void whenFormSaverFinishes_answerConstraintViolated_setSaveResultState_toConstraintError() {
-        LiveData<FormSaveViewModel.SaveResult> saveResult = viewModel.saveForm(Uri.parse("file://form"), false, "", false);
+        viewModel.saveForm(Uri.parse("file://form"), false, "", false);
+        LiveData<FormSaveViewModel.SaveResult> saveResult = viewModel.getSaveResult();
 
         whenFormSaverFinishes(FormEntryController.ANSWER_CONSTRAINT_VIOLATED);
         assertThat(saveResult.getValue().getState(), equalTo(CONSTRAINT_ERROR));
@@ -294,7 +317,8 @@ public class FormSaveViewModelTest {
 
     @Test
     public void whenFormSaverFinishes_answerRequiredButEmpty_setSaveResultState_toConstraintError() {
-        LiveData<FormSaveViewModel.SaveResult> saveResult = viewModel.saveForm(Uri.parse("file://form"), false, "", false);
+        viewModel.saveForm(Uri.parse("file://form"), false, "", false);
+        LiveData<FormSaveViewModel.SaveResult> saveResult = viewModel.getSaveResult();
 
         whenFormSaverFinishes(FormEntryController.ANSWER_REQUIRED_BUT_EMPTY);
         assertThat(saveResult.getValue().getState(), equalTo(CONSTRAINT_ERROR));
@@ -312,9 +336,26 @@ public class FormSaveViewModelTest {
     }
 
     @Test
+    public void saveForm_savesCorrectFiles() {
+        viewModel.deleteAnswerFile("index", "blah");
+        viewModel.replaceAnswerFile("index", "blah");
+
+        viewModel.saveForm(Uri.parse("file://form"), true, "", true);
+        whenFormSaverFinishes(SaveFormToDisk.SAVED);
+
+        assertThat(formSaver.tempFiles.contains("blah"), equalTo(true));
+
+        viewModel.saveForm(Uri.parse("file://form"), true, "", true);
+        whenFormSaverFinishes(SaveFormToDisk.SAVED);
+
+        assertThat(formSaver.tempFiles.isEmpty(), equalTo(true));
+    }
+
+    @Test
     public void whenReasonRequiredToSave_saveReason_setsSaveResultState_toSaving() {
         whenReasonRequiredToSave();
-        LiveData<FormSaveViewModel.SaveResult> saveResult = viewModel.saveForm(Uri.parse("file://form"), false, "", false);
+        viewModel.saveForm(Uri.parse("file://form"), false, "", false);
+        LiveData<FormSaveViewModel.SaveResult> saveResult = viewModel.getSaveResult();
 
         viewModel.setReason("blah");
         viewModel.saveReason();
@@ -344,6 +385,79 @@ public class FormSaveViewModelTest {
         assertThat(viewModel.saveReason(), equalTo(false));
     }
 
+    @Test
+    public void resumeFormEntry_clearsSaveResult() {
+        LiveData<FormSaveViewModel.SaveResult> saveResult = viewModel.getSaveResult();
+        viewModel.saveForm(Uri.parse("file://form"), true, "", false);
+        viewModel.resumeFormEntry();
+        assertThat(saveResult.getValue(), equalTo(null));
+    }
+
+    //region QuestionMediaManager implementation
+
+    /**
+     * Covers clearing an answer, adding a new answer and then clearing again - we'd never need
+     * to restore the new answer file in this case.
+     */
+    @Test
+    public void deleteAnswerFile_whenAnswerFileHasAlreadyBeenDeleted_actuallyDeletesNewFile() {
+        viewModel.deleteAnswerFile("index", "blah1");
+        viewModel.deleteAnswerFile("index", "blah2");
+
+        verify(mediaUtils).deleteImageFileFromMediaProvider("blah2");
+    }
+
+    @Test
+    public void deleteAnswerFile_whenAnswerFileHasAlreadyBeenDeleted_onRecreatingViewModel_actuallyDeletesNewFile() {
+        viewModel.deleteAnswerFile("index", "blah1");
+
+        FormSaveViewModel restoredViewModel = new FormSaveViewModel(savedStateHandle, () -> CURRENT_TIME, formSaver, mediaUtils, null);
+        restoredViewModel.formLoaded(formController);
+        restoredViewModel.deleteAnswerFile("index", "blah2");
+
+        verify(mediaUtils).deleteImageFileFromMediaProvider("blah2");
+    }
+
+    /**
+     * Covers replacing an answer, and then replacing an answer again - we'd never need
+     * to restore the first replacement in this case
+     */
+    @Test
+    public void replaceAnswerFile_whenAnswerFileHasAlreadyBeenReplaced_deletesPreviousReplacement() {
+        viewModel.replaceAnswerFile("index", "blah1");
+        viewModel.replaceAnswerFile("index", "blah2");
+
+        verify(mediaUtils).deleteImageFileFromMediaProvider("blah1");
+    }
+
+    @Test
+    public void replaceAnswerFile_whenAnswerFileHasAlreadyBeenReplaced_afterRecreatingViewModel_deletesPreviousReplacement() {
+        viewModel.replaceAnswerFile("index", "blah1");
+
+        FormSaveViewModel restoredViewModel = new FormSaveViewModel(savedStateHandle, () -> CURRENT_TIME, formSaver, mediaUtils, null);
+        restoredViewModel.formLoaded(formController);
+        restoredViewModel.replaceAnswerFile("index", "blah2");
+
+        verify(mediaUtils).deleteImageFileFromMediaProvider("blah1");
+    }
+
+    @Test
+    public void getAnswerFile_returnsFileFromInstance() {
+        File tempDir = Files.createTempDir();
+        when(formController.getInstanceFile()).thenReturn(new File(tempDir + File.separator + "instance.xml"));
+
+        File answerFile = viewModel.getAnswerFile("answer.file");
+        assertThat(answerFile, is(new File(tempDir, "answer.file")));
+    }
+
+    //endregion
+
+    @Test
+    public void ignoreChanges_whenFormControllerNotSet_doesNothing() {
+        FormSaveViewModel viewModel = new FormSaveViewModel(savedStateHandle, () -> CURRENT_TIME, formSaver, mediaUtils, null);
+        viewModel.ignoreChanges(); // Checks nothing explodes
+    }
+
     private void whenReasonRequiredToSave() {
         when(logger.isChangeReasonRequired()).thenReturn(true);
         when(logger.isChangesMade()).thenReturn(true);
@@ -359,7 +473,24 @@ public class FormSaveViewModelTest {
         saveToDiskResult.setSaveResult(result, true);
         saveToDiskResult.setSaveErrorMessage(message);
 
-        when(formSaver.save(any(), any(), anyBoolean(), anyBoolean(), any(), any())).thenReturn(saveToDiskResult);
+        formSaver.saveToDiskResult = saveToDiskResult;
         Robolectric.getBackgroundThreadScheduler().runOneTask();
+    }
+
+    public static class FakeFormSaver implements FormSaver {
+
+        public SaveToDiskResult saveToDiskResult;
+        public ArrayList<String> tempFiles;
+
+        public int numberOfTimesCalled;
+
+        @Override
+        public SaveToDiskResult save(Uri instanceContentURI, FormController formController, MediaUtils mediaUtils, boolean shouldFinalize,
+                                     boolean exitAfter, String updatedSaveName, ProgressListener progressListener, Analytics analytics, ArrayList<String> tempFiles) {
+            this.tempFiles = tempFiles;
+            numberOfTimesCalled++;
+
+            return saveToDiskResult;
+        }
     }
 }

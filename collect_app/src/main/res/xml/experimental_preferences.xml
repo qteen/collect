@@ -1,0 +1,15 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:title="@string/experimental">
+
+    <SwitchPreference
+        android:key="magenta"
+        app:iconSpaceReserved="false"
+        app:title="@string/theme_magenta" />
+
+    <SwitchPreference
+        android:key="external_app_recording"
+        app:iconSpaceReserved="false"
+        app:title="@string/external_app_recording" />
+
+</PreferenceScreen>

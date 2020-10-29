@@ -11,9 +11,9 @@ import org.odk.collect.android.activities.FormEntryActivity;
 import org.odk.collect.android.application.Collect;
 import org.odk.collect.android.dao.helpers.ContentResolverHelper;
 import org.odk.collect.android.exception.GDriveConnectionException;
-import org.odk.collect.android.formentry.ODKView;
 import org.odk.collect.android.fragments.dialogs.ProgressDialogFragment;
-import org.odk.collect.android.logic.FormController;
+import org.odk.collect.android.javarosawrapper.FormController;
+import org.odk.collect.android.network.NetworkStateProvider;
 import org.odk.collect.android.utilities.FileUtils;
 import org.odk.collect.android.utilities.ImageConverter;
 import org.odk.collect.android.utilities.MediaUtils;
@@ -29,9 +29,11 @@ import timber.log.Timber;
 public class MediaLoadingTask extends AsyncTask<Uri, Void, File> {
 
     private WeakReference<FormEntryActivity> formEntryActivity;
+    private WeakReference<NetworkStateProvider> connectivityProvider;
 
-    public MediaLoadingTask(FormEntryActivity formEntryActivity) {
+    public MediaLoadingTask(FormEntryActivity formEntryActivity, NetworkStateProvider connectivityProvider) {
         onAttach(formEntryActivity);
+        this.connectivityProvider = new WeakReference<>(connectivityProvider);
     }
 
     public void onAttach(FormEntryActivity formEntryActivity) {
@@ -40,6 +42,7 @@ public class MediaLoadingTask extends AsyncTask<Uri, Void, File> {
 
     public void onDetach() {
         formEntryActivity = null;
+        connectivityProvider = null;
     }
 
     @Override
@@ -53,10 +56,14 @@ public class MediaLoadingTask extends AsyncTask<Uri, Void, File> {
             if (instanceFile != null) {
                 String instanceFolder = instanceFile.getParent();
                 String extension = ContentResolverHelper.getFileExtensionFromUri(formEntryActivity.get(), uris[0]);
-                String destMediaPath = instanceFolder + File.separator + System.currentTimeMillis() + extension;
+                String destMediaPath = instanceFolder
+                        + File.separator
+                        + System.currentTimeMillis()
+                        + "."
+                        + extension;
 
                 try {
-                    File chosenFile = MediaUtils.getFileFromUri(formEntryActivity.get(), uris[0], MediaStore.Images.Media.DATA);
+                    File chosenFile = MediaUtils.getFileFromUri(formEntryActivity.get(), uris[0], MediaStore.Images.Media.DATA, connectivityProvider.get());
                     if (chosenFile != null) {
                         final File newFile = new File(destMediaPath);
                         FileUtils.copyFile(chosenFile, newFile);
@@ -90,10 +97,6 @@ public class MediaLoadingTask extends AsyncTask<Uri, Void, File> {
         if (prev != null && !formEntryActivity.get().isInstanceStateSaved()) {
             ((DialogFragment) prev).dismiss();
         }
-
-        ODKView odkView = formEntryActivity.get().getCurrentViewIfODKView();
-        if (odkView != null) {
-            odkView.setBinaryData(result);
-        }
+        formEntryActivity.get().setBinaryWidgetData(result);
     }
 }

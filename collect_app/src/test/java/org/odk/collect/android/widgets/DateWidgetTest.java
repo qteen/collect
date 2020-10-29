@@ -50,10 +50,9 @@ public class DateWidgetTest extends GeneralDateTimeWidgetTest<DateWidget, DateDa
 
     @Test
     public void setData() {
-        DateWidget widget = getWidget();
+        DateWidget widget = getSpyWidget();
         LocalDateTime date = new LocalDateTime().withYear(2010).withMonthOfYear(5).withDayOfMonth(12);
-        widget.setBinaryData(date);
-        assertFalse(widget.isWaitingForData());
+        widget.setData(date);
         assertFalse(widget.isNullAnswer);
         assertEquals(widget.getAnswer().getDisplayText(), new DateData(date.toDate()).getDisplayText());
     }
@@ -62,6 +61,6 @@ public class DateWidgetTest extends GeneralDateTimeWidgetTest<DateWidget, DateDa
     public void usingReadOnlyOptionShouldMakeAllClickableElementsDisabled() {
         when(formEntryPrompt.isReadOnly()).thenReturn(true);
 
-        assertThat(getWidget().dateButton.getVisibility(), is(View.GONE));
+        assertThat(getSpyWidget().dateButton.getVisibility(), is(View.GONE));
     }
 }

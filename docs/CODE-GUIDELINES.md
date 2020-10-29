@@ -44,14 +44,8 @@ Follow these naming conventions in Android XML files:
   ```
 
 ## UI components style guidelines
-Ensure that the added UI components are compatible with both light and dark themes.
-Follow the below points to get the color for coloring the UI components like text and icons instead of directly using color values (eg. #000000 or R.color.color_name).
 
-UI Component | Java | Xml _(layouts, drawables, vectors)_:
---- | --- | ---
-text color | themeUtils.getPrimaryTextColor() | ?primaryTextColor
-accent color | themeUtils.getAccentColor() | ?colorAccent
-icon color | themeUtils.getIconColor() | ?iconColor
+Ensure that the added UI components are compatible with both light and dark themes by using theme attributes for coloring the UI components instead of directly using color values (eg. #000000 or R.color.color_name). In XML these should come from the Material Theme attributes documented [here](https://material.io/develop/android/theming/color/). If you need to set colors in Java code there is a `ThemeUtils` helper class that will let you fetch these attributes.
 
 ## Custom view guidelines
 
@@ -64,7 +58,7 @@ When creating or refactoring views, keep in mind our vision of an "ideal" view:
 - Views that render more than one kind of data (and that have more than one setter) might benefit from a `render` method that encapsulates all the logic around displaying the state of a view.
 
 ## Strings
-Always use [string resources](https://developer.android.com/guide/topics/resources/string-resource.html) instead of literal strings. This ensures wording consistency across the project and also enables full translation of the app. Only make changes to the base `res/values/strings.xml` English file and not to the other language files. The translated files are generated from [Transifex](https://www.transifex.com/opendatakit/collect/) where translations can be submitted by the community. Names of software packages or other untranslatable strings should be placed in `res/values/untranslated.xml`.
+Always use [string resources](https://developer.android.com/guide/topics/resources/string-resource.html) instead of literal strings. This ensures wording consistency across the project and also enables full translation of the app. Only make changes to the base `res/values/strings.xml` English file (in the `strings` module) and not to the other language files. The translated files are generated from [Transifex](https://www.transifex.com/getodk/collect/) where translations can be submitted by the community. Names of software packages or other untranslatable strings should be placed in `res/values/untranslated.xml`.
 
 Strings that represent very rare failure cases or that are meant more for ODK developers to use for troubleshooting rather than directly for users may be written as literal strings. This reduces the burden on translators and makes it easier for developers to troubleshoot edge cases without having to look up translations.
 
@@ -78,10 +72,10 @@ While it's important to read the Dagger [documentation](https://google.github.io
 
 ### Providing dependencies
 
-To declare a new dependency that objects can inject add a `@Provider` method to the `AppDepedencyModule`:
+To declare a new dependency that objects can inject add a `@Provides` method to the `AppDependencyModule`:
 
 ```java
-@Provider
+@Provides
 public MyDependency providesMyDependency() {
     return MyDependency();
 }
@@ -118,9 +112,9 @@ For Fragment objects you should hook into the `onAttach` lifecycle method instea
 
 ```java
 @Override
-public void onAttach(Activity activity) {
-    super.onAttach(activity);
-    DaggerUtils.getComponent(activity).inject(this);
+public void onAttach(Context context) {
+    super.onAttach(context);
+    DaggerUtils.getComponent(context).inject(this);
 }
 ```
 

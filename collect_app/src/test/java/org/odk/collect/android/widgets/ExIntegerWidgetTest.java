@@ -6,6 +6,7 @@ import org.javarosa.core.model.data.IntegerData;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.junit.Test;
 import org.odk.collect.android.widgets.base.GeneralExStringWidgetTest;
+import org.odk.collect.android.widgets.support.FakeWaitingForDataRegistry;
 
 import static junit.framework.TestCase.assertEquals;
 import static org.mockito.Mockito.when;
@@ -20,7 +21,7 @@ public class ExIntegerWidgetTest extends GeneralExStringWidgetTest<ExIntegerWidg
     @NonNull
     @Override
     public ExIntegerWidget createWidget() {
-        return new ExIntegerWidget(activity, new QuestionDetails(formEntryPrompt, "formAnalyticsID"));
+        return new ExIntegerWidget(activity, new QuestionDetails(formEntryPrompt, "formAnalyticsID"), new FakeWaitingForDataRegistry());
     }
 
     @NonNull
@@ -41,14 +42,14 @@ public class ExIntegerWidgetTest extends GeneralExStringWidgetTest<ExIntegerWidg
 
     @Test
     public void digitsAboveLimitOfNineShouldBeTruncatedFromRight() {
-        getActualWidget().answerText.setText("123456789123");
-        assertEquals("123456789", getActualWidget().getAnswerText());
+        getWidget().answerText.setText("123456789123");
+        assertEquals("123456789", getWidget().getAnswerText());
     }
 
     @Test
     public void separatorsShouldBeAddedWhenEnabled() {
         when(formEntryPrompt.getAppearanceHint()).thenReturn(THOUSANDS_SEP);
-        getActualWidget().answerText.setText("123456789");
-        assertEquals("123,456,789", getActualWidget().answerText.getText().toString());
+        getWidget().answerText.setText("123456789");
+        assertEquals("123,456,789", getWidget().answerText.getText().toString());
     }
 }

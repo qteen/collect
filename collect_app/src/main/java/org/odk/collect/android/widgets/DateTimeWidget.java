@@ -23,7 +23,8 @@ import org.javarosa.core.model.data.IAnswerData;
 import org.joda.time.LocalDateTime;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.listeners.WidgetValueChangedListener;
-import org.odk.collect.android.widgets.interfaces.BinaryWidget;
+import org.odk.collect.android.widgets.interfaces.WidgetDataReceiver;
+import org.odk.collect.android.widgets.interfaces.ButtonClickListener;
 
 /**
  * Displays a DatePicker widget. DateWidget handles leap years and does not allow dates that do not
@@ -34,7 +35,7 @@ import org.odk.collect.android.widgets.interfaces.BinaryWidget;
  */
 
 @SuppressLint("ViewConstructor")
-public class DateTimeWidget extends QuestionWidget implements BinaryWidget, WidgetValueChangedListener {
+public class DateTimeWidget extends QuestionWidget implements WidgetDataReceiver, WidgetValueChangedListener, ButtonClickListener {
 
     DateWidget dateWidget;
     TimeWidget timeWidget;
@@ -42,8 +43,8 @@ public class DateTimeWidget extends QuestionWidget implements BinaryWidget, Widg
     public DateTimeWidget(Context context, QuestionDetails prompt) {
         super(context, prompt);
 
-        dateWidget = new DateWidget(context, prompt);
-        timeWidget = new TimeWidget(context, prompt);
+        dateWidget = new DateWidget(context, prompt, true);
+        timeWidget = new TimeWidget(context, prompt, true);
 
         dateWidget.getAudioVideoImageTextLabel().getLabelTextView().setVisibility(GONE);
         dateWidget.getHelpTextLayout().setVisibility(GONE);
@@ -117,8 +118,8 @@ public class DateTimeWidget extends QuestionWidget implements BinaryWidget, Widg
     }
 
     @Override
-    public void setBinaryData(Object answer) {
-        dateWidget.setBinaryData(answer);
+    public void setData(Object answer) {
+        dateWidget.setData(answer);
     }
 
     public DateWidget getDateWidget() {

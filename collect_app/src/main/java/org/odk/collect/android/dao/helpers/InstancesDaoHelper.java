@@ -20,10 +20,9 @@ import android.net.Uri;
 import org.odk.collect.android.application.Collect;
 import org.odk.collect.android.dao.InstancesDao;
 import org.odk.collect.android.instances.Instance;
-import org.odk.collect.android.logic.FormController;
+import org.odk.collect.android.javarosawrapper.FormController;
 import org.odk.collect.android.preferences.GeneralKeys;
 import org.odk.collect.android.preferences.GeneralSharedPreferences;
-import org.odk.collect.android.provider.InstanceProviderAPI;
 import org.odk.collect.android.provider.InstanceProviderAPI.InstanceColumns;
 
 import timber.log.Timber;
@@ -67,7 +66,7 @@ public final class InstancesDaoHelper {
                     c.moveToFirst();
                     int columnIndex = c.getColumnIndex(InstanceColumns.STATUS);
                     String status = c.getString(columnIndex);
-                    if (InstanceProviderAPI.STATUS_COMPLETE.equals(status)) {
+                    if (Instance.STATUS_COMPLETE.equals(status)) {
                         complete = true;
                     }
                 }
