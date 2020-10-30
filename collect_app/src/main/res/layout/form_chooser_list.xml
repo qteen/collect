@@ -14,21 +14,22 @@ License for the specific language governing permissions and limitations under
 the License.
 -->
 <RelativeLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent">
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
 
-    <include layout="@layout/app_bar_layout"/>
+    <include layout="@layout/app_bar_layout_no_logo" />
 
     <LinearLayout
-            android:id="@+id/llParent"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_below="@id/appBarLayout"
-            android:orientation="vertical">
+        android:id="@+id/llParent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/progressBar"
+        android:layout_above="@id/bottom_nav"
+        android:orientation="vertical">
 
         <ListView
-                android:id="@id/android:list"
+                android:id="@android:id/list"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
@@ -45,4 +46,5 @@ the License.
 
     </LinearLayout>
 
+    <include layout="@layout/bottom_navbar_layout"/>
 </RelativeLayout>

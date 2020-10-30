@@ -154,6 +154,9 @@ public class FormDownloadListActivity extends FormListActivity implements FormLi
         setContentView(R.layout.form_download_list);
         setTitle(getString(R.string.get_forms));
 
+        initBottomNav();
+        bottomNav.getMenu().getItem(MENU_NAV_GET_INDEX).setChecked(true);
+
         viewModel = new ViewModelProvider(this, new FormDownloadListViewModel.Factory(analytics))
                 .get(FormDownloadListViewModel.class);
 

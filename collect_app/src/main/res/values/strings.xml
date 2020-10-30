@@ -1,1 +1,7 @@
-<resources></resources>
+<resources>
+    <string name="new_entry">New</string>
+    <string name="edit_entry">Edit</string>
+    <string name="view_sent">Sent</string>
+    <string name="send_entry">Send</string>
+    <string name="get_form">Get</string>
+</resources>

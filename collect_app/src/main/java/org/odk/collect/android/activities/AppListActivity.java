@@ -16,6 +16,8 @@
 
 package org.odk.collect.android.activities;
 
+import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -30,13 +32,18 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 
 import org.odk.collect.android.R;
 import org.odk.collect.android.adapters.SortDialogAdapter;
 import org.odk.collect.android.application.Collect;
+import org.odk.collect.android.configure.qr.QRCodeTabsActivity;
 import org.odk.collect.android.listeners.RecyclerViewClickListener;
+import org.odk.collect.android.preferences.AdminPasswordDialogFragment;
+import org.odk.collect.android.preferences.PreferencesActivity;
 import org.odk.collect.android.provider.InstanceProviderAPI.InstanceColumns;
+import org.odk.collect.android.utilities.ApplicationConstants;
 import org.odk.collect.android.utilities.MultiClickGuard;
 import org.odk.collect.android.utilities.SnackbarUtils;
 
@@ -55,6 +62,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import timber.log.Timber;
 
 import static org.odk.collect.android.utilities.ApplicationConstants.SortingOrder.BY_NAME_ASC;
+import static org.odk.collect.android.utilities.DialogUtils.showIfNotShowing;
 
 abstract class AppListActivity extends CollectAbstractActivity {
 
@@ -63,6 +71,12 @@ abstract class AppListActivity extends CollectAbstractActivity {
     private static final String IS_SEARCH_BOX_SHOWN = "isSearchBoxShown";
     private static final String IS_BOTTOM_DIALOG_SHOWN = "isBottomDialogShown";
     private static final String SEARCH_TEXT = "searchText";
+
+    protected static int MENU_NAV_NEW_INDEX = 0;
+    protected static int MENU_NAV_EDIT_INDEX = 1;
+    protected static int MENU_NAV_SEND_INDEX = 2;
+    protected static int MENU_NAV_SENT_INDEX = 3;
+    protected static int MENU_NAV_GET_INDEX = 4;
 
     protected CursorAdapter listAdapter;
     protected LinkedHashSet<Long> selectedInstances = new LinkedHashSet<>();
@@ -82,6 +96,51 @@ abstract class AppListActivity extends CollectAbstractActivity {
 
     private boolean canHideProgressBar;
     private boolean progressBarVisible;
+
+    protected BottomNavigationView bottomNav;
+
+    protected void initBottomNav() {
+        bottomNav = findViewById(R.id.bottom_nav);
+        bottomNav.setOnNavigationItemSelectedListener(item -> {
+            item.setChecked(false);
+            Intent i = null;
+            switch (item.getItemId()) {
+                case R.id.navigation_new:
+                    i = new Intent(getApplicationContext(),
+                            FillBlankFormActivity.class);
+                    i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(i);
+                    break;
+                case R.id.navigation_edit:
+                    i = new Intent(getApplicationContext(), InstanceChooserList.class);
+                    i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    i.putExtra(ApplicationConstants.BundleKeys.FORM_MODE,
+                            ApplicationConstants.FormModes.EDIT_SAVED);
+                    startActivity(i);
+                    break;
+                case R.id.navigation_send:
+                    i = new Intent(getApplicationContext(),
+                            InstanceUploaderListActivity.class);
+                    i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(i);
+                    break;
+                case R.id.navigation_sent:
+                    i = new Intent(getApplicationContext(), InstanceChooserList.class);
+                    i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    i.putExtra(ApplicationConstants.BundleKeys.FORM_MODE,
+                            ApplicationConstants.FormModes.VIEW_SENT);
+                    startActivity(i);
+                    break;
+                case R.id.navigation_get:
+                    i = new Intent(getApplicationContext(),
+                            FormDownloadListActivity.class);
+                    i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(i);
+                    break;
+            }
+            return true;
+        });
+    }
 
     // toggles to all checked or all unchecked
     // returns:
@@ -232,6 +291,15 @@ abstract class AppListActivity extends CollectAbstractActivity {
                 bottomSheetDialog.show();
                 isBottomDialogShown = true;
                 return true;
+            case R.id.menu_configure_qr_code:
+                startActivity(new Intent(this, QRCodeTabsActivity.class));
+                return true;
+//            case R.id.menu_about:
+//                startActivity(new Intent(this, AboutActivity.class));
+//                return true;
+            case R.id.menu_general_preferences:
+                startActivity(new Intent(this, PreferencesActivity.class));
+                return true;
         }
 
         return super.onOptionsItemSelected(item);
@@ -352,5 +420,12 @@ abstract class AppListActivity extends CollectAbstractActivity {
     protected void showProgressBar() {
         progressBar.setVisibility(View.VISIBLE);
         progressBarVisible = true;
+    }
+
+    @Override
+    public void onBackPressed() {
+        Intent intent = new Intent(this, FillBlankFormActivity.class);
+        startActivity(intent);
+        finish();
     }
 }

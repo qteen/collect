@@ -115,6 +115,9 @@ public class InstanceUploaderListActivity extends InstanceListActivity implement
         setTitle(getString(R.string.send_data));
         setContentView(R.layout.instance_uploader_list);
 
+        initBottomNav();
+        bottomNav.getMenu().getItem(MENU_NAV_SEND_INDEX).setChecked(true);
+
         ButterKnife.bind(this);
 
         if (savedInstanceState != null) {
@@ -297,9 +300,6 @@ public class InstanceUploaderListActivity extends InstanceListActivity implement
         }
 
         switch (item.getItemId()) {
-            case R.id.menu_preferences:
-                createPreferencesMenu();
-                return true;
             case R.id.menu_change_view:
                 showSentAndUnsentChoices();
                 return true;

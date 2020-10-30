@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/navigation_new"
+        android:icon="@drawable/n_fill_blank"
+        android:title="@string/new_entry" />
+    <item
+        android:id="@+id/navigation_edit"
+        android:icon="@drawable/n_edit"
+        android:title="@string/edit_entry" />
+    <item
+        android:id="@+id/navigation_send"
+        android:icon="@drawable/n_send"
+        android:title="@string/send_entry" />
+    <item
+        android:id="@+id/navigation_sent"
+        android:icon="@drawable/n_view_sent"
+        android:title="@string/view_sent" />
+    <item
+        android:id="@+id/navigation_get"
+        android:icon="@drawable/n_get_form"
+        android:title="@string/get_form" />
+</menu>

@@ -21,16 +21,20 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.loader.app.LoaderManager;
 import androidx.loader.content.Loader;
+
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import org.odk.collect.android.R;
 import org.odk.collect.android.adapters.FormListAdapter;
@@ -81,6 +85,7 @@ public class FillBlankFormActivity extends FormListActivity implements
     BlankFormsListViewModel.Factory blankFormsListViewModelFactory;
 
     BlankFormListMenuDelegate menuDelegate;
+    private boolean is_exit;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -89,6 +94,10 @@ public class FillBlankFormActivity extends FormListActivity implements
         DaggerUtils.getComponent(this).inject(this);
 
         setTitle(getString(R.string.enter_data));
+        is_exit = false;
+
+        initBottomNav();
+        bottomNav.getMenu().getItem(MENU_NAV_NEW_INDEX).setChecked(true);
 
         BlankFormsListViewModel blankFormsListViewModel = new ViewModelProvider(this, blankFormsListViewModelFactory).get(BlankFormsListViewModel.class);
         blankFormsListViewModel.isSyncing().observe(this, syncing -> {
@@ -207,7 +216,6 @@ public class FillBlankFormActivity extends FormListActivity implements
                 startActivity(intent);
             }
 
-            finish();
         }
     }
 
@@ -333,5 +341,22 @@ public class FillBlankFormActivity extends FormListActivity implements
 
     private boolean hideOldFormVersions() {
         return GeneralSharedPreferences.getInstance().getBoolean(GeneralKeys.KEY_HIDE_OLD_FORM_VERSIONS, false);
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (is_exit) {
+            finish(); // finish activity
+        } else {
+            Toast.makeText(this, "Tekan Kembali lagi untuk Keluar.",
+                    Toast.LENGTH_SHORT).show();
+            is_exit = true;
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    is_exit = false;
+                }
+            }, 3 * 1000);
+        }
     }
 }

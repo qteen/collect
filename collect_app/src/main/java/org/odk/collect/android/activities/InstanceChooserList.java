@@ -70,10 +70,12 @@ public class InstanceChooserList extends InstanceListActivity implements
         super.onCreate(savedInstanceState);
         setContentView(R.layout.form_chooser_list);
 
+        initBottomNav();
+
         String formMode = getIntent().getStringExtra(ApplicationConstants.BundleKeys.FORM_MODE);
         if (formMode == null || ApplicationConstants.FormModes.EDIT_SAVED.equalsIgnoreCase(formMode)) {
-
             setTitle(getString(R.string.review_data));
+            bottomNav.getMenu().getItem(MENU_NAV_EDIT_INDEX).setChecked(true);
             editMode = true;
             sortingOptions = new int[] {
                     R.string.sort_by_name_asc, R.string.sort_by_name_desc,
@@ -82,7 +84,7 @@ public class InstanceChooserList extends InstanceListActivity implements
             };
         } else {
             setTitle(getString(R.string.view_sent_forms));
-
+            bottomNav.getMenu().getItem(MENU_NAV_SENT_INDEX).setChecked(true);
             sortingOptions = new int[] {
                     R.string.sort_by_name_asc, R.string.sort_by_name_desc,
                     R.string.sort_by_date_asc, R.string.sort_by_date_desc
