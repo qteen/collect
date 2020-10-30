@@ -76,6 +76,7 @@ import org.odk.collect.android.R;
 import org.odk.collect.android.analytics.Analytics;
 import org.odk.collect.android.application.Collect;
 import org.odk.collect.android.audio.AudioControllerView;
+import org.odk.collect.android.listeners.SkipAllRequiredListener;
 import org.odk.collect.android.widgets.utilities.ViewModelAudioPlayer;
 import org.odk.collect.android.backgroundwork.FormSubmitManager;
 import org.odk.collect.android.dao.FormsDao;
@@ -205,7 +206,7 @@ import static org.odk.collect.android.utilities.ToastUtils.showShortToast;
 @SuppressWarnings("PMD.CouplingBetweenObjects")
 public class FormEntryActivity extends CollectAbstractActivity implements AnimationListener,
         FormLoaderListener, AdvanceToNextListener, SwipeHandler.OnSwipeListener,
-        SavePointListener, NumberPickerDialog.NumberPickerListener,
+        SavePointListener, NumberPickerDialog.NumberPickerListener, SkipAllRequiredListener,
         CustomDatePickerDialog.CustomDatePickerDialogListener, RankingWidgetDialog.RankingListener,
         SaveFormIndexTask.SaveFormIndexListener, WidgetValueChangedListener,
         ScreenContext, FormLoadingDialogFragment.FormLoadingDialogFragmentListener,
@@ -299,6 +300,11 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
         swipeHandler.setAllowSwiping(doSwipe);
     }
 
+    @Override
+    public void skip() {
+        skipAllRequired = true;
+    }
+
     enum AnimationType {
         LEFT, RIGHT, FADE
     }
@@ -306,6 +312,8 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
     private boolean showNavigationButtons;
 
     private Bundle state;
+
+    private boolean skipAllRequired;
 
     @Inject
     RxEventBus eventBus;
@@ -354,6 +362,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
         setupViewModels();
         setContentView(R.layout.form_entry);
         swipeHandler = new SwipeHandler(this);
+        skipAllRequired = false;
 
         compositeDisposable.add(eventBus
                 .register(ReadPhoneStatePermissionRxEvent.class)
@@ -1565,7 +1574,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
                     .get(GeneralKeys.KEY_CONSTRAINT_BEHAVIOR);
 
             // if constraint behavior says we should validate on swipe, do so
-            if (constraintBehavior.equals(GeneralKeys.CONSTRAINT_BEHAVIOR_ON_SWIPE)) {
+            if (constraintBehavior.equals(GeneralKeys.CONSTRAINT_BEHAVIOR_ON_SWIPE) && !skipAllRequired) {
                 if (!saveAnswersForCurrentScreen(EVALUATE_CONSTRAINTS)) {
                     // A constraint was violated so a dialog should be showing.
                     swipeHandler.setBeenSwiped(false);
@@ -2186,13 +2195,13 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
                     t.cancel(true);
                     t.destroy();
                     // there is no formController -- fire MainMenu activity?
-                    startActivity(new Intent(this, MainMenuActivity.class));
+                    startActivity(new Intent(this, FillBlankFormActivity.class));
                 }
             }
         } else {
             if (formController == null) {
                 // there is no formController -- fire MainMenu activity?
-                startActivity(new Intent(this, MainMenuActivity.class));
+                startActivity(new Intent(this, FillBlankFormActivity.class));
                 finish();
                 return;
             }

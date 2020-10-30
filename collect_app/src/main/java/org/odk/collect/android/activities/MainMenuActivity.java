@@ -281,7 +281,7 @@ public class MainMenuActivity extends CollectAbstractActivity implements AdminPa
 
         setButtonsVisibility();
         invalidateOptionsMenu();
-        setUpStorageMigrationBanner();
+//        setUpStorageMigrationBanner();
     }
 
     private void setButtonsVisibility() {
@@ -342,22 +342,22 @@ public class MainMenuActivity extends CollectAbstractActivity implements AdminPa
             case R.id.menu_general_preferences:
                 startActivity(new Intent(this, PreferencesActivity.class));
                 return true;
-            case R.id.menu_admin_preferences:
-                if (adminPasswordProvider.isAdminPasswordSet()) {
-                    Bundle args = new Bundle();
-                    args.putSerializable(AdminPasswordDialogFragment.ARG_ACTION, Action.ADMIN_SETTINGS);
-                    showIfNotShowing(AdminPasswordDialogFragment.class, args, getSupportFragmentManager());
-                } else {
-                    startActivity(new Intent(this, AdminPreferencesActivity.class));
-                }
-                return true;
+//            case R.id.menu_admin_preferences:
+//                if (adminPasswordProvider.isAdminPasswordSet()) {
+//                    Bundle args = new Bundle();
+//                    args.putSerializable(AdminPasswordDialogFragment.ARG_ACTION, Action.ADMIN_SETTINGS);
+//                    showIfNotShowing(AdminPasswordDialogFragment.class, args, getSupportFragmentManager());
+//                } else {
+//                    startActivity(new Intent(this, AdminPreferencesActivity.class));
+//                }
+//                return true;
         }
         return super.onOptionsItemSelected(item);
     }
 
     private void initToolbar() {
         Toolbar toolbar = findViewById(R.id.toolbar);
-        setTitle(String.format("%s %s", getString(R.string.app_name), viewModel.getVersion()));
+        setTitle(String.format("%s", viewModel.getVersion()));
         setSupportActionBar(toolbar);
     }
 

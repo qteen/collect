@@ -6,6 +6,7 @@ import com.google.zxing.integration.android.IntentIntegrator;
 import com.journeyapps.barcodescanner.BarcodeResult;
 
 import org.odk.collect.android.R;
+import org.odk.collect.android.activities.FillBlankFormActivity;
 import org.odk.collect.android.activities.MainMenuActivity;
 import org.odk.collect.android.analytics.Analytics;
 import org.odk.collect.android.analytics.AnalyticsEvents;
@@ -48,7 +49,7 @@ public class QRCodeScannerFragment extends BarCodeScannerFragment {
         if (importSuccess) {
             ToastUtils.showLongToast(getString(R.string.successfully_imported_settings));
             analytics.logEvent(AnalyticsEvents.SETTINGS_IMPORT_QR, "Success", settingsHash);
-            startActivityAndCloseAllOthers(requireActivity(), MainMenuActivity.class);
+            startActivityAndCloseAllOthers(requireActivity(), FillBlankFormActivity.class);
         } else {
             ToastUtils.showLongToast(getString(R.string.invalid_qrcode));
             analytics.logEvent(AnalyticsEvents.SETTINGS_IMPORT_QR, "No valid settings", settingsHash);

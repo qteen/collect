@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.widget.Toast;
 
 import org.odk.collect.android.R;
+import org.odk.collect.android.activities.FillBlankFormActivity;
 import org.odk.collect.android.activities.MainMenuActivity;
 import org.odk.collect.android.analytics.Analytics;
 import org.odk.collect.android.analytics.AnalyticsEvents;
@@ -56,7 +57,7 @@ public class QRCodeActivityResultDelegate implements ActivityResultDelegate {
                         if (settingsImporter.fromJSON(response)) {
                             showToast(R.string.successfully_imported_settings);
                             analytics.logEvent(AnalyticsEvents.SETTINGS_IMPORT_QR_IMAGE, "Success", responseHash);
-                            startActivityAndCloseAllOthers(activity, MainMenuActivity.class);
+                            startActivityAndCloseAllOthers(activity, FillBlankFormActivity.class);
                         } else {
                             showToast(R.string.invalid_qrcode);
                             analytics.logEvent(AnalyticsEvents.SETTINGS_IMPORT_QR_IMAGE, "No valid settings", responseHash);

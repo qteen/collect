@@ -16,7 +16,7 @@
             android:minHeight="200sp"
             android:id="@+id/imageView2"
             android:layout_gravity="center_horizontal"
-            android:src="@drawable/moda_s_logo2"
+            android:src="@drawable/moda_s_logo"
             />
         <ImageView
             android:layout_gravity="bottom|center_horizontal"
@@ -73,7 +73,7 @@
             android:layout_width="fill_parent"
             android:layout_height="wrap_content"
             android:text="Masuk"
-            android:id="@+id/button"/>
+            android:id="@+id/login_button"/>
 
     </LinearLayout>
     <LinearLayout
