@@ -1,1 +1,10 @@
 - menambah logo moda
+- mengganti nama aplikasi
+- mengganti versi aplikasi
+- mengubah logo launcher
+- menambah widget SkipAllRequired dan listenernya
+- menambah fungsi skipAllRequired di FormEntryActivity
+- merubah menu menjadi menggunakan BottomNavigationView
+- refactor semua pemanggilan MainMenuActivity diganti menjadi FillBlankActivity
+- menambah toolbar menu dari MainMenuActivity pada FillBlankActivity
+- splash_screen harus selalu muncul
