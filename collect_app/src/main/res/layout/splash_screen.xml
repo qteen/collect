@@ -4,33 +4,53 @@
     android:layout_height="match_parent"
     android:background="@android:color/transparent"
     android:gravity="center_vertical|center_horizontal"
-    android:orientation="vertical"
+    android:orientation="horizontal"
     android:padding="10dip">
 
     <ImageView
         android:id="@+id/splash"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="72dp"
+        android:layout_height="72dp"
         android:background="@android:color/transparent"
         android:contentDescription="@string/app_name"
         android:gravity="center"
         android:padding="0dip"
-        android:visibility="gone" />
+        android:src="@drawable/moda_s_logo"/>
 
     <LinearLayout
-        android:id="@+id/splash_default"
+        android:orientation="vertical"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical|center_horizontal"
-        android:orientation="horizontal"
-        android:paddingBottom="5dip"
-        android:background="@android:color/transparent">
-
-        <ImageView
-            android:layout_width="wrap_content"
-            android:layout_height="120dp"
-            android:contentDescription="@string/app_name"
-            android:src="@drawable/moda_s_logo"
-            android:background="@color/grey_100_transparant"/>
+        android:gravity="center_vertical|left"
+        android:paddingBottom="5dip">
+        <TextView
+            android:id="@+id/app_name_text"
+            android:text="@string/app_name"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:background="@android:color/transparent"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:paddingLeft="7dip"
+            android:paddingRight="7dip" />
+        <TextView
+            android:id="@+id/power"
+            android:text="@string/attribution_str"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:background="@android:color/transparent"
+            android:textSize="14sp"
+            android:paddingLeft="7dip"
+            android:paddingRight="7dip" />
+        <TextView
+            android:id="@+id/url"
+            android:text="@string/app_url"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent"
+            android:background="@android:color/transparent"
+            android:textSize="14sp"
+            android:paddingLeft="7dip"
+            android:paddingRight="7dip" />
     </LinearLayout>
+
 </LinearLayout>

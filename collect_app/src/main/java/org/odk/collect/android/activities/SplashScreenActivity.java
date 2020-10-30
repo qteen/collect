@@ -52,7 +52,7 @@ import static org.odk.collect.android.preferences.GeneralKeys.KEY_SPLASH_PATH;
 
 public class SplashScreenActivity extends Activity {
 
-    private static final int SPLASH_TIMEOUT = 2000; // milliseconds
+    private static final int SPLASH_TIMEOUT = 10000; // milliseconds
     private static final boolean EXIT = true;
 
     private int imageMaxWidth;
@@ -102,17 +102,18 @@ public class SplashScreenActivity extends Activity {
 
         setContentView(R.layout.splash_screen);
 
-        boolean showSplash = generalSharedPreferences.getBoolean(GeneralKeys.KEY_SHOW_SPLASH, false);
-        String splashPath = (String) generalSharedPreferences.get(KEY_SPLASH_PATH);
+//        boolean showSplash = generalSharedPreferences.getBoolean(GeneralKeys.KEY_SHOW_SPLASH, true);
+//        String splashPath = (String) generalSharedPreferences.get(KEY_SPLASH_PATH);
 
-        if (showSplash) {
-            startSplashScreen(splashPath);
-
-            String splashPathHash = FileUtils.getMd5Hash(new ByteArrayInputStream(splashPath.getBytes()));
-            analytics.logEvent(SHOW_SPLASH_SCREEN, splashPathHash, "");
-        } else {
-            endSplashScreen();
-        }
+//        if (showSplash) {
+//            startSplashScreen(splashPath);
+//
+//            String splashPathHash = FileUtils.getMd5Hash(new ByteArrayInputStream(splashPath.getBytes()));
+//            analytics.logEvent(SHOW_SPLASH_SCREEN, splashPathHash, "");
+//        } else {
+//            endSplashScreen();
+//        }
+        startSplashScreen(null);
     }
 
     private void endSplashScreen() {
@@ -167,15 +168,15 @@ public class SplashScreenActivity extends Activity {
     private void startSplashScreen(String path) {
 
         // add items to the splash screen here. makes things less distracting.
-        ImageView customSplashView = findViewById(R.id.splash);
-        LinearLayout defaultSplashView = findViewById(R.id.splash_default);
-
-        File customSplash = new File(path);
-        if (customSplash.exists()) {
-            customSplashView.setImageBitmap(decodeFile(customSplash));
-            defaultSplashView.setVisibility(View.GONE);
-            customSplashView.setVisibility(View.VISIBLE);
-        }
+//        ImageView customSplashView = findViewById(R.id.splash);
+//        LinearLayout defaultSplashView = findViewById(R.id.splash_default);
+//
+//        File customSplash = new File(path);
+//        if (customSplash.exists()) {
+//            customSplashView.setImageBitmap(decodeFile(customSplash));
+//            defaultSplashView.setVisibility(View.GONE);
+//            customSplashView.setVisibility(View.VISIBLE);
+//        }
 
         new Handler().postDelayed(this::endSplashScreen, SPLASH_TIMEOUT);
     }
