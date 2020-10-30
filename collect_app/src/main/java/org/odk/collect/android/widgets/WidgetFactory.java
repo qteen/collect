@@ -241,7 +241,11 @@ public class WidgetFactory {
                 questionWidget = new RankingWidget(context, questionDetails);
                 break;
             case Constants.CONTROL_TRIGGER:
-                questionWidget = new TriggerWidget(context, questionDetails);
+                if (appearance.startsWith(WidgetAppearanceUtils.SKIP)) {
+                    questionWidget = new TriggerSkipAllRequiredWidget(context, questionDetails);
+                } else {
+                    questionWidget = new TriggerWidget(context, questionDetails);
+                }
                 break;
             case Constants.CONTROL_RANGE:
                 if (appearance.startsWith(WidgetAppearanceUtils.RATING)) {

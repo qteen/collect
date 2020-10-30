@@ -59,6 +59,7 @@ public class WidgetAppearanceUtils {
     public static final String IMAGE_MAP                = "image-map";
     public static final String NO_BUTTONS               = "no-buttons";
     public static final String QUICK                    = "quick";
+    public static final String SKIP                     = "skip";
 
     // Media appearances
     public static final String SIGNATURE                = "signature";
