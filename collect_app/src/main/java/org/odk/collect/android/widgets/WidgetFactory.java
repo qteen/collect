@@ -51,6 +51,7 @@ import org.odk.collect.android.widgets.utilities.ExternalAppRecordingRequester;
 import org.odk.collect.android.widgets.utilities.GetContentAudioFileRequester;
 import org.odk.collect.android.widgets.utilities.InternalRecordingRequester;
 import org.odk.collect.android.widgets.utilities.RecordingRequester;
+import org.odk.collect.android.widgets.utilities.DateTimeWidgetUtils;
 import org.odk.collect.android.widgets.utilities.WaitingForDataRegistry;
 
 import static org.odk.collect.android.analytics.AnalyticsEvents.PROMPT;
@@ -98,13 +99,13 @@ public class WidgetFactory {
             case Constants.CONTROL_INPUT:
                 switch (prompt.getDataType()) {
                     case Constants.DATATYPE_DATE_TIME:
-                        questionWidget = new DateTimeWidget(context, questionDetails);
+                        questionWidget = new DateTimeWidget(context, questionDetails, new DateTimeWidgetUtils());
                         break;
                     case Constants.DATATYPE_DATE:
-                        questionWidget = new DateWidget(context, questionDetails);
+                        questionWidget = new DateWidget(context, questionDetails, new DateTimeWidgetUtils());
                         break;
                     case Constants.DATATYPE_TIME:
-                        questionWidget = new TimeWidget(context, questionDetails);
+                        questionWidget = new TimeWidget(context, questionDetails, new DateTimeWidgetUtils());
                         break;
                     case Constants.DATATYPE_DECIMAL:
                         if (appearance.startsWith(WidgetAppearanceUtils.EX)) {

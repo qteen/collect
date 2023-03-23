@@ -81,6 +81,7 @@ import org.javarosa.form.api.FormEntryCaption;
 import org.javarosa.form.api.FormEntryController;
 import org.javarosa.form.api.FormEntryPrompt;
 import org.jetbrains.annotations.NotNull;
+import org.joda.time.DateTime;
 import org.joda.time.LocalDateTime;
 import org.odk.collect.android.R;
 import org.odk.collect.android.analytics.Analytics;
@@ -90,6 +91,8 @@ import org.odk.collect.android.listeners.SkipAllRequiredListener;
 import org.odk.collect.android.utilities.ClickSpan;
 import org.odk.collect.android.widgets.utilities.ViewModelAudioPlayer;
 import org.odk.collect.android.backgroundwork.FormSubmitManager;
+import org.odk.collect.android.fragments.dialogs.CustomDatePickerDialog;
+import org.odk.collect.android.fragments.dialogs.CustomTimePickerDialog;
 import org.odk.collect.android.dao.FormsDao;
 import org.odk.collect.android.dao.helpers.ContentResolverHelper;
 import org.odk.collect.android.dao.helpers.FormsDaoHelper;
@@ -116,7 +119,6 @@ import org.odk.collect.android.formentry.repeats.DeleteRepeatDialogFragment;
 import org.odk.collect.android.formentry.saving.FormSaveViewModel;
 import org.odk.collect.android.formentry.saving.SaveFormProgressDialogFragment;
 import org.odk.collect.android.fragments.MediaLoadingFragment;
-import org.odk.collect.android.fragments.dialogs.CustomDatePickerDialog;
 import org.odk.collect.android.fragments.dialogs.LocationProvidersDisabledDialog;
 import org.odk.collect.android.fragments.dialogs.NumberPickerDialog;
 import org.odk.collect.android.fragments.dialogs.ProgressDialogFragment;
@@ -218,12 +220,12 @@ import static org.odk.collect.android.utilities.ToastUtils.showShortToast;
 public class FormEntryActivity extends CollectAbstractActivity implements AnimationListener,
         FormLoaderListener, AdvanceToNextListener, SwipeHandler.OnSwipeListener,
         SavePointListener, NumberPickerDialog.NumberPickerListener, SkipAllRequiredListener,
-        CustomDatePickerDialog.CustomDatePickerDialogListener, RankingWidgetDialog.RankingListener,
-        SaveFormIndexTask.SaveFormIndexListener, WidgetValueChangedListener,
-        ScreenContext, FormLoadingDialogFragment.FormLoadingDialogFragmentListener,
+        RankingWidgetDialog.RankingListener, SaveFormIndexTask.SaveFormIndexListener,
+        WidgetValueChangedListener, ScreenContext, FormLoadingDialogFragment.FormLoadingDialogFragmentListener,
         AudioControllerView.SwipableParent, FormIndexAnimationHandler.Listener,
         QuitFormDialogFragment.Listener, DeleteRepeatDialogFragment.DeleteRepeatDialogCallback,
-        SelectMinimalDialog.SelectMinimalDialogListener, ClickSpan.OnClickListener {
+        SelectMinimalDialog.SelectMinimalDialogListener, CustomDatePickerDialog.DateChangeListener,
+        CustomTimePickerDialog.TimeChangeListener {
 
     // Defines for FormEntryActivity
     private static final boolean EXIT = true;
@@ -2762,23 +2764,18 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
     }
 
     @Override
-    public void onDateChanged(LocalDateTime date) {
-        ODKView odkView = getCurrentViewIfODKView();
-        if (odkView != null) {
-            QuestionWidget widgetGettingNewValue = getWidgetWaitingForBinaryData();
-            setBinaryWidgetData(date);
-            widgetValueChanged(widgetGettingNewValue);
-        }
+    public void onDateChanged(LocalDateTime selectedDate) {
+        onDataChanged(selectedDate);
+    }
+
+    @Override
+    public void onTimeChanged(DateTime selectedTime) {
+        onDataChanged(selectedTime);
     }
 
     @Override
     public void onRankingChanged(List<SelectChoice> items) {
-        ODKView odkView = getCurrentViewIfODKView();
-        if (odkView != null) {
-            QuestionWidget widgetGettingNewValue = getWidgetWaitingForBinaryData();
-            setBinaryWidgetData(items);
-            widgetValueChanged(widgetGettingNewValue);
-        }
+        onDataChanged(items);
     }
 
     /*
@@ -2805,6 +2802,15 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
             t.destroy();
         }
         finish();
+    }
+
+    private void onDataChanged(Object data) {
+        ODKView odkView = getCurrentViewIfODKView();
+        if (odkView != null) {
+            QuestionWidget widgetGettingNewValue = getWidgetWaitingForBinaryData();
+            setBinaryWidgetData(data);
+            widgetValueChanged(widgetGettingNewValue);
+        }
     }
 
     /**
@@ -2980,4 +2986,3 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
         return !Objects.equals(mutableQuestionBeforeSave.getAnswerText(), immutableQuestionBeforeSave.getAnswerText());
     }
 }
-
