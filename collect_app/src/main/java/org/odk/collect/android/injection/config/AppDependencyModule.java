@@ -55,10 +55,9 @@ import org.odk.collect.android.formmanagement.matchexactly.SyncStatusRepository;
 import org.odk.collect.android.forms.FormSource;
 import org.odk.collect.android.forms.FormsRepository;
 import org.odk.collect.android.forms.MediaFileRepository;
-import org.odk.collect.android.gdrive.GoogleAccountCredentialGoogleAccountPicker;
-import org.odk.collect.android.gdrive.GoogleAccountPicker;
-import org.odk.collect.android.gdrive.GoogleApiProvider;
 import org.odk.collect.android.geo.MapProvider;
+import org.odk.collect.android.instancemanagement.DataDownloader;
+import org.odk.collect.android.instancemanagement.ServerDataDownloader;
 import org.odk.collect.android.instances.InstancesRepository;
 import org.odk.collect.android.logic.PropertyManager;
 import org.odk.collect.android.metadata.InstallIDProvider;
@@ -172,6 +171,11 @@ public class AppDependencyModule {
     @Provides
     public FormDownloader providesFormDownloader(FormSource formSource, FormsRepository formsRepository, StoragePathProvider storagePathProvider) {
         return new ServerFormDownloader(formSource, formsRepository, new File(storagePathProvider.getDirPath(StorageSubdirectory.CACHE)), storagePathProvider.getDirPath(StorageSubdirectory.FORMS), new FormMetadataParser(ReferenceManager.instance()));
+    }
+
+    @Provides
+    public DataDownloader providesDataDownloader(FormSource formSource, FormsRepository formsRepository, StoragePathProvider storagePathProvider) {
+        return new ServerDataDownloader(formSource, formsRepository, storagePathProvider);
     }
 
     @Provides
@@ -402,8 +406,10 @@ public class AppDependencyModule {
         SharedPreferences generalPrefs = generalSharedPreferences.getSharedPreferences();
         String serverURL = generalPrefs.getString(GeneralKeys.KEY_SERVER_URL, context.getString(R.string.default_server_url));
         String formListPath = generalPrefs.getString(GeneralKeys.KEY_FORMLIST_URL, context.getString(R.string.default_odk_formlist));
+        String submissionListPath = generalPrefs.getString(GeneralKeys.KEY_SUBMISSIONLIST_URL, context.getString(R.string.default_odk_submissionlist));
+        String submissionPath = generalPrefs.getString(GeneralKeys.KEY_DL_SUBMISSION_URL, context.getString(R.string.default_odk_dl_submission));
 
-        return new OpenRosaFormSource(serverURL, formListPath, openRosaHttpInterface, webCredentialsUtils);
+        return new OpenRosaFormSource(serverURL, formListPath, submissionListPath, submissionPath, openRosaHttpInterface, webCredentialsUtils);
     }
 
     @Provides
@@ -449,19 +455,6 @@ public class AppDependencyModule {
     @Provides
     public InstancesRepository providesInstancesRepository() {
         return new DatabaseInstancesRepository();
-    }
-
-    @Provides
-    public GoogleApiProvider providesGoogleApiProvider(Context context, PreferencesProvider preferencesProvider) {
-        return new GoogleApiProvider(context
-        );
-    }
-
-    @Provides
-    public GoogleAccountPicker providesGoogleAccountPicker(Context context) {
-        return new GoogleAccountCredentialGoogleAccountPicker(GoogleAccountCredential
-                .usingOAuth2(context, Collections.singletonList(DriveScopes.DRIVE))
-                .setBackOff(new ExponentialBackOff()));
     }
 
 }

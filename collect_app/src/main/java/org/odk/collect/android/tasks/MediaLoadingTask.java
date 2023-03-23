@@ -18,11 +18,16 @@ import org.odk.collect.android.utilities.FileUtils;
 import org.odk.collect.android.utilities.ImageConverter;
 import org.odk.collect.android.utilities.MediaUtils;
 import org.odk.collect.android.utilities.ToastUtils;
+import org.odk.collect.android.utilities.TranslationHandler;
 import org.odk.collect.android.widgets.BaseImageWidget;
 import org.odk.collect.android.widgets.QuestionWidget;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.nio.CharBuffer;
 
 import timber.log.Timber;
 
@@ -30,10 +35,16 @@ public class MediaLoadingTask extends AsyncTask<Uri, Void, File> {
 
     private WeakReference<FormEntryActivity> formEntryActivity;
     private WeakReference<NetworkStateProvider> connectivityProvider;
+    private boolean itemsetFile;
 
     public MediaLoadingTask(FormEntryActivity formEntryActivity, NetworkStateProvider connectivityProvider) {
         onAttach(formEntryActivity);
+        this.itemsetFile = false;
         this.connectivityProvider = new WeakReference<>(connectivityProvider);
+    }
+
+    public void setItemsetFile(boolean itemsetFile) {
+        this.itemsetFile = itemsetFile;
     }
 
     public void onAttach(FormEntryActivity formEntryActivity) {
@@ -53,7 +64,7 @@ public class MediaLoadingTask extends AsyncTask<Uri, Void, File> {
 
         if (formController != null) {
             instanceFile = formController.getInstanceFile();
-            if (instanceFile != null) {
+            if (instanceFile != null && !itemsetFile) {
                 String instanceFolder = instanceFile.getParent();
                 String extension = ContentResolverHelper.getFileExtensionFromUri(formEntryActivity.get(), uris[0]);
                 String destMediaPath = instanceFolder
@@ -83,6 +94,44 @@ public class MediaLoadingTask extends AsyncTask<Uri, Void, File> {
                 } catch (GDriveConnectionException e) {
                     Timber.e("Could not receive chosen file due to connection problem");
                     formEntryActivity.get().runOnUiThread(() -> ToastUtils.showLongToastInMiddle(R.string.gdrive_connection_exception));
+                    return null;
+                }
+            } else if(itemsetFile) {
+                File mediaFolder = formController.getMediaFolder();
+                Timber.i("Media Folder: %s", mediaFolder.getAbsolutePath());
+                String filePath = MediaUtils.getPathFromUri(formEntryActivity.get(), uris[0], null);
+
+                boolean isError;
+                try {
+                    File chosenFile = new File(filePath);
+                    if (chosenFile != null && chosenFile.getName().endsWith(".csv")
+                            && chosenFile.getName().contains("itemsets")
+                            && chosenFile.isFile() && chosenFile.canRead()) {
+                        CharBuffer charBuffer = CharBuffer.allocate(100);
+                        FileReader fileReader = new FileReader(chosenFile);
+                        fileReader.read(charBuffer);
+                        charBuffer.rewind();
+                        String fileContent = charBuffer.toString();
+
+                        if(fileContent.startsWith("\"list_name\",")
+                                || fileContent.startsWith("list_name,")) {
+                            String destMediaPath = mediaFolder.getAbsolutePath() + "/" + FormLoaderTask.ITEMSETS_CSV;
+                            final File newFile = new File(destMediaPath);
+                            FileUtils.copyFile(chosenFile, newFile);
+                            return newFile;
+                        } else throw new IOException("Not a CSV file");
+                    } else throw new IOException("Cannot read CSV file");
+                } catch (FileNotFoundException e) {
+                    isError = true;
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    isError = true;
+                    e.printStackTrace();
+                }
+                if(isError) {
+                    Timber.e("Invalid itemsets file");
+                    formEntryActivity.get().runOnUiThread(() ->
+                            ToastUtils.showLongToast(TranslationHandler.getString(Collect.getInstance(), R.string.file_invalid, filePath)));
                     return null;
                 }
             }

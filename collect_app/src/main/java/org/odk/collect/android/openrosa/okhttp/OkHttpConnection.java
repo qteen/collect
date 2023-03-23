@@ -3,6 +3,8 @@ package org.odk.collect.android.openrosa.okhttp;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.google.common.net.HttpHeaders;
+
 import org.apache.commons.io.IOUtils;
 import org.odk.collect.android.openrosa.CaseInsensitiveEmptyHeaders;
 import org.odk.collect.android.openrosa.CaseInsensitiveHeaders;

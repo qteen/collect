@@ -21,6 +21,12 @@ public class MediaLoadingFragment extends Fragment {
         mediaLoadingTask.execute(uri);
     }
 
+    public void beginItemsetsLoadingTask(Uri uri, NetworkStateProvider connectivityProvider) {
+        mediaLoadingTask = new MediaLoadingTask(formEntryActivity, connectivityProvider);
+        mediaLoadingTask.setItemsetFile(true);
+        mediaLoadingTask.execute(uri);
+    }
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

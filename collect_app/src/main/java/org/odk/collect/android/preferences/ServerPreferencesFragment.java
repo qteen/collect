@@ -39,7 +39,6 @@ import org.odk.collect.android.R;
 import org.odk.collect.android.analytics.Analytics;
 import org.odk.collect.android.backgroundwork.FormUpdateManager;
 import org.odk.collect.android.configure.ServerRepository;
-import org.odk.collect.android.gdrive.GoogleAccountsManager;
 import org.odk.collect.android.injection.DaggerUtils;
 import org.odk.collect.android.listeners.OnBackPressedListener;
 import org.odk.collect.android.listeners.PermissionListener;
@@ -67,14 +66,11 @@ import static org.odk.collect.android.preferences.GeneralKeys.KEY_SELECTED_GOOGL
 import static org.odk.collect.android.preferences.GeneralKeys.KEY_SUBMISSION_URL;
 import static org.odk.collect.android.utilities.DialogUtils.showDialog;
 
-public class ServerPreferencesFragment extends BasePreferenceFragment implements View.OnTouchListener, OnBackPressedListener {
+public class ServerPreferencesFragment extends BasePreferenceFragment implements View.OnTouchListener {
 
     private static final int REQUEST_ACCOUNT_PICKER = 1000;
 
     private EditTextPreference passwordPreference;
-
-    @Inject
-    GoogleAccountsManager accountsManager;
 
     @Inject
     Analytics analytics;
@@ -96,8 +92,6 @@ public class ServerPreferencesFragment extends BasePreferenceFragment implements
     public void onAttach(@NotNull Context context) {
         super.onAttach(context);
         DaggerUtils.getComponent(context).inject(this);
-
-        ((PreferencesActivity) context).setOnBackPressedListener(this);
     }
 
     @Override
@@ -136,9 +130,6 @@ public class ServerPreferencesFragment extends BasePreferenceFragment implements
         switch (Protocol.parse(getActivity(), value)) {
             case ODK:
                 addAggregatePreferences();
-                break;
-            case GOOGLE:
-                addGooglePreferences();
                 break;
         }
     }
@@ -204,53 +195,6 @@ public class ServerPreferencesFragment extends BasePreferenceFragment implements
     public void setupUrlDropdownAdapter(ListPopupWindow listPopupWindow) {
         ArrayAdapter adapter = new ArrayAdapter<>(getActivity(), android.R.layout.simple_list_item_1, serverRepository.getServers());
         listPopupWindow.setAdapter(adapter);
-    }
-
-    public void addGooglePreferences() {
-        addPreferencesFromResource(R.xml.google_preferences);
-        selectedGoogleAccountPreference = findPreference(KEY_SELECTED_GOOGLE_ACCOUNT);
-
-        EditTextPreference googleSheetsUrlPreference = (EditTextPreference) findPreference(
-                GeneralKeys.KEY_GOOGLE_SHEETS_URL);
-        googleSheetsUrlPreference.setOnBindEditTextListener(editText -> editText.setFilters(new InputFilter[] {new ControlCharacterFilter(), new WhitespaceFilter() }));
-        googleSheetsUrlPreference.setOnPreferenceChangeListener(createChangeListener());
-
-        String currentGoogleSheetsURL = googleSheetsUrlPreference.getText();
-        if (currentGoogleSheetsURL != null && currentGoogleSheetsURL.length() > 0) {
-            googleSheetsUrlPreference.setSummary(currentGoogleSheetsURL + "\n\n"
-                    + getString(R.string.google_sheets_url_hint));
-        }
-        initAccountPreferences();
-    }
-
-    public void initAccountPreferences() {
-        selectedGoogleAccountPreference.setSummary(accountsManager.getLastSelectedAccountIfValid());
-        selectedGoogleAccountPreference.setOnPreferenceClickListener(preference -> {
-            if (allowClickSelectedGoogleAccountPreference) {
-                if (new PlayServicesChecker().isGooglePlayServicesAvailable(getActivity())) {
-                    allowClickSelectedGoogleAccountPreference = false;
-                    requestAccountsPermission();
-                } else {
-                    new PlayServicesChecker().showGooglePlayServicesAvailabilityErrorDialog(getActivity());
-                }
-            }
-            return true;
-        });
-    }
-
-    private void requestAccountsPermission() {
-        new PermissionUtils(R.style.Theme_Collect_Dialog_PermissionAlert).requestGetAccountsPermission(getActivity(), new PermissionListener() {
-            @Override
-            public void granted() {
-                Intent intent = accountsManager.getAccountChooserIntent();
-                startActivityForResult(intent, REQUEST_ACCOUNT_PICKER);
-            }
-
-            @Override
-            public void denied() {
-                allowClickSelectedGoogleAccountPreference = true;
-            }
-        });
     }
 
     @Override
@@ -379,44 +323,20 @@ public class ServerPreferencesFragment extends BasePreferenceFragment implements
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        switch (requestCode) {
-            case REQUEST_ACCOUNT_PICKER:
-                if (resultCode == RESULT_OK && data != null && data.getExtras() != null) {
-                    String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
-                    accountsManager.selectAccount(accountName);
-                    selectedGoogleAccountPreference.setSummary(accountName);
-                }
-                allowClickSelectedGoogleAccountPreference = true;
-                break;
-        }
-    }
-
-    private void runGoogleAccountValidation() {
-        String account = (String) GeneralSharedPreferences.getInstance().get(KEY_SELECTED_GOOGLE_ACCOUNT);
-        String protocol = (String) GeneralSharedPreferences.getInstance().get(KEY_PROTOCOL);
-
-        if (TextUtils.isEmpty(account) && protocol.equals(getString(R.string.protocol_google_sheets))) {
-
-            AlertDialog alertDialog = new AlertDialog.Builder(getActivity())
-                    .setIcon(android.R.drawable.ic_dialog_info)
-                    .setTitle(R.string.missing_google_account_dialog_title)
-                    .setMessage(R.string.missing_google_account_dialog_desc)
-                    .setPositiveButton(getString(R.string.ok), (dialog, which) -> dialog.dismiss())
-                    .create();
-
-            showDialog(alertDialog, getActivity());
-        } else {
-            continueOnBackPressed();
-        }
+//        switch (requestCode) {
+//            case REQUEST_ACCOUNT_PICKER:
+//                if (resultCode == RESULT_OK && data != null && data.getExtras() != null) {
+//                    String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+//                    accountsManager.selectAccount(accountName);
+//                    selectedGoogleAccountPreference.setSummary(accountName);
+//                }
+//                allowClickSelectedGoogleAccountPreference = true;
+//                break;
+//        }
     }
 
     private void continueOnBackPressed() {
         ((PreferencesActivity) getActivity()).setOnBackPressedListener(null);
         getActivity().onBackPressed();
-    }
-
-    @Override
-    public void doBack() {
-        runGoogleAccountValidation();
     }
 }

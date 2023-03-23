@@ -6,11 +6,9 @@ import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 
 import androidx.annotation.NonNull;
 
-import com.google.android.gms.maps.GoogleMap;
 import com.mapbox.mapboxsdk.maps.Style;
 
 import org.odk.collect.android.R;
-import org.odk.collect.android.geo.GoogleMapConfigurator.GoogleMapTypeOption;
 import org.odk.collect.android.geo.MapboxMapConfigurator.MapboxUrlOption;
 import org.odk.collect.android.geo.OsmDroidMapConfigurator.WmsOption;
 import org.odk.collect.android.preferences.PrefUtils;
@@ -19,14 +17,12 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import static org.odk.collect.android.preferences.GeneralKeys.BASEMAP_SOURCE_CARTO;
-import static org.odk.collect.android.preferences.GeneralKeys.BASEMAP_SOURCE_GOOGLE;
 import static org.odk.collect.android.preferences.GeneralKeys.BASEMAP_SOURCE_MAPBOX;
 import static org.odk.collect.android.preferences.GeneralKeys.BASEMAP_SOURCE_OSM;
 import static org.odk.collect.android.preferences.GeneralKeys.BASEMAP_SOURCE_STAMEN;
 import static org.odk.collect.android.preferences.GeneralKeys.BASEMAP_SOURCE_USGS;
 import static org.odk.collect.android.preferences.GeneralKeys.KEY_BASEMAP_SOURCE;
 import static org.odk.collect.android.preferences.GeneralKeys.KEY_CARTO_MAP_STYLE;
-import static org.odk.collect.android.preferences.GeneralKeys.KEY_GOOGLE_MAP_STYLE;
 import static org.odk.collect.android.preferences.GeneralKeys.KEY_MAPBOX_MAP_STYLE;
 import static org.odk.collect.android.preferences.GeneralKeys.KEY_USGS_MAP_STYLE;
 
@@ -66,15 +62,6 @@ public class MapProvider {
      */
     private static SourceOption[] initOptions() {
         return new SourceOption[] {
-            new SourceOption(BASEMAP_SOURCE_GOOGLE, R.string.basemap_source_google,
-                new GoogleMapConfigurator(
-                    KEY_GOOGLE_MAP_STYLE, R.string.basemap_source_google,
-                    new GoogleMapTypeOption(GoogleMap.MAP_TYPE_NORMAL, R.string.streets),
-                    new GoogleMapTypeOption(GoogleMap.MAP_TYPE_TERRAIN, R.string.terrain),
-                    new GoogleMapTypeOption(GoogleMap.MAP_TYPE_HYBRID, R.string.hybrid),
-                    new GoogleMapTypeOption(GoogleMap.MAP_TYPE_SATELLITE, R.string.satellite)
-                )
-            ),
             new SourceOption(BASEMAP_SOURCE_MAPBOX, R.string.basemap_source_mapbox,
                 new MapboxMapConfigurator(
                     KEY_MAPBOX_MAP_STYLE, R.string.basemap_source_mapbox,

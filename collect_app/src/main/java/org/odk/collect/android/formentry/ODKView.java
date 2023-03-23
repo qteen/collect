@@ -103,6 +103,9 @@ public class ODKView extends FrameLayout implements OnLongClickListener, WidgetV
     private final QuestionMediaManager questionMediaManager;
 
     public static final String FIELD_LIST = "field-list";
+    public static final String BOOKMARK = "bookmark";
+    public static final String LIST_NOLABEL = "list-nolabel";
+    public static final String LABEL = "label";
     private final WaitingForDataRegistry waitingForDataRegistry;
     private final AudioPlayer audioPlayer;
 

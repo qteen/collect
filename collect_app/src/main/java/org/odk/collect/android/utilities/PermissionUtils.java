@@ -3,7 +3,9 @@ package org.odk.collect.android.utilities;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.provider.Settings;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
@@ -257,10 +259,12 @@ public class PermissionUtils {
     }
 
     protected void showAdditionalExplanation(Activity activity, int title, int message, int drawable, @NonNull PermissionListener action) {
-        AlertDialog alertDialog = new AlertDialog.Builder(activity, dialogTheme)
+        AlertDialog alertDialog = new AlertDialog.Builder(activity)
                 .setTitle(title)
                 .setMessage(message)
-                .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> action.denied())
+                .setPositiveButton(android.R.string.ok, (dialogInterface, i) -> {
+                    action.denied();
+                })
                 .setCancelable(false)
                 .setIcon(drawable)
                 .create();

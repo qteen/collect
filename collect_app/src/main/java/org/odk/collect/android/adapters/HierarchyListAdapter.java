@@ -48,7 +48,7 @@ public class HierarchyListAdapter extends RecyclerView.Adapter<HierarchyListAdap
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.bind(hierarchyElements.get(position), listener);
+        holder.bind(hierarchyElements.get(position), position, listener);
         if (hierarchyElements.get(position).getIcon() != null) {
             holder.icon.setVisibility(View.VISIBLE);
             holder.icon.setImageDrawable(hierarchyElements.get(position).getIcon());
@@ -81,12 +81,12 @@ public class HierarchyListAdapter extends RecyclerView.Adapter<HierarchyListAdap
             secondaryText = v.findViewById(R.id.secondary_text);
         }
 
-        void bind(final HierarchyElement element, final OnElementClickListener listener) {
-            itemView.setOnClickListener(v -> listener.onElementClick(element));
+        void bind(final HierarchyElement element, final int position, final OnElementClickListener listener) {
+            itemView.setOnClickListener(v -> listener.onElementClick(element, position));
         }
     }
 
     public interface OnElementClickListener {
-        void onElementClick(HierarchyElement element);
+        void onElementClick(HierarchyElement element, int position);
     }
 }

@@ -1,34 +1,41 @@
 {
   "project_info": {
-    "project_number": "462257085307",
-    "firebase_url": "https://getodk-debug.firebaseio.com",
-    "project_id": "getodk-debug",
-    "storage_bucket": "getodk-debug.appspot.com"
+    "project_number": "411162716371",
+    "project_id": "game-plan-5036f",
+    "storage_bucket": "game-plan-5036f.appspot.com"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:462257085307:android:64acb5e3c9e68ab5173bde",
+        "mobilesdk_app_id": "1:411162716371:android:b5a63fd53cb8630eb44c26",
         "android_client_info": {
           "package_name": "org.odk.collect.android"
         }
       },
       "oauth_client": [
         {
-          "client_id": "462257085307-o9ll0ogq8jm4ta3q9av2mf2rh4ume9vj.apps.googleusercontent.com",
+          "client_id": "411162716371-lh7om0jd22jnrkg3gcmkgnfn16gqa9l1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "org.odk.collect.android",
+            "certificate_hash": "e6bd4d9ffeebf57090c3c9d72ac635780fdd888d"
+          }
+        },
+        {
+          "client_id": "411162716371-i9cqcb87jhof0do0dn1tlle4pc10fmf8.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAClt29XaVTTO1m2R9u3WW-RimapSqjALg"
+          "current_key": "AIzaSyDWL-r55ig9Q2AloWKf2AmlUPAVcl3ldVM"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "462257085307-o9ll0ogq8jm4ta3q9av2mf2rh4ume9vj.apps.googleusercontent.com",
+              "client_id": "411162716371-i9cqcb87jhof0do0dn1tlle4pc10fmf8.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

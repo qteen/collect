@@ -17,12 +17,8 @@ import org.odk.collect.android.formentry.saving.FormSaveViewModel;
 import org.odk.collect.android.javarosawrapper.FormController;
 import org.odk.collect.android.preferences.AdminKeys;
 import org.odk.collect.android.preferences.AdminSharedPreferences;
-import org.odk.collect.android.preferences.GeneralSharedPreferences;
 import org.odk.collect.android.preferences.PreferencesActivity;
 import org.odk.collect.android.utilities.MenuDelegate;
-import org.odk.collect.android.utilities.PlayServicesChecker;
-
-import static org.odk.collect.android.preferences.GeneralKeys.KEY_BACKGROUND_LOCATION;
 
 public class FormEntryMenuDelegate implements MenuDelegate, RequiresFormController {
 
@@ -75,12 +71,12 @@ public class FormEntryMenuDelegate implements MenuDelegate, RequiresFormControll
         menu.findItem(R.id.menu_preferences).setVisible(useability)
                 .setEnabled(useability);
 
-        if (formController != null && formController.currentFormCollectsBackgroundLocation()
-                && new PlayServicesChecker().isGooglePlayServicesAvailable(activity)) {
-            MenuItem backgroundLocation = menu.findItem(R.id.track_location);
-            backgroundLocation.setVisible(true);
-            backgroundLocation.setChecked(GeneralSharedPreferences.getInstance().getBoolean(KEY_BACKGROUND_LOCATION, true));
-        }
+//        if (formController != null && formController.currentFormCollectsBackgroundLocation()
+//                && new PlayServicesChecker().isGooglePlayServicesAvailable(activity)) {
+//            MenuItem backgroundLocation = menu.findItem(R.id.track_location);
+//            backgroundLocation.setVisible(true);
+//            backgroundLocation.setChecked(GeneralSharedPreferences.getInstance().getBoolean(KEY_BACKGROUND_LOCATION, true));
+//        }
 
         menu.findItem(R.id.menu_add_repeat).setVisible(getFormEntryViewModel().canAddRepeat());
     }

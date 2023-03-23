@@ -21,23 +21,16 @@ import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.DisplayMetrics;
-import android.view.View;
 import android.view.Window;
-import android.widget.ImageView;
-import android.widget.LinearLayout;
 
 import org.odk.collect.android.R;
-import org.odk.collect.android.analytics.Analytics;
 import org.odk.collect.android.injection.DaggerUtils;
 import org.odk.collect.android.listeners.PermissionListener;
-import org.odk.collect.android.preferences.GeneralKeys;
 import org.odk.collect.android.preferences.GeneralSharedPreferences;
 import org.odk.collect.android.storage.StorageInitializer;
 import org.odk.collect.android.utilities.DialogUtils;
-import org.odk.collect.android.utilities.FileUtils;
 import org.odk.collect.android.utilities.PermissionUtils;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -47,18 +40,12 @@ import javax.inject.Inject;
 
 import timber.log.Timber;
 
-import static org.odk.collect.android.analytics.AnalyticsEvents.SHOW_SPLASH_SCREEN;
-import static org.odk.collect.android.preferences.GeneralKeys.KEY_SPLASH_PATH;
-
 public class SplashScreenActivity extends Activity {
 
     private static final int SPLASH_TIMEOUT = 10000; // milliseconds
     private static final boolean EXIT = true;
 
     private int imageMaxWidth;
-
-    @Inject
-    Analytics analytics;
 
     @Inject
     PermissionUtils permissionUtils;
@@ -102,17 +89,6 @@ public class SplashScreenActivity extends Activity {
 
         setContentView(R.layout.splash_screen);
 
-//        boolean showSplash = generalSharedPreferences.getBoolean(GeneralKeys.KEY_SHOW_SPLASH, true);
-//        String splashPath = (String) generalSharedPreferences.get(KEY_SPLASH_PATH);
-
-//        if (showSplash) {
-//            startSplashScreen(splashPath);
-//
-//            String splashPathHash = FileUtils.getMd5Hash(new ByteArrayInputStream(splashPath.getBytes()));
-//            analytics.logEvent(SHOW_SPLASH_SCREEN, splashPathHash, "");
-//        } else {
-//            endSplashScreen();
-//        }
         startSplashScreen(null);
     }
 

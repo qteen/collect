@@ -211,6 +211,28 @@ public class FormController {
         return value;
     }
 
+    public FormIndex getIndexFromReference(String reference) {
+        FormIndex returned = null;
+        FormIndex saved = getFormIndex();
+        // the only way I know how to do this is to step through the entire form
+        // until the XPath of a form entry matches that of the supplied XPath
+        try {
+            jumpToIndex(FormIndex.createBeginningOfFormIndex());
+            int event = stepToNextEvent(true);
+            while (event != FormEntryController.EVENT_END_OF_FORM) {
+                String candidateReference = getFormIndex().getReference().toString();
+                if (candidateReference.startsWith(reference)) {
+                    returned = getFormIndex();
+                    break;
+                }
+                event = stepToNextEvent(true);
+            }
+        } finally {
+            jumpToIndex(saved);
+        }
+        return returned;
+    }
+
     public FormIndex getIndexFromXPath(String xpath) {
         switch (xpath) {
             case "beginningOfForm":
@@ -374,11 +396,21 @@ public class FormController {
             return false;
         }
 
-        return ODKView.FIELD_LIST.equalsIgnoreCase(element.getAppearanceAttr());
+        return element.getAppearanceAttr()!=null && element.getAppearanceAttr().contains(ODKView.FIELD_LIST);
     }
 
     private boolean repeatIsFieldList(FormIndex index) {
         return groupIsFieldList(index);
+    }
+
+    public boolean groupIsBookmarkList() {
+        // if this isn't a group, return right away
+        IFormElement element = formEntryController.getModel().getForm().getChild(getFormIndex());
+        if (!(element instanceof GroupDef)) {
+            return false;
+        }
+
+        return element.getAppearanceAttr()!=null && element.getAppearanceAttr().contains(ODKView.BOOKMARK);
     }
 
     /**

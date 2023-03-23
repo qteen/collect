@@ -18,6 +18,7 @@ limitations under the License.
     <item
         android:id="@+id/menu_change_view"
         android:title="@string/change_view"
+        android:orderInCategory="98"
         app:showAsAction="never" />
 
 </menu>

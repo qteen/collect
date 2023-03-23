@@ -17,6 +17,7 @@ package org.odk.collect.android.widgets;
 import android.annotation.SuppressLint;
 import android.app.DatePickerDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.graphics.Color;
@@ -206,6 +207,8 @@ public class DateWidget extends QuestionWidget implements DatePickerDialog.OnDat
             default:
                 DatePickerDialog datePickerDialog = new FixedDatePickerDialog(getContext(), getTheme(), this);
                 datePickerDialog.show();
+                datePickerDialog.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(themeUtils.getColorOnSurface());
+                datePickerDialog.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(themeUtils.getColorOnSurface());
         }
     }
 

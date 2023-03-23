@@ -33,11 +33,11 @@ import java.util.List;
 import timber.log.Timber;
 
 public class ServerFormsDetailsFetcher {
-
     private final FormsRepository formsRepository;
     private final MediaFileRepository mediaFileRepository;
     private final FormSource formSource;
     private final DiskFormsSynchronizer diskFormsSynchronizer;
+    private boolean checkData;
 
     public ServerFormsDetailsFetcher(FormsRepository formsRepository,
                                      MediaFileRepository mediaFileRepository,
@@ -47,6 +47,11 @@ public class ServerFormsDetailsFetcher {
         this.mediaFileRepository = mediaFileRepository;
         this.formSource = formSource;
         this.diskFormsSynchronizer = diskFormsSynchronizer;
+        this.checkData = false;
+    }
+
+    public void setCheckData(boolean checkData) {
+        this.checkData = checkData;
     }
 
     public void updateFormListApi(String url, WebCredentialsUtils webCredentialsUtils) {
@@ -65,6 +70,11 @@ public class ServerFormsDetailsFetcher {
 
             if (listItem.getManifestURL() != null) {
                 manifestFile = getManifestFile(formSource, listItem.getManifestURL());
+            }
+
+            List<String> idList = null;
+            if(checkData) {
+                idList = formSource.fetchFormSubmissionIds(listItem.getFormID());
             }
 
             boolean thisFormAlreadyDownloaded = !formsRepository.getByJrFormIdNotDeleted(listItem.getFormID()).isEmpty();
@@ -91,7 +101,9 @@ public class ServerFormsDetailsFetcher {
                     listItem.getHashWithPrefix(),
                     !thisFormAlreadyDownloaded,
                     isNewerFormVersionAvailable,
-                    manifestFile);
+                    manifestFile,
+                    idList!=null?idList.size():0,
+                    idList!=null?idList.size():0);
 
             serverFormDetailsList.add(serverFormDetails);
         }

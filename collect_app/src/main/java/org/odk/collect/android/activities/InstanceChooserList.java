@@ -137,6 +137,7 @@ public class InstanceChooserList extends InstanceListActivity implements
                 if (Intent.ACTION_PICK.equals(action)) {
                     // caller is waiting on a picked form
                     setResult(RESULT_OK, new Intent().setData(instanceUri));
+                    finish();
                 } else {
                     // the form can be edited if it is incomplete or if, when it was
                     // marked as complete, it was determined that it could be edited
@@ -163,7 +164,6 @@ public class InstanceChooserList extends InstanceListActivity implements
                     }
                     startActivity(intent);
                 }
-                finish();
             } else {
                 TextView disabledCause = view.findViewById(R.id.form_subtitle2);
                 Toast.makeText(this, disabledCause.getText(), Toast.LENGTH_SHORT).show();

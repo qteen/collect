@@ -41,7 +41,7 @@
     <string name="clear_answer">Remove response</string>
     <string name="clear_answer_ask">Remove This Response?</string>
     <string name="clear_answer_no">Cancel</string>
-    <string name="data">Saved Forms</string>
+    <string name="data">Saved</string>
     <string name="data_saved_error">Sorry, form save failed!</string>
     <string name="data_saved_ok">Form successfully saved!</string>
     <string name="save_point_error">Error saving recovery point: %s</string>
@@ -58,8 +58,9 @@
     <string name="discard_answer">Remove response</string>
     <string name="discard_group">Remove group</string>
     <string name="download">Get Selected</string>
+    <string name="download_files">Download</string>
     <string name="download_forms_result">Download Results</string>
-    <string name="downloading_data">Connecting to Server</string>
+    <string name="downloading_data">Connecting to Server %s</string>
     <string name="do_not_change">Cancel</string>
     <string name="do_not_exit">Cancel</string>
     <string name="do_not_save">Ignore Changes</string>
@@ -70,11 +71,13 @@
     <string name="fetching_file">Getting %1$s.\n\nForm %2$s of %3$s form(s).</string>
     <string name="file_deleted_error">Sorry, %1$s of %2$s selected form(s) failed to delete!</string>
     <string name="file_deleted_ok">%s form(s) successfully deleted!</string>
+    <string name="data_download_completed">Data(s) successfully downloaded!</string>
+    <string name="data_download_failed">Data(s) download failed!</string>
     <string name="file_delete_in_progress">Sorry, a form delete action is already in progress!</string>
     <string name="file_invalid">File: %s is invalid.</string>
     <string name="file_missing">File: %s is missing.</string>
     <string name="finished_disk_scan">Finished scanning. All forms loaded.</string>
-    <string name="forms">Blank Forms</string>
+    <string name="forms">Forms</string>
     <string name="getting_location">Loading Location</string>
     <string name="get_barcode">Get Barcode</string>
     <string name="get_forms">Get Blank Form</string>
@@ -90,11 +93,13 @@
     <string name="load_remote_form_error">Form list download failed</string>
     <string name="location_accuracy">Accuracy: %1$s m</string>
     <string name="location_provider">Location provider: %s</string>
-    <string name="manage_files">Delete Saved Form</string>
+    <string name="manage_files">Manage Data</string>
+    <string name="delete_files">Delete Data</string>
     <string name="mark_finished">Mark form as finalized</string>
     <string name="noselect_error">Sorry, you have not selected any forms!</string>
     <string name="no_connection">No network connection available</string>
     <string name="no_items_display">Nothing available to display.</string>
+    <string name="no_items_display_refresh">Nothing available to display.\n\Tap here to refresh.</string>
     <string name="no_items_display_forms">Nothing available to display.\n\nTry getting and filling out a blank form.</string>
     <string name="no_items_display_sent_forms">Nothing available to display.\n\nTry sending finalized forms before viewing.</string>
     <string name="no_items_display_instances">Nothing available to display.\n\nTry finalizing saved forms before sending.</string>
@@ -132,6 +137,7 @@
     <string name="url_error">Sorry, invalid URL!</string>
     <string name="username">Username</string>
     <string name="view_hierarchy">Go To Prompt</string>
+    <string name="jump_to_group">Go To Group</string>
     <string name="general_preferences">General Settings</string>
     <string name="client">User interface</string>
     <string name="show_splash_summary">Shows when application starts</string>
@@ -148,6 +154,7 @@
     <string name="font_size">Text font size</string>
     <string name="change_font_size">Text font size</string>
     <string name="form_download_progress">%1$s. Getting media files: %2$s of %3$s</string>
+    <string name="data_download_progress">%1$s. Getting data: %2$s of %3$s</string>
     <string name="success">Success</string>
     <string name="failures">Failures</string>
     <string name="no_forms_uploaded">Sorry, no form was uploaded.</string>
@@ -169,6 +176,7 @@
     <string name="font_size_small">Small</string>
     <string name="font_size_extra_small">Extra Small</string>
     <string name="change_view">Change View</string>
+    <string name="change_itemset">Update Itemsets</string>
     <string name="show_sent_and_unsent_forms">Show Sent and Unsent Forms</string>
     <string name="show_unsent_forms">Show Unsent Forms</string>
     <string name="added_on_date_at_time">\'Added on\' EEE, MMM dd, yyyy \'at\' HH:mm</string> <!-- http://docs.oracle.com/javase/6/docs/api/java/text/SimpleDateFormat.html -->
@@ -534,6 +542,7 @@
     <string name="edit_value">Edit value</string>
     <string name="no_value_selected">No value selected</string>
     <string name="form_delete_message">Deleting selected forms</string>
+    <string name="data_download_message">Downloading selected data</string>
     <string name="deleting_form_dialog_update_message">Deleting form: %1$d out of %2$d </string>
     <string name="search">Search</string>
     <string name="null_intent_value">The external application did not provide expected information.</string>
@@ -652,7 +661,7 @@
     <string name="go_to_settings">Go to settings</string>
     <string name="track_location">Track location</string>
     <string name="background_location_disabled">This form wants to track your location but tracking is disabled. Please enable in the %1$s menu above.</string>
-    <string name="background_location_enabled">This form tracks your location. You can disable tracking in the %1$s menu above.</string>
+    <string name="background_location_enabled">This form tracks your location.</string>
     <string name="open_file">Open file</string>
     <string name="google_sheets_encrypted_message">Encrypted forms can\'t be submitted to Google Sheets.</string>
     <string name="number_picker_title">Number Picker</string>
@@ -661,6 +670,7 @@
     <string name="qr_code_not_found">QR Code not found in the selected image</string>
     <string name="not_granted_permission">The activity you are trying to start requires a permission which is not granted.</string>
     <string name="basemap_source_unavailable">Sorry, %s basemaps are not available on this device.  Please choose another basemap in General Settings &gt; Maps.</string>
+    <string name="form_not_found">Form %s not found! Please download the form from Get menu</string>
     <string name="enter_identity">Enter identity</string>
     <string name="identity">Identity</string>
     <string name="enter_identity_description">This form requires you to identify yourself</string>
@@ -708,4 +718,5 @@
     <string name="external_app_recording">Use external app for audio recording</string>
     <string name="stop_recording">Stop recording</string>
     <string name="recording">Recording…</string>
+    <string name="welcome_username">Hello %s</string>
 </resources>

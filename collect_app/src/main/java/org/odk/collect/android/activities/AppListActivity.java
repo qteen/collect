@@ -19,8 +19,11 @@ package org.odk.collect.android.activities;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.text.SpannableString;
+import android.text.style.ForegroundColorSpan;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -32,18 +35,25 @@ import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 
+import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 
+import org.odk.collect.android.BuildConfig;
 import org.odk.collect.android.R;
 import org.odk.collect.android.adapters.SortDialogAdapter;
 import org.odk.collect.android.application.Collect;
 import org.odk.collect.android.configure.qr.QRCodeTabsActivity;
+import org.odk.collect.android.dao.InstancesDao;
+import org.odk.collect.android.injection.config.AppDependencyComponent;
 import org.odk.collect.android.listeners.RecyclerViewClickListener;
-import org.odk.collect.android.preferences.AdminPasswordDialogFragment;
+import org.odk.collect.android.logic.PropertyManager;
+import org.odk.collect.android.preferences.GeneralKeys;
+import org.odk.collect.android.preferences.GeneralSharedPreferences;
 import org.odk.collect.android.preferences.PreferencesActivity;
 import org.odk.collect.android.provider.InstanceProviderAPI.InstanceColumns;
 import org.odk.collect.android.utilities.ApplicationConstants;
+import org.odk.collect.android.utilities.DialogUtils;
 import org.odk.collect.android.utilities.MultiClickGuard;
 import org.odk.collect.android.utilities.SnackbarUtils;
 
@@ -53,6 +63,7 @@ import java.util.List;
 
 import androidx.annotation.LayoutRes;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SearchView;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.MenuItemCompat;
@@ -61,6 +72,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import timber.log.Timber;
 
+import static org.odk.collect.android.preferences.GeneralKeys.KEY_USERNAME;
 import static org.odk.collect.android.utilities.ApplicationConstants.SortingOrder.BY_NAME_ASC;
 import static org.odk.collect.android.utilities.DialogUtils.showIfNotShowing;
 
@@ -98,9 +110,13 @@ abstract class AppListActivity extends CollectAbstractActivity {
     private boolean progressBarVisible;
 
     protected BottomNavigationView bottomNav;
+    private int completedCount;
+    private int savedCount;
+    private int viewSentCount;
 
     protected void initBottomNav() {
         bottomNav = findViewById(R.id.bottom_nav);
+        initBadges();
         bottomNav.setOnNavigationItemSelectedListener(item -> {
             item.setChecked(false);
             Intent i = null;
@@ -140,6 +156,81 @@ abstract class AppListActivity extends CollectAbstractActivity {
             }
             return true;
         });
+    }
+
+    private void countSavedForms() {
+        InstancesDao instancesDao = new InstancesDao();
+
+        // count for finalized instances
+        Cursor finalizedCursor = null;
+        try {
+            finalizedCursor = instancesDao.getFinalizedInstancesCursor();
+        } catch (Exception e) {
+            DialogUtils.createErrorDialog(this, e.getMessage(), false);
+        } finally {
+            completedCount = finalizedCursor != null ? finalizedCursor.getCount() : 0;
+            if(finalizedCursor!=null) {
+                finalizedCursor.close();
+            }
+        }
+
+        // count for saved instances
+        Cursor savedCursor = null;
+        try {
+            savedCursor = instancesDao.getUnsentInstancesCursor();
+        } catch (Exception e) {
+            DialogUtils.createErrorDialog(this, e.getMessage(), false);
+        } finally {
+            savedCount = savedCursor != null ? savedCursor.getCount() : 0;
+            if(savedCursor!=null) {
+                savedCursor.close();
+            }
+        }
+
+
+        //count for view sent form
+        Cursor viewSentCursor = null;
+        try {
+            viewSentCursor = instancesDao.getSentInstancesCursor();
+        } catch (Exception e) {
+            DialogUtils.createErrorDialog(this, e.getMessage(), false);
+        } finally {
+            viewSentCount = viewSentCursor != null ? viewSentCursor.getCount() : 0;
+            if(viewSentCursor!=null) {
+                viewSentCursor.close();
+            }
+        }
+    }
+
+    private void initBadges() {
+        countSavedForms();
+
+        BadgeDrawable editBadge = bottomNav.getOrCreateBadge(R.id.navigation_edit);
+        if(savedCount>0) {
+            editBadge.setNumber(savedCount);
+            editBadge.setVisible(true);
+        } else {
+            editBadge.clearNumber();
+            editBadge.setVisible(false);
+        }
+
+        BadgeDrawable sendBadge = bottomNav.getOrCreateBadge(R.id.navigation_send);
+        if(completedCount>0) {
+            sendBadge.setNumber(completedCount);
+            sendBadge.setVisible(true);
+        } else {
+            sendBadge.clearNumber();
+            sendBadge.setVisible(false);
+        }
+
+        BadgeDrawable sentBadge = bottomNav.getOrCreateBadge(R.id.navigation_sent);
+        if(viewSentCount>0) {
+            sentBadge.setNumber(viewSentCount);
+            sentBadge.setVisible(true);
+        } else {
+            sentBadge.clearNumber();
+            sentBadge.setVisible(false);
+        }
     }
 
     // toggles to all checked or all unchecked
@@ -203,6 +294,7 @@ abstract class AppListActivity extends CollectAbstractActivity {
         super.onResume();
         restoreSelectedSortingOrder();
         setupBottomSheet();
+        initBadges();
     }
 
     @Override
@@ -235,6 +327,18 @@ abstract class AppListActivity extends CollectAbstractActivity {
     @Override
     public boolean onCreateOptionsMenu(final Menu menu) {
         getMenuInflater().inflate(R.menu.list_menu, menu);
+
+        int gray_color = Color.parseColor("#5a5a5a");
+        String username = (String) GeneralSharedPreferences.getInstance().get(KEY_USERNAME);
+        MenuItem usernameItem = menu.findItem(R.id.menu_username);
+        SpannableString userSpan = new SpannableString(getString(R.string.welcome_username, username));
+        userSpan.setSpan(new ForegroundColorSpan(gray_color), 0, userSpan.length(), 0);
+        usernameItem.setTitle(userSpan);
+        MenuItem versionItem = menu.findItem(R.id.menu_version);
+        SpannableString versionSpan = new SpannableString("v" + BuildConfig.VERSION_NAME);
+        versionSpan.setSpan(new ForegroundColorSpan(gray_color), 0, versionSpan.length(), 0);
+        versionItem.setTitle(versionSpan);
+
         final MenuItem sortItem = menu.findItem(R.id.menu_sort);
         final MenuItem searchItem = menu.findItem(R.id.menu_filter);
         searchView = (SearchView) MenuItemCompat.getActionView(searchItem);
@@ -294,11 +398,24 @@ abstract class AppListActivity extends CollectAbstractActivity {
             case R.id.menu_configure_qr_code:
                 startActivity(new Intent(this, QRCodeTabsActivity.class));
                 return true;
-//            case R.id.menu_about:
-//                startActivity(new Intent(this, AboutActivity.class));
-//                return true;
+            case R.id.menu_delete_files:
+                startActivity(new Intent(this, DeleteSavedFormActivity.class));
+                return true;
+            case R.id.menu_data_management:
+                startActivityForResult(new Intent(this, DataManagementActivity.class), ApplicationConstants.RequestCodes.DATA_REQUEST);
+                return true;
             case R.id.menu_general_preferences:
                 startActivity(new Intent(this, PreferencesActivity.class));
+                return true;
+            case R.id.menu_logout:
+                AppDependencyComponent component = Collect.getInstance().getComponent();
+                component.generalSharedPreferences().save(GeneralKeys.KEY_USERNAME, null);
+                component.generalSharedPreferences().save(GeneralKeys.KEY_PASSWORD, null);
+                component.generalSharedPreferences().save(GeneralKeys.KEY_AUTH_TOKEN, null);
+//                component.propertyManager().reload();
+                Intent intent = new Intent(this, LoginActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
                 return true;
         }
 
@@ -427,5 +544,14 @@ abstract class AppListActivity extends CollectAbstractActivity {
         Intent intent = new Intent(this, FillBlankFormActivity.class);
         startActivity(intent);
         finish();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if(requestCode == ApplicationConstants.RequestCodes.DATA_REQUEST && resultCode == RESULT_OK) {
+            initBottomNav();
+        }
     }
 }

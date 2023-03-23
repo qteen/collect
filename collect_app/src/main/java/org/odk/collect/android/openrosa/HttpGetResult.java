@@ -18,9 +18,15 @@ package org.odk.collect.android.openrosa;
 
 import androidx.annotation.NonNull;
 
+import org.odk.collect.android.moda.ModaConstants;
+
 import java.io.InputStream;
 import java.util.Map;
 
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jws;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
 import timber.log.Timber;
 
 public class HttpGetResult {

@@ -1,5 +1,6 @@
 package org.odk.collect.android.formmanagement;
 
+import android.net.TrafficStats;
 import android.net.Uri;
 
 import org.odk.collect.android.R;
@@ -301,6 +302,7 @@ public class ServerFormDownloader implements FormDownloader {
                 i++;
             }
 
+            TrafficStats.setThreadStatsTag((int) Thread.currentThread().getId());
             InputStream file = formSource.fetchForm(url);
             writeFile(tempFormFile, stateListener, file, tempDir);
 

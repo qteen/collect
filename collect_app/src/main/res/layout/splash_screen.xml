@@ -43,7 +43,7 @@
             android:paddingLeft="7dip"
             android:paddingRight="7dip" />
         <TextView
-            android:id="@+id/url"
+            android:id="@+id/odk_url"
             android:text="@string/app_url"
             android:layout_width="fill_parent"
             android:layout_height="fill_parent"

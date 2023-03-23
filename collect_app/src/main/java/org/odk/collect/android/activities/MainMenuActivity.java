@@ -43,13 +43,11 @@ import org.odk.collect.android.configure.LegacySettingsFileReader;
 import org.odk.collect.android.configure.SettingsImporter;
 import org.odk.collect.android.configure.qr.QRCodeTabsActivity;
 import org.odk.collect.android.dao.InstancesDao;
-import org.odk.collect.android.gdrive.GoogleDriveActivity;
 import org.odk.collect.android.injection.DaggerUtils;
 import org.odk.collect.android.preferences.AdminKeys;
 import org.odk.collect.android.preferences.AdminPasswordDialogFragment;
 import org.odk.collect.android.preferences.AdminPasswordDialogFragment.Action;
 import org.odk.collect.android.preferences.AdminPreferencesActivity;
-import org.odk.collect.android.preferences.GeneralKeys;
 import org.odk.collect.android.preferences.PreferencesActivity;
 import org.odk.collect.android.provider.InstanceProviderAPI.InstanceColumns;
 import org.odk.collect.android.storage.StorageInitializer;
@@ -63,7 +61,6 @@ import org.odk.collect.android.utilities.ApplicationConstants;
 import org.odk.collect.android.utilities.DialogUtils;
 import org.odk.collect.android.utilities.FileUtils;
 import org.odk.collect.android.utilities.MultiClickGuard;
-import org.odk.collect.android.utilities.PlayServicesChecker;
 import org.odk.collect.android.utilities.ToastUtils;
 import org.odk.collect.material.MaterialBanner;
 
@@ -215,21 +212,10 @@ public class MainMenuActivity extends CollectAbstractActivity implements AdminPa
                 if (MultiClickGuard.allowClick(getClass().getName())) {
                     SharedPreferences sharedPreferences = PreferenceManager
                             .getDefaultSharedPreferences(MainMenuActivity.this);
-                    String protocol = sharedPreferences.getString(
-                            GeneralKeys.KEY_PROTOCOL, getString(R.string.protocol_odk_default));
-                    Intent i = null;
-                    if (protocol.equalsIgnoreCase(getString(R.string.protocol_google_sheets))) {
-                        if (new PlayServicesChecker().isGooglePlayServicesAvailable(MainMenuActivity.this)) {
-                            i = new Intent(getApplicationContext(),
-                                    GoogleDriveActivity.class);
-                        } else {
-                            new PlayServicesChecker().showGooglePlayServicesAvailabilityErrorDialog(MainMenuActivity.this);
-                            return;
-                        }
-                    } else {
-                        i = new Intent(getApplicationContext(),
-                                FormDownloadListActivity.class);
-                    }
+//                    String protocol = sharedPreferences.getString(
+//                            GeneralKeys.KEY_PROTOCOL, getString(R.string.protocol_odk_default));
+                    Intent i = new Intent(getApplicationContext(),
+                            FormDownloadListActivity.class);
                     startActivity(i);
                 }
             }
@@ -243,7 +229,7 @@ public class MainMenuActivity extends CollectAbstractActivity implements AdminPa
             public void onClick(View v) {
                 if (MultiClickGuard.allowClick(getClass().getName())) {
                     Intent i = new Intent(getApplicationContext(),
-                            DeleteSavedFormActivity.class);
+                            DataManagementActivity.class);
                     startActivity(i);
                 }
             }

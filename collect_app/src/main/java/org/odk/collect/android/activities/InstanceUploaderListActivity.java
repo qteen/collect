@@ -39,7 +39,6 @@ import org.odk.collect.android.adapters.InstanceUploaderAdapter;
 import org.odk.collect.android.analytics.Analytics;
 import org.odk.collect.android.backgroundwork.SchedulerFormUpdateAndSubmitManager;
 import org.odk.collect.android.dao.InstancesDao;
-import org.odk.collect.android.gdrive.GoogleSheetsUploaderActivity;
 import org.odk.collect.android.injection.DaggerUtils;
 import org.odk.collect.android.listeners.DiskSyncListener;
 import org.odk.collect.android.listeners.PermissionListener;
@@ -259,15 +258,15 @@ public class InstanceUploaderListActivity extends InstanceListActivity implement
         String server = (String) GeneralSharedPreferences.getInstance().get(KEY_PROTOCOL);
 
         if (server.equalsIgnoreCase(getString(R.string.protocol_google_sheets))) {
-            // if it's Sheets, start the Sheets uploader
-            // first make sure we have a google account selected
-            if (new PlayServicesChecker().isGooglePlayServicesAvailable(this)) {
-                Intent i = new Intent(this, GoogleSheetsUploaderActivity.class);
-                i.putExtra(FormEntryActivity.KEY_INSTANCES, instanceIds);
-                startActivityForResult(i, INSTANCE_UPLOADER);
-            } else {
-                new PlayServicesChecker().showGooglePlayServicesAvailabilityErrorDialog(this);
-            }
+//            // if it's Sheets, start the Sheets uploader
+//            // first make sure we have a google account selected
+//            if (new PlayServicesChecker().isGooglePlayServicesAvailable(this)) {
+//                Intent i = new Intent(this, GoogleSheetsUploaderActivity.class);
+//                i.putExtra(FormEntryActivity.KEY_INSTANCES, instanceIds);
+//                startActivityForResult(i, INSTANCE_UPLOADER);
+//            } else {
+//                new PlayServicesChecker().showGooglePlayServicesAvailabilityErrorDialog(this);
+//            }
         } else {
             // otherwise, do the normal aggregate/other thing.
             Intent i = new Intent(this, InstanceUploaderActivity.class);

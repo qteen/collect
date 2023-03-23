@@ -64,8 +64,7 @@ public class LocationProvidersDisabledDialog extends DialogFragment {
                 .setPositiveButton(R.string.go_to_settings, (dialog, id) -> {
                     startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
                 })
-                .setNegativeButton(R.string.cancel, (dialog, id) -> {
-                })
+                .setCancelable(false)
                 .create();
     }
 }

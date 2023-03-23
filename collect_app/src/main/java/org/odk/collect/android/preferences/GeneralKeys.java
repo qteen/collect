@@ -1,6 +1,5 @@
 package org.odk.collect.android.preferences;
 
-import com.google.android.gms.maps.GoogleMap;
 import com.mapbox.mapboxsdk.maps.Style;
 
 import org.odk.collect.android.R;
@@ -17,10 +16,14 @@ public final class GeneralKeys {
     public static final String KEY_SERVER_URL               = "server_url";
     public static final String KEY_USERNAME                 = "username";
     public static final String KEY_PASSWORD                 = "password";
+    public static final String KEY_AUTH_TOKEN               = "auth_token";
 
     // custom_server_paths_preferences.xmlreferences.xml
     public static final String KEY_FORMLIST_URL             = "formlist_url";
     public static final String KEY_SUBMISSION_URL           = "submission_url";
+    public static final String KEY_DL_SUBMISSION_URL        = "dl_submission_url";
+    public static final String KEY_SUBMISSIONLIST_URL       = "submissionlist_url";
+    public static final String KEY_AUTH_URL                 = "auth_url";
 
     // google_preferences.xml
     public static final String KEY_SELECTED_GOOGLE_ACCOUNT  = "selected_google_account";
@@ -84,7 +87,6 @@ public final class GeneralKeys {
     public static final String CATEGORY_BASEMAP             = "category_basemap";
 
     // basemap source values
-    public static final String BASEMAP_SOURCE_GOOGLE        = "google";
     public static final String BASEMAP_SOURCE_MAPBOX        = "mapbox";
     public static final String BASEMAP_SOURCE_OSM           = "osm";
     public static final String BASEMAP_SOURCE_USGS          = "usgs";
@@ -127,22 +129,22 @@ public final class GeneralKeys {
         // custom_server_paths_preferenceshs_preferences.xml
         hashMap.put(KEY_FORMLIST_URL,               Collect.getInstance().getString(R.string.default_odk_formlist));
         hashMap.put(KEY_SUBMISSION_URL,             Collect.getInstance().getString(R.string.default_odk_submission));
+        hashMap.put(KEY_AUTH_URL,                   Collect.getInstance().getString(R.string.default_moda_auth));
         // server_preferences.xml
         hashMap.put(KEY_PROTOCOL,                   Collect.getInstance().getString(R.string.protocol_odk_default));
         // user_interface_preferences.xml
         hashMap.put(KEY_APP_THEME,                  Collect.getInstance().getString(R.string.app_theme_light));
         hashMap.put(KEY_APP_LANGUAGE,               "");
         hashMap.put(KEY_FONT_SIZE,                  String.valueOf(QuestionFontSizeUtils.DEFAULT_FONT_SIZE));
-        hashMap.put(KEY_NAVIGATION,                 NAVIGATION_SWIPE);
+        hashMap.put(KEY_NAVIGATION,                 NAVIGATION_BUTTONS);
         hashMap.put(KEY_SHOW_SPLASH,                false);
         hashMap.put(KEY_SPLASH_PATH,                Collect.getInstance().getString(R.string.default_splash_path));
         hashMap.put(KEY_MAGENTA_THEME,              false);
         hashMap.put(KEY_EXTERNAL_APP_RECORDING,     true);
         // map_preferences.xml
-        hashMap.put(KEY_BASEMAP_SOURCE,             BASEMAP_SOURCE_GOOGLE);
+        hashMap.put(KEY_BASEMAP_SOURCE,             BASEMAP_SOURCE_OSM);
         hashMap.put(KEY_CARTO_MAP_STYLE,            "positron");
         hashMap.put(KEY_USGS_MAP_STYLE,             "topographic");
-        hashMap.put(KEY_GOOGLE_MAP_STYLE,           String.valueOf(GoogleMap.MAP_TYPE_NORMAL));
         hashMap.put(KEY_MAPBOX_MAP_STYLE,           Style.MAPBOX_STREETS);
         return hashMap;
     }

@@ -31,10 +31,21 @@
         app:actionViewClass="androidx.appcompat.widget.SearchView"
         app:showAsAction="always|collapseActionView"/>
 
-    <!--item
-        android:id="@+id/menu_about"
-        android:title="@string/about_preferences"
-        app:showAsAction="never"/-->
+    <item
+        android:id="@+id/menu_username"
+        android:title="username"
+        android:enabled="false"
+        app:showAsAction="never"/>
+
+    <item
+        android:id="@+id/menu_delete_files"
+        android:title="@string/delete_files"
+        app:showAsAction="never"/>
+
+    <item
+        android:id="@+id/menu_data_management"
+        android:title="@string/manage_files"
+        app:showAsAction="never"/>
 
     <item
         android:id="@+id/menu_general_preferences"
@@ -44,5 +55,19 @@
     <item
         android:id="@+id/menu_configure_qr_code"
         android:title="@string/configure_via_qr_code"
+        android:visible="false"
+        app:showAsAction="never"/>
+
+    <item
+        android:id="@+id/menu_logout"
+        android:title="@string/logout_menu"
+        android:orderInCategory="99"
+        app:showAsAction="never"/>
+
+    <item
+        android:id="@+id/menu_version"
+        android:title="v1"
+        android:orderInCategory="100"
+        android:enabled="false"
         app:showAsAction="never"/>
 </menu>

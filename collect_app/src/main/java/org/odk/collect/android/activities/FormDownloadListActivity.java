@@ -699,7 +699,7 @@ public class FormDownloadListActivity extends FormListActivity implements FormLi
         cleanUpWebCredentials();
 
         DialogUtils.dismissDialog(RefreshFormListDialogFragment.class, getSupportFragmentManager());
-        createAlertDialog(getString(R.string.download_forms_result), getDownloadResultMessage(result), EXIT);
+        createAlertDialog(getString(R.string.download_forms_result), getDownloadResultMessage(result), false);
 
         // Set result to true for forms which were downloaded
         if (viewModel.isDownloadOnlyMode()) {

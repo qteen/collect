@@ -6,6 +6,7 @@ import androidx.fragment.app.FragmentActivity;
 import androidx.viewpager2.adapter.FragmentStateAdapter;
 
 import org.odk.collect.android.fragments.BlankFormListFragment;
+import org.odk.collect.android.fragments.DataDownloadListFragment;
 import org.odk.collect.android.fragments.SavedFormListFragment;
 
 public class DeleteFormsTabsAdapter extends FragmentStateAdapter {

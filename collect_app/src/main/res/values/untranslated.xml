@@ -10,9 +10,13 @@ the specific language governing permissions and limitations under the License. -
     <string name="app_name" translatable="false">Moda Survey</string>
     <string name="protocol_odk_default" translatable="false">odk_default</string>
     <string name="protocol_google_sheets" translatable="false">google_sheets</string>
-    <string name="default_server_url" translatable="false">https://opendatakit.appspot.com</string>
+    <string name="default_server_url" translatable="false">https://capimoda.bnn.go.id</string>
+    <string name="alt_server_url" translatable="false">https://capilatihan.bnn.go.id</string>
     <string name="default_odk_formlist" translatable="false">/formList</string>
     <string name="default_odk_submission" translatable="false">/submission</string>
+    <string name="default_odk_dl_submission" translatable="false">/view/downloadSubmission</string>
+    <string name="default_odk_submissionlist" translatable="false">/view/submissionList</string>
+    <string name="default_moda_auth" translatable="false">/jwtAuth</string>
     <string name="app_url" translatable="false">http://getodk.org</string>
     <string name="never_value" translatable="false">never</string>
     <string name="every_fifteen_minutes_value" translatable="false">every_fifteen_minutes</string>
@@ -33,5 +37,10 @@ the specific language governing permissions and limitations under the License. -
     <string name="basemap_source_usgs" translatable="false">USGS</string>
     <string name="basemap_source_stamen" translatable="false">Stamen</string>
     <string name="basemap_source_carto" translatable="false">Carto</string>
-    <string name="attribution_str">Powered by</string>
+    <string name="attribution_str" translatable="false">Powered by</string>
+
+    <string-array name="capi_urls">
+        <item>@string/default_server_url</item>
+        <item>@string/alt_server_url</item>
+    </string-array>
 </resources>

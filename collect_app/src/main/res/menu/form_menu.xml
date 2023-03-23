@@ -33,11 +33,22 @@
         app:showAsAction="always" />
 
     <item
+        android:id="@+id/menu_jumpto"
+        android:icon="@drawable/ic_read_more_24"
+        android:title="@string/jump_to_group"
+        app:showAsAction="always" />
+
+    <item
         android:id="@+id/track_location"
         android:checkable="true"
         android:title="@string/track_location"
         android:visible="false"
         app:actionViewClass="android.widget.CheckBox"
+        app:showAsAction="never" />
+
+    <item
+        android:id="@+id/menu_change_itemsets"
+        android:title="@string/change_itemset"
         app:showAsAction="never" />
 
     <item

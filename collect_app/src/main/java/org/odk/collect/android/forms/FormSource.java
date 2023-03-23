@@ -1,5 +1,6 @@
 package org.odk.collect.android.forms;
 
+import org.odk.collect.android.exception.ParsingException;
 import org.odk.collect.android.utilities.WebCredentialsUtils;
 
 import java.io.InputStream;
@@ -13,12 +14,15 @@ public interface FormSource {
 
     List<FormListItem> fetchFormList() throws FormSourceException;
 
+    List<String> fetchFormSubmissionIds(String formId) throws FormSourceException;
+
     ManifestFile fetchManifest(String manifestURL) throws FormSourceException;
 
     InputStream fetchForm(String formURL) throws FormSourceException;
 
     InputStream fetchMediaFile(String mediaFileURL) throws FormSourceException;
 
+    SubmissionManifest fetchData(String formId, String formVersion, String submissionId) throws FormSourceException, ParsingException;
     /**
      * @deprecated This is specific to the Open Rosa/HTTP implementation so should really move
      * down to that level

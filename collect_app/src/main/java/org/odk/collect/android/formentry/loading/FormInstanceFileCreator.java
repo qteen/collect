@@ -1,5 +1,6 @@
 package org.odk.collect.android.formentry.loading;
 
+import org.odk.collect.android.forms.SubmissionManifest;
 import org.odk.collect.android.storage.StoragePathProvider;
 import org.odk.collect.android.storage.StorageSubdirectory;
 import org.odk.collect.android.utilities.FileUtils;
@@ -32,6 +33,21 @@ public class FormInstanceFileCreator {
 
         if (FileUtils.createFolder(instanceDir)) {
             return new File(instanceDir + File.separator + formFileName + "_" + timestamp + ".xml");
+        } else {
+            Timber.e("Error creating form instance file");
+            return null;
+        }
+    }
+
+    public File createInstanceFile(String formDefinitionPath, SubmissionManifest submissionManifest) {
+        String instanceId = submissionManifest.getInstanceID().replace(":","");
+        String formFileName = formDefinitionPath.substring(formDefinitionPath.lastIndexOf('/') + 1,
+                formDefinitionPath.lastIndexOf('.'));
+        String instancesDir = storagePathProvider.getDirPath(StorageSubdirectory.INSTANCES);
+        String instanceDir = instancesDir + File.separator + formFileName + "_" + instanceId;
+
+        if (FileUtils.createFolder(instanceDir)) {
+            return new File(instanceDir + File.separator + formFileName + "_" + instanceId + ".xml");
         } else {
             Timber.e("Error creating form instance file");
             return null;

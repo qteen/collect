@@ -68,7 +68,7 @@ import static org.odk.collect.android.forms.FormUtils.setupReferenceManagerForFo
  * @author Yaw Anokwa (yanokwa@gmail.com)
  */
 public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FECWrapper> {
-    private static final String ITEMSETS_CSV = "itemsets.csv";
+    public static final String ITEMSETS_CSV = "itemsets.csv";
 
     private FormLoaderListener stateListener;
     private String errorMsg;
@@ -355,8 +355,7 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
             @Override
             public boolean accept(File file) {
                 String lowerCaseName = file.getName().toLowerCase(Locale.US);
-                return lowerCaseName.endsWith(".csv") && !lowerCaseName.equalsIgnoreCase(
-                        ITEMSETS_CSV);
+                return lowerCaseName.endsWith(".csv");
             }
         });
 

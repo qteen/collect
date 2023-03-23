@@ -19,6 +19,7 @@
 package org.odk.collect.android.external;
 
 import android.database.sqlite.SQLiteDatabase;
+import android.util.Log;
 
 import org.apache.commons.io.FileUtils;
 import org.odk.collect.android.tasks.FormLoaderTask;
@@ -99,7 +100,17 @@ public class ExternalDataReaderImpl implements ExternalDataReader {
 
             // then just exit and do not process any other CSVs.
             return false;
-
+        } else {
+            // rename the dataSetFile into "dataSetFile.csv.imported" in order not to be loaded again
+            File importedFile = new File(dataSetFile.getParentFile(), dataSetFile.getName() + ".imported");
+            if(!dataSetFile.getName().equalsIgnoreCase(FormLoaderTask.ITEMSETS_CSV)) {
+                boolean renamed = dataSetFile.renameTo(importedFile);
+                if (!renamed) {
+                    Timber.e(dataSetFile.getName() + " could not be renamed to be archived. It will be re-imported again! :(");
+                } else {
+                    Timber.i(dataSetFile.getName() + " was renamed to " + importedFile.getName());
+                }
+            }
         }
         return true;
     }

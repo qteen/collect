@@ -4,4 +4,10 @@
     <string name="view_sent">Sent</string>
     <string name="send_entry">Send</string>
     <string name="get_form">Get</string>
+    <string name="get_data">Data</string>
+    <string name="manage_forms">Forms</string>
+    <string name="wait_loading">Please wait...</string>
+    <string name="logout_menu">Logout</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>

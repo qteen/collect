@@ -29,7 +29,7 @@
   <string name="clear_answer">Hapus jawaban</string>
   <string name="clear_answer_ask">Hapus Jawaban Ini?</string>
   <string name="clear_answer_no">Batal</string>
-  <string name="data">Formulir Tersimpan</string>
+  <string name="data">Tersimpan</string>
   <string name="data_saved_error">Maaf, tidak berhasil menyimpan formulir.</string>
   <string name="data_saved_ok">Formulir berhasil disimpan.</string>
   <string name="save_point_error">Terjadi kesalahan saat menyimpan titik pemulihan: %s</string>
@@ -46,8 +46,9 @@
   <string name="discard_answer">Hapus jawaban</string>
   <string name="discard_group">Hapus grup</string>
   <string name="download">Unduh Terpilih</string>
+  <string name="download_files">Unduh</string>
   <string name="download_forms_result">Hasil Unduhan</string>
-  <string name="downloading_data">Menghubungkan ke Server</string>
+  <string name="downloading_data">Menghubungkan ke Server %s</string>
   <string name="do_not_change">Batal</string>
   <string name="do_not_exit">Batal</string>
   <string name="do_not_save">Abaikan Perubahan</string>
@@ -58,11 +59,13 @@
   <string name="fetching_file">Mengunduh %1$s.\n\nFormulir %2$s dari %3$s formulir.</string>
   <string name="file_deleted_error">Maaf, %1$s dari %2$s formulir terpilih, tidak berhasil dihapus.</string>
   <string name="file_deleted_ok">%s formulir telah berhasil dihapus.</string>
+  <string name="data_download_completed">Data telah berhasil didownload.</string>
+  <string name="data_download_failed">Proses unduh data gagal!</string>
   <string name="file_delete_in_progress">Maaf, proses penghapusan formulir sedang berlangsung.</string>
   <string name="file_invalid">Berkas: %s tidak valid.</string>
   <string name="file_missing">Berkas: %s tidak ditemukan.</string>
   <string name="finished_disk_scan">Seluruh formulir telah berhasil dimuat.</string>
-  <string name="forms">Formulir Kosong</string>
+  <string name="forms">Formulir</string>
   <string name="getting_location">Memuat Lokasi</string>
   <string name="get_barcode">Ambil Barcode</string>
   <string name="get_forms">Unduh Formulir Kosong</string>
@@ -78,11 +81,13 @@
   <string name="load_remote_form_error">Unduhan daftar formulir tidak berhasil</string>
   <string name="location_accuracy">Tingkat akurasi adalah %1$s meter</string>
   <string name="location_provider">Lokasi penyedia jasa: %s</string>
-  <string name="manage_files">Hapus Formulir Tersimpan</string>
+  <string name="manage_files">Manajemen Data</string>
+  <string name="delete_files">Hapus Berkas</string>
   <string name="mark_finished">Tandai formulir telah terfinalisasi</string>
   <string name="noselect_error">Maaf, anda belum memilih formulir</string>
   <string name="no_connection">Koneksi internet tidak tersedia</string>
   <string name="no_items_display">Tidak ada yang dapat ditampilkan.</string>
+  <string name="no_items_display_refresh">Tidak ada yang dapat ditampilkan.\n\Sentuh di sini untuk memuat ulang.</string>
   <string name="no_items_display_forms">Tidak ada yang dapat ditampilkan.\n\nCoba kembali mengunduh dan mengisi formulir yang masih kosong.</string>
   <string name="no_items_display_sent_forms">Tidak ada yang dapat ditampilkan.\n\nCoba kirim formulir yang telah terfinalisasi sebelum melihat ke sini.</string>
   <string name="no_items_display_instances">Tidak ada yang dapat ditampilkan.\n\nCoba finalisasi formulir yang tersimpan sebelum mengirim.</string>
@@ -120,6 +125,7 @@
   <string name="url_error">Maaf, URL tidak valid.</string>
   <string name="username">Nama Pengguna</string>
   <string name="view_hierarchy">Risalah</string>
+  <string name="jump_to_group">Loncat Ke Grup</string>
   <string name="general_preferences">Pengaturan Umum</string>
   <string name="client">Antarmuka pengguna</string>
   <string name="show_splash_summary">Tampilkan pada awal aplikasi berjalan</string>
@@ -136,10 +142,11 @@
   <string name="font_size">Ukuran teks font</string>
   <string name="change_font_size">Ukuran teks font</string>
   <string name="form_download_progress">%1$s. Sedang mengunduh berkas media: %2$s dari %3$s</string>
-    <string name="success">Berhasil</string>
+  <string name="data_download_progress">%1$s. Sedang mengunduh data: %2$s dari %3$s</string>
+  <string name="success">Berhasil</string>
   <string name="failures">Tidak Berhasil</string>
   <string name="no_forms_uploaded">Maaf, tidak ada formulir yang telah diunggah.</string>
-  <string name="upload_results">Unggahan</string>
+  <string name="upload_results">Hasil Unggahan</string>
   <string name="xform_parse_error">XForm parse bermasalah pada %1$s: %2$s hilang atau tidak valid</string>
   <string name="choose_file">Pilih Berkas</string>
   <string name="choose_sound">Pilih Suara</string>
@@ -157,6 +164,7 @@
   <string name="font_size_small">Kecil</string>
   <string name="font_size_extra_small">Sangat kecil</string>
   <string name="change_view">Ubah Tampilan</string>
+  <string name="change_itemset">Perbarui Itemset</string>
   <string name="show_sent_and_unsent_forms">Tampilkan Formulir Terkirim dan Belum Terkirim</string>
   <string name="show_unsent_forms">Tampilkan Formulir Belum Terkirim</string>
   <string name="added_on_date_at_time">\'Ditambahkan pada\' EEE, dd MMM yyyy\', pukul\' HH:mm</string>
@@ -508,6 +516,7 @@
   <string name="edit_value">Ubah nilai</string>
   <string name="no_value_selected">Tidak ada nilai terpilih</string>
   <string name="form_delete_message">Menghapus form terpilih</string>
+  <string name="data_download_message">Mengunduh data terpilih</string>
   <string name="deleting_form_dialog_update_message">Menghapus form: %1$d dari %2$d</string>
   <string name="search">Cari</string>
   <string name="null_intent_value">Aplikasi eksternal tidak menyediakan informasi yang dibutuhkan.</string>
@@ -626,7 +635,7 @@
   <string name="go_to_settings">Pergi ke pengaturan</string>
   <string name="track_location">Rekam pergerakan lokasi</string>
   <string name="background_location_disabled">Formulir ini hendak melacak lokasi Anda, tetapi pelacakan lokasi tidak aktif. Mohon aktifkan melalui menu %1$s di atas.</string>
-  <string name="background_location_enabled">Formulir ini melacak lokasi Anda. Anda dapat menonaktifkan pelacakan melalui menu %1$s di atas.</string>
+  <string name="background_location_enabled">Formulir ini melacak lokasi Anda.</string>
   <string name="open_file">Buka berkas</string>
   <string name="google_sheets_encrypted_message">Formulir terenkripsi tidak dapat dikirimkan ke Google Sheets.</string>
   <string name="number_picker_title">Pemilihan nomor</string>
@@ -635,6 +644,7 @@
   <string name="qr_code_not_found">Kode QR tidak ditemukan pada gambar terpilih</string>
   <string name="not_granted_permission">Aktivitas yang sedang Anda coba memerlukan izin yang belum Anda diberikan.</string>
   <string name="basemap_source_unavailable">Maaf, peta dasar %s tidak tersedia pada perangkat ini. Mohon pilih peta dasar lain di Pengaturan Umum &gt; Peta.</string>
+  <string name="form_not_found">Form %s tidak tersedia! Mohon unduh terlebih dahulu melalui menu Get.</string>
   <string name="enter_identity">Masukan identitas</string>
   <string name="identity">Identitas</string>
   <string name="enter_identity_description">Formulir ini mengharuskan Anda untuk mengidentifikasi diri Anda sendiri</string>
@@ -677,4 +687,5 @@
   <string name="security_error">ODK Collect tidak dapat menghubung server di %s. Apakah anda sudah memasukkan URL dengan benar?</string>
   <string name="failure">Tidak Berhasil</string>
   <string name="form_update_succeeded">Pembaruan formulir berhasil</string>
+    <string name="welcome_username">Halo %s</string>
 </resources>

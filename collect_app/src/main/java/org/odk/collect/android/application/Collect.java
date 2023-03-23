@@ -36,6 +36,7 @@ import org.odk.collect.android.utilities.FileUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 
 import javax.inject.Inject;
 
@@ -80,6 +81,14 @@ public class Collect extends Application {
             }
         }
         return false;
+    }
+
+    public static byte[] getAuthSecretKey() {
+        return BuildConfig.MODA_AUTH_SECRET.getBytes(StandardCharsets.UTF_8);
+    }
+
+    public static String getAuthIssuer() {
+        return BuildConfig.MODA_AUTH_ISSUER;
     }
 
     @Nullable

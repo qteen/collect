@@ -20,7 +20,7 @@ import android.view.View;
 import android.widget.TextView;
 
 public final class SnackbarUtils {
-    private static final int DURATION_SHORT = 3500;
+    private static final int DURATION_SHORT = 1500;
     private static final int DURATION_LONG = 5500;
 
     private SnackbarUtils() {

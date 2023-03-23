@@ -2,34 +2,30 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:background="?attr/colorSurface"
-    tools:context=".activities.LoginActivity" android:id="@+id/container">
+    tools:context=".activities.LoginActivity"
+    android:id="@+id/container">
 
-    <FrameLayout
-        android:id="@+id/containerTop"
-        android:layout_alignParentTop="true"
+    <ImageView
+        android:paddingLeft="30dp"
+        android:paddingRight="30dp"
         android:layout_width="match_parent"
-        android:layout_height="400dp">
-        <ImageView
-            android:layout_width="fill_parent"
-            android:layout_height="wrap_content"
-            android:minHeight="200sp"
-            android:id="@+id/imageView2"
-            android:layout_gravity="center_horizontal"
-            android:src="@drawable/moda_s_logo"
-            />
-        <ImageView
-            android:layout_gravity="bottom|center_horizontal"
-            android:layout_width="100dp"
-            android:layout_height="100dp"
-            android:src="@drawable/bnn_logo"/>
-    </FrameLayout>
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentLeft="true"
+        android:id="@+id/imageView2"
+        android:src="@drawable/moda_s_logo"
+        />
+
     <LinearLayout
-        android:layout_below="@+id/containerTop"
+        android:id="@+id/bottomLayout"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
         android:orientation="vertical"
-        android:layout_width="fill_parent"
-        android:layout_height="match_parent" android:gravity="center_vertical">
-        <EditText
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <AutoCompleteTextView
             android:singleLine="true"
             android:lines="1"
             android:maxLines="1"

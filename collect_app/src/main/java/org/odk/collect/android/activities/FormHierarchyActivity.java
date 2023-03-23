@@ -15,7 +15,9 @@
 package org.odk.collect.android.activities;
 
 import android.content.DialogInterface;
+import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -123,6 +125,7 @@ public class FormHierarchyActivity extends CollectAbstractActivity implements De
     Analytics analytics;
 
     private FormEntryViewModel formEntryViewModel;
+    protected boolean viewOnly = false;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -153,6 +156,14 @@ public class FormHierarchyActivity extends CollectAbstractActivity implements De
         startIndex = formController.getFormIndex();
 
         setTitle(formController.getFormTitle());
+
+//        View groupLayout = findViewById(R.id.pathlayout);
+//        groupLayout.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View v) {
+//
+//            }
+//        });
 
         groupFolderIcon = findViewById(R.id.pathicon);
         groupPathTextView = findViewById(R.id.pathtext);
@@ -357,23 +368,7 @@ public class FormHierarchyActivity extends CollectAbstractActivity implements De
      * Navigates "up" in the form hierarchy.
      */
     protected void goUpLevel() {
-        FormController formController = Collect.getInstance().getFormController();
-
-        // If `repeatGroupPickerIndex` is set it means we're currently displaying
-        // a list of repeat instances. If we unset `repeatGroupPickerIndex`,
-        // we will go back up to the previous screen.
-        if (shouldShowRepeatGroupPicker()) {
-            // Exit the picker.
-            repeatGroupPickerIndex = null;
-        } else {
-            // Enter the picker if coming from a repeat group.
-            int event = formController.getEvent(screenIndex);
-            if (event == FormEntryController.EVENT_REPEAT || event == FormEntryController.EVENT_PROMPT_NEW_REPEAT) {
-                repeatGroupPickerIndex = screenIndex;
-            }
-
-            formController.stepToOuterScreenEvent();
-        }
+        Collect.getInstance().getFormController().stepToOuterScreenEvent();
 
         refreshView(true);
     }
@@ -530,7 +525,7 @@ public class FormHierarchyActivity extends CollectAbstractActivity implements De
                 // retrieve the current group
                 TreeReference curGroup = (visibleGroupRef == null) ? contextGroupRef : visibleGroupRef;
 
-                if (curGroup != null && !curGroup.isParentOf(currentRef, false)) {
+                if (curGroup != null && !curGroup.isAncestorOf(currentRef, false)) {
                     // We have left the current group
                     if (visibleGroupRef == null) {
                         // We are done.
@@ -557,10 +552,44 @@ public class FormHierarchyActivity extends CollectAbstractActivity implements De
                         }
 
                         FormEntryPrompt fp = formController.getQuestionPrompt();
-                        String label = fp.getShortText();
+                        boolean isRequired = fp.isRequired();
                         String answerDisplay = FormEntryPromptUtils.getAnswerText(fp, this, formController);
+                        if(!viewOnly) {
+                            answerDisplay = answerDisplay==null?"-":"✓";
+
+                            if(fp.getAppearanceHint()!=null && fp.getAppearanceHint().equals(ODKView.LIST_NOLABEL)) {
+                                break;
+                            } else if(fp.getAppearanceHint()!=null && fp.getAppearanceHint().equals(ODKView.LABEL)) {
+                                FormIndex tmpIndex = formController.getFormIndex();
+                                answerDisplay = "✓";
+                                boolean loopContinue = true;
+                                do {
+                                    int tmpEvent = formController.stepToNextEvent(false);
+                                    if(tmpEvent==FormEntryController.EVENT_QUESTION) {
+                                        fp = formController.getQuestionPrompt();
+                                        if(fp.getAppearanceHint()!=null
+                                                && fp.getAppearanceHint().equals(ODKView.LIST_NOLABEL)) {
+                                            isRequired = fp.isRequired();
+                                            if(FormEntryPromptUtils.getAnswerText(fp, this, formController)==null) {
+                                                answerDisplay = "-";
+                                                loopContinue = false;
+                                            }
+                                        } else {
+                                            loopContinue = false;
+                                        }
+                                    } else {
+                                        loopContinue = false;
+                                    }
+                                } while(loopContinue);
+
+                                formController.jumpToIndex(tmpIndex);
+                                fp = formController.getQuestionPrompt();
+                            }
+                        }
+
+                        String label = fp.getShortText();
                         elementsToDisplay.add(
-                                new HierarchyElement(FormEntryPromptUtils.markQuestionIfIsRequired(label, fp.isRequired()), answerDisplay, null,
+                                new HierarchyElement(FormEntryPromptUtils.markQuestionIfIsRequired(label, isRequired), answerDisplay, null,
                                         HierarchyElement.Type.QUESTION, fp.getIndex()));
                         break;
                     }
@@ -617,40 +646,43 @@ public class FormHierarchyActivity extends CollectAbstractActivity implements De
                             break;
                         }
 
+                        if (fc.getMultiplicity() == 0) {
+                            // Display the repeat header for the group.
+                            HierarchyElement group = new HierarchyElement(
+                                    fc.getShortText(), getString(R.string.repeatable_group_label),
+                                    ContextCompat.getDrawable(this, R.drawable.expander_ic_right),
+                                    HierarchyElement.Type.REPEATABLE_GROUP_COLLAPSE, fc.getIndex());
+                            elementsToDisplay.add(group);
+//                            repeatGroupPickerIndex = fc.getIndex();
+                        }
+
                         if (shouldShowRepeatGroupPicker()) {
                             // Don't render other groups' instances.
                             String repeatGroupPickerRef = repeatGroupPickerIndex.getReference().toString(false);
                             if (!currentRef.toString(false).equals(repeatGroupPickerRef)) {
                                 break;
                             }
-
-                            int itemNumber = fc.getMultiplicity() + 1;
-
-                            // e.g. `friends > 1`
-                            String repeatLabel = fc.getShortText() + " > " + itemNumber;
-
-                            // If the child of the group has a more descriptive label, use that instead.
-                            if (fc.getFormElement().getChildren().size() == 1 && fc.getFormElement().getChild(0) instanceof GroupDef) {
-                                formController.stepToNextEvent(FormController.STEP_INTO_GROUP);
-                                String itemLabel = formController.getCaptionPrompt().getShortText();
-                                if (itemLabel != null) {
-                                    // e.g. `1. Alice`
-                                    repeatLabel = itemNumber + ".\u200E " + itemLabel;
-                                }
-                            }
-
-                            HierarchyElement instance = new HierarchyElement(
-                                    repeatLabel, null,
-                                    null, HierarchyElement.Type.REPEAT_INSTANCE, fc.getIndex());
-                            elementsToDisplay.add(instance);
-                        } else if (fc.getMultiplicity() == 0) {
-                            // Display the repeat header for the group.
-                            HierarchyElement group = new HierarchyElement(
-                                    fc.getShortText(), getString(R.string.repeatable_group_label),
-                                    ContextCompat.getDrawable(this, R.drawable.ic_repeat),
-                                    HierarchyElement.Type.REPEATABLE_GROUP, fc.getIndex());
-                            elementsToDisplay.add(group);
                         }
+                        int itemNumber = fc.getMultiplicity() + 1;
+
+                        // e.g. `friends > 1`
+                        String repeatLabel = fc.getShortText() + " > " + itemNumber;
+
+                        // If the child of the group has a more descriptive label, use that instead.
+                        if (fc.getFormElement().getChildren().size() == 1 && fc.getFormElement().getChild(0) instanceof GroupDef) {
+                            formController.stepToNextEvent(FormController.STEP_INTO_GROUP);
+                            String itemLabel = formController.getCaptionPrompt().getShortText();
+                            if (itemLabel != null) {
+                                // e.g. `1. Alice`
+                                repeatLabel = itemNumber + ".\u200E " + itemLabel;
+                            }
+                        }
+
+                        HierarchyElement parent = elementsToDisplay.get(elementsToDisplay.size() - 1);
+                        HierarchyElement instance = new HierarchyElement(
+                                repeatLabel, null,
+                                null, HierarchyElement.Type.REPEAT_INSTANCE, fc.getIndex());
+                        parent.addChild(instance);
 
                         break;
                     }
@@ -693,17 +725,12 @@ public class FormHierarchyActivity extends CollectAbstractActivity implements De
     /**
      * Handles clicks on a specific row in the hierarchy view.
      */
-    public void onElementClick(HierarchyElement element) {
+    public void onElementClick(HierarchyElement element, int position) {
         FormIndex index = element.getFormIndex();
 
         switch (element.getType()) {
             case QUESTION:
                 onQuestionClicked(index);
-                break;
-            case REPEATABLE_GROUP:
-                // Show the picker.
-                repeatGroupPickerIndex = index;
-                refreshView();
                 break;
             case VISIBLE_GROUP:
             case REPEAT_INSTANCE:
@@ -713,7 +740,31 @@ public class FormHierarchyActivity extends CollectAbstractActivity implements De
                 setResult(RESULT_OK);
                 refreshView();
                 break;
+            case REPEATABLE_GROUP_COLLAPSE:
+                element.setType(HierarchyElement.Type.REPEATABLE_GROUP_EXPANDED);
+                element.setIcon(ContextCompat.getDrawable(this, R.drawable.expander_ic_minimized));
+
+                ArrayList<HierarchyElement> children1 = element.getChildren();
+                for (int i = 0; i < children1.size(); i++) {
+                    elementsToDisplay.add(position + 1 + i, children1.get(i));
+                }
+                ((LinearLayoutManager) recyclerView.getLayoutManager()).scrollToPositionWithOffset(position, 0);
+                break;
+            case REPEATABLE_GROUP_EXPANDED:
+                element.setType(HierarchyElement.Type.REPEATABLE_GROUP_COLLAPSE);
+                element.setIcon(ContextCompat.getDrawable(this, R.drawable.expander_ic_right));
+
+                ArrayList<HierarchyElement> children = element.getChildren();
+                for (int i=children.size(); i>0 ; i--) {
+                    elementsToDisplay.remove(position + i);
+                }
+                ((LinearLayoutManager) recyclerView.getLayoutManager()).scrollToPositionWithOffset(position, 0);
+                break;
         }
+
+        // Should only get here if we've expanded or collapsed a group
+        HierarchyListAdapter itla = new HierarchyListAdapter(elementsToDisplay, this::onElementClick);
+        recyclerView.setAdapter(itla);
     }
 
     /**

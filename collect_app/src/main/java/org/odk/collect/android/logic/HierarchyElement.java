@@ -20,6 +20,8 @@ import androidx.annotation.Nullable;
 
 import org.javarosa.core.model.FormIndex;
 
+import java.util.ArrayList;
+
 /**
  * Represents a question or repeat to be shown in
  * {@link org.odk.collect.android.activities.FormHierarchyActivity}.
@@ -55,6 +57,8 @@ public class HierarchyElement {
     @Nullable
     private Drawable icon;
 
+    ArrayList<HierarchyElement> mChildren;
+
     public HierarchyElement(@NonNull String primaryText, @Nullable String secondaryText,
                             @Nullable Drawable icon, @NonNull Type type, @NonNull FormIndex formIndex) {
         this.primaryText = primaryText;
@@ -62,6 +66,7 @@ public class HierarchyElement {
         this.icon = icon;
         this.type = type;
         this.formIndex = formIndex;
+        this.mChildren = new ArrayList<>();
     }
 
     @NonNull
@@ -97,13 +102,22 @@ public class HierarchyElement {
         type = newType;
     }
 
+    public ArrayList<HierarchyElement> getChildren() {
+        return mChildren;
+    }
+
+    public void addChild(HierarchyElement element) {
+        mChildren.add(element);
+    }
+
     /**
      * The type and state of this element.
      */
     public enum Type {
         QUESTION,
         VISIBLE_GROUP,
-        REPEATABLE_GROUP,
+        REPEATABLE_GROUP_COLLAPSE,
+        REPEATABLE_GROUP_EXPANDED,
         REPEAT_INSTANCE
     }
 }

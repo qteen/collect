@@ -117,6 +117,21 @@ abstract class AppListFragment extends ListFragment {
         menu.clear();
         inflater.inflate(R.menu.list_menu, menu);
 
+        MenuItem logoutItem = menu.findItem(R.id.menu_logout);
+        logoutItem.setVisible(false);
+        MenuItem genPrefItem = menu.findItem(R.id.menu_general_preferences);
+        genPrefItem.setVisible(false);
+        MenuItem conQRItem = menu.findItem(R.id.menu_configure_qr_code);
+        conQRItem.setVisible(false);
+        MenuItem dataMngItem = menu.findItem(R.id.menu_data_management);
+        dataMngItem.setVisible(false);
+        MenuItem delItem = menu.findItem(R.id.menu_delete_files);
+        delItem.setVisible(false);
+        MenuItem versionItem = menu.findItem(R.id.menu_version);
+        versionItem.setVisible(false);
+        MenuItem usernameItem = menu.findItem(R.id.menu_username);
+        usernameItem.setVisible(false);
+
         final MenuItem sortItem = menu.findItem(R.id.menu_sort);
         final MenuItem searchItem = menu.findItem(R.id.menu_filter);
         final SearchView searchView = (SearchView) MenuItemCompat.getActionView(searchItem);

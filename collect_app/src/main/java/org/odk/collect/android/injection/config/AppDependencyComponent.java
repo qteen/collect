@@ -3,6 +3,7 @@ package org.odk.collect.android.injection.config;
 import android.app.Application;
 
 import org.javarosa.core.reference.ReferenceManager;
+import org.odk.collect.android.activities.DataManagementActivity;
 import org.odk.collect.android.activities.DeleteSavedFormActivity;
 import org.odk.collect.android.activities.FillBlankFormActivity;
 import org.odk.collect.android.activities.FormDownloadListActivity;
@@ -13,6 +14,7 @@ import org.odk.collect.android.activities.GeoPointMapActivity;
 import org.odk.collect.android.activities.GeoPolyActivity;
 import org.odk.collect.android.activities.InstanceUploaderActivity;
 import org.odk.collect.android.activities.InstanceUploaderListActivity;
+import org.odk.collect.android.activities.LoginActivity;
 import org.odk.collect.android.activities.MainMenuActivity;
 import org.odk.collect.android.activities.SplashScreenActivity;
 import org.odk.collect.android.adapters.InstanceUploaderAdapter;
@@ -31,12 +33,10 @@ import org.odk.collect.android.formentry.QuitFormDialogFragment;
 import org.odk.collect.android.formentry.saving.SaveFormProgressDialogFragment;
 import org.odk.collect.android.fragments.BarCodeScannerFragment;
 import org.odk.collect.android.fragments.BlankFormListFragment;
+import org.odk.collect.android.fragments.DataDownloadListFragment;
 import org.odk.collect.android.fragments.MapBoxInitializationFragment;
 import org.odk.collect.android.fragments.SavedFormListFragment;
 import org.odk.collect.android.fragments.dialogs.SelectMinimalDialog;
-import org.odk.collect.android.gdrive.GoogleDriveActivity;
-import org.odk.collect.android.gdrive.GoogleSheetsUploaderActivity;
-import org.odk.collect.android.geo.GoogleMapFragment;
 import org.odk.collect.android.geo.MapboxMapFragment;
 import org.odk.collect.android.geo.OsmDroidMapFragment;
 import org.odk.collect.android.logic.PropertyManager;
@@ -60,6 +60,7 @@ import org.odk.collect.android.storage.StorageInitializer;
 import org.odk.collect.android.storage.migration.StorageMigrationDialog;
 import org.odk.collect.android.storage.migration.StorageMigrationService;
 import org.odk.collect.android.tasks.InstanceServerUploaderTask;
+import org.odk.collect.android.tasks.LoginAsyncTask;
 import org.odk.collect.android.utilities.ApplicationResetter;
 import org.odk.collect.android.utilities.AuthDialogUtility;
 import org.odk.collect.android.widgets.ExStringWidget;
@@ -126,10 +127,6 @@ public interface AppDependencyComponent {
 
     void inject(InstanceUploaderListActivity activity);
 
-    void inject(GoogleDriveActivity googleDriveActivity);
-
-    void inject(GoogleSheetsUploaderActivity googleSheetsUploaderActivity);
-
     void inject(QuestionWidget questionWidget);
 
     void inject(ExStringWidget exStringWidget);
@@ -146,11 +143,11 @@ public interface AppDependencyComponent {
 
     void inject(OsmDroidMapFragment mapFragment);
 
-    void inject(GoogleMapFragment mapFragment);
-
     void inject(MapboxMapFragment mapFragment);
 
     void inject(MainMenuActivity mainMenuActivity);
+
+    void inject(LoginActivity loginActivity);
 
     void inject(QRCodeTabsActivity qrCodeTabsActivity);
 
@@ -210,15 +207,23 @@ public interface AppDependencyComponent {
 
     void inject(DeleteSavedFormActivity deleteSavedFormActivity);
 
+    void inject(DataManagementActivity dataManagementActivity);
+
     void inject(AdminPreferencesFragment.MainMenuAccessPreferences mainMenuAccessPreferences);
 
     void inject(SelectMinimalDialog selectMinimalDialog);
+
+    void inject(LoginAsyncTask loginAsyncTask);
+
+    void inject(DataDownloadListFragment dataDownloadListFragment);
 
     OpenRosaHttpInterface openRosaHttpInterface();
 
     ReferenceManager referenceManager();
 
     Analytics analytics();
+
+    PropertyManager propertyManager();
 
     GeneralSharedPreferences generalSharedPreferences();
 

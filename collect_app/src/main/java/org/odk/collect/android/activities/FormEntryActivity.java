@@ -31,6 +31,7 @@ import android.text.InputFilter;
 import android.text.TextWatcher;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -38,13 +39,20 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup.LayoutParams;
+import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.Animation.AnimationListener;
+import android.widget.AdapterView;
+import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.SimpleAdapter;
+import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -63,10 +71,12 @@ import com.google.zxing.integration.android.IntentResult;
 import org.apache.commons.io.IOUtils;
 import org.javarosa.core.model.FormDef;
 import org.javarosa.core.model.FormIndex;
+import org.javarosa.core.model.GroupDef;
 import org.javarosa.core.model.SelectChoice;
 import org.javarosa.core.model.data.IAnswerData;
 import org.javarosa.core.model.data.helper.Selection;
 import org.javarosa.core.model.instance.TreeElement;
+import org.javarosa.core.model.instance.TreeReference;
 import org.javarosa.form.api.FormEntryCaption;
 import org.javarosa.form.api.FormEntryController;
 import org.javarosa.form.api.FormEntryPrompt;
@@ -77,6 +87,7 @@ import org.odk.collect.android.analytics.Analytics;
 import org.odk.collect.android.application.Collect;
 import org.odk.collect.android.audio.AudioControllerView;
 import org.odk.collect.android.listeners.SkipAllRequiredListener;
+import org.odk.collect.android.utilities.ClickSpan;
 import org.odk.collect.android.widgets.utilities.ViewModelAudioPlayer;
 import org.odk.collect.android.backgroundwork.FormSubmitManager;
 import org.odk.collect.android.dao.FormsDao;
@@ -212,7 +223,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
         ScreenContext, FormLoadingDialogFragment.FormLoadingDialogFragmentListener,
         AudioControllerView.SwipableParent, FormIndexAnimationHandler.Listener,
         QuitFormDialogFragment.Listener, DeleteRepeatDialogFragment.DeleteRepeatDialogCallback,
-        SelectMinimalDialog.SelectMinimalDialogListener {
+        SelectMinimalDialog.SelectMinimalDialogListener, ClickSpan.OnClickListener {
 
     // Defines for FormEntryActivity
     private static final boolean EXIT = true;
@@ -303,6 +314,35 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
     @Override
     public void skip() {
         skipAllRequired = true;
+    }
+
+    @Override
+    public void onSpanClicked(String path) {
+        FormController formController = Collect.getInstance().getFormController();
+        FormIndex indexFromReference = formController.getIndexFromReference(path);
+        String shortText = formController.getQuestionPrompt(indexFromReference).getShortText();
+
+        if(alertDialog==null || !alertDialog.isShowing())
+            alertDialog = new AlertDialog.Builder(this).create();
+
+        alertDialog.setTitle("Apakah anda ingin loncat ke pertanyaan");
+        alertDialog.setMessage(shortText + " ?");
+        DialogInterface.OnClickListener listener = new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int i) {
+                switch (i) {
+                    case BUTTON_POSITIVE:
+                        formController.jumpToIndex(indexFromReference);
+                        refreshCurrentView();
+                        break;
+                }
+            }
+        };
+        alertDialog.setCancelable(true);
+        alertDialog.setButton(BUTTON_POSITIVE, getString(R.string.ok), listener);
+        alertDialog.setButton(BUTTON_NEGATIVE, getString(R.string.cancel), (DialogInterface.OnClickListener) null);
+        swipeHandler.setBeenSwiped(false);
+        alertDialog.show();
     }
 
     enum AnimationType {
@@ -809,6 +849,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
             }
         }
 
+        ProgressDialogFragment progressDialog;
         switch (requestCode) {
             case RequestCodes.OSM_CAPTURE:
                 String osmFileName = intent.getStringExtra("OSM_FILE_NAME");
@@ -905,11 +946,18 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
                  * Android 1.6) we want to handle images the audio and video
                  */
 
-                ProgressDialogFragment progressDialog = new ProgressDialogFragment();
+                progressDialog = new ProgressDialogFragment();
                 progressDialog.setMessage(getString(R.string.please_wait));
                 progressDialog.show(getSupportFragmentManager(), ProgressDialogFragment.COLLECT_PROGRESS_DIALOG_TAG);
 
                 mediaLoadingFragment.beginMediaLoadingTask(intent.getData(), connectivityProvider);
+                break;
+            case RequestCodes.CHOOSE_ITEMSETS:
+                progressDialog = new ProgressDialogFragment();
+                progressDialog.setMessage(getString(R.string.please_wait));
+                progressDialog.show(getSupportFragmentManager(), ProgressDialogFragment.COLLECT_PROGRESS_DIALOG_TAG);
+
+                mediaLoadingFragment.beginItemsetsLoadingTask(intent.getData(), connectivityProvider);
                 break;
             case RequestCodes.AUDIO_CAPTURE:
                 /*
@@ -1006,6 +1054,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
                     Timber.e(e);
                 }
                 break;
+
         }
     }
 
@@ -1047,6 +1096,9 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
             }
 
             if (!set) {
+                if(data instanceof File && ((File) data).getName().endsWith(".csv") && ((File) data).getName().contains("itemsets")) {
+                    createQuitDialog();
+                }
                 Timber.w("Attempting to return data to a widget or set of widgets not looking for data");
             }
         }
@@ -1102,6 +1154,10 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
                 saveForm(DO_NOT_EXIT, InstancesDaoHelper.isInstanceComplete(false), null, true);
                 return true;
 
+            case R.id.menu_jumpto:
+                createJumpToDialog();
+                return true;
+
             case R.id.menu_goto:
                 state = null;
                 if (formController != null && formController.currentPromptIsQuestion()) {
@@ -1116,9 +1172,119 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
                 Intent i = new Intent(this, FormHierarchyActivity.class);
                 startActivityForResult(i, RequestCodes.HIERARCHY_ACTIVITY);
                 return true;
+
+            case R.id.menu_change_itemsets:
+                createChangeItemsetsDialog();
+                return true;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private void createChangeItemsetsDialog() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("*/*"); // all csv file
+        startActivityForResult(intent, ApplicationConstants.RequestCodes.CHOOSE_ITEMSETS);
+    }
+
+    private void createJumpToDialog() {
+        FormController formController = getFormController();
+        FormIndex current = formController.getFormIndex();
+        formController.jumpToIndex(FormIndex.createBeginningOfFormIndex());
+
+        int selectedIndex = 0;
+        List<Map<String, String>> dataList = new ArrayList<>();
+        while (formController.stepToNextEvent(FormController.STEP_INTO_GROUP)!=FormEntryController.EVENT_END_OF_FORM) {
+            int event = formController.getEvent();
+
+            if(event==FormEntryController.EVENT_REPEAT
+                    || event==FormEntryController.EVENT_GROUP) {
+                TreeReference reference = formController.getFormIndex().getReference();
+                if(reference.isAncestorOf(current.getReference(), true)) {
+                    selectedIndex = dataList.size();
+                }
+
+                String extraSpace = "";
+                for (int i=0; i<reference.size(); i++)
+                    extraSpace += "  ";
+
+                FormEntryCaption fc = formController.getCaptionPrompt();
+                String label = fc.getShortText();
+
+                if(event==FormEntryController.EVENT_REPEAT) {
+                    if(fc.getMultiplicity()==0 && label!=null && label.length()>0) {
+                        selectedIndex = selectedIndex==dataList.size()?(selectedIndex+1):selectedIndex;
+                        Map<String, String> data = new HashMap<>();
+                        data.put("label", extraSpace + label);
+                        data.put("path", formController.getXPath(formController.getFormIndex()));
+                        dataList.add(data);
+                    }
+                    if(fc.getFormElement().getChildren().size() == 1
+                            && fc.getFormElement().getChild(0) instanceof GroupDef) {
+                        formController.stepToNextEvent(FormController.STEP_INTO_GROUP);
+                        String itemLabel = formController.getCaptionPrompt().getShortText();
+                        if (itemLabel != null) {
+                            // e.g. `1. Alice`
+                            label = "  " + itemLabel;
+                        }
+                    }
+                } else if(event==FormEntryController.EVENT_GROUP) {
+                    if (!formController.isDisplayableGroup(formController.getFormIndex())) {
+                        continue;
+                    }
+                }
+
+                if(label!=null && label.length()>0) {
+                    Map<String, String> data = new HashMap<>();
+                    data.put("label", extraSpace + label);
+                    data.put("path", formController.getXPath(formController.getFormIndex()));
+                    dataList.add(data);
+                }
+            }
+        }
+
+        String[] froms = new String[] {"label"};
+        int[] tos = new int[] {R.id.jump_spinner_text};
+        SimpleAdapter simpleAdapter = new SimpleAdapter(this, dataList, R.layout.jump_spinner_item, froms, tos);
+        Spinner sp = new Spinner(this);
+        sp.setLayoutParams(new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT,LayoutParams.WRAP_CONTENT));
+        sp.setAdapter(simpleAdapter);
+        final int[] selectedCount = {0};
+        sp.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if(selectedCount[0] == 0) {
+                    selectedCount[0]++;
+                    return;
+                }
+                Map<String, String> data = dataList.get(position);
+                String path = data.get("path");
+                FormIndex index = formController.getIndexFromXPath(path);
+                formController.jumpToIndex(index);
+                if(formController.getEvent()==FormEntryController.EVENT_GROUP && !formController.indexIsInFieldList()) {
+                    formController.stepToNextEvent(FormController.STEP_INTO_GROUP);
+                }
+                refreshCurrentView();
+                alertDialog.hide();
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+        sp.setSelection(selectedIndex,false);
+
+        formController.jumpToIndex(current);
+        alertDialog = new AlertDialog.Builder(this)
+                .setView(sp)
+                .setTitle(R.string.jump_to_group)
+                .create();
+        WindowManager.LayoutParams wmlp = alertDialog.getWindow().getAttributes();
+        wmlp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
+
+        alertDialog.show();
     }
 
     /**
@@ -2685,7 +2851,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
 
                 @Override
                 public void denied() {
-                    backgroundLocationViewModel.locationPermissionsDenied();
+//                    backgroundLocationViewModel.locationPermissionsDenied();
                 }
             });
         }
@@ -2713,7 +2879,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
             snackBarText = getString(backgroundLocationMessage.getMessageTextResourceId());
         }
 
-        SnackbarUtils.showLongSnackbar(findViewById(R.id.llParent), snackBarText);
+        SnackbarUtils.showShortSnackbar(findViewById(R.id.llParent), snackBarText);
     }
 
     @Override

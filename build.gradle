@@ -74,6 +74,8 @@ ext {
     androidTargetSdk = 28
 
     fragmentVersion = '1.2.5'
-    daggerVersion = '2.29.1'
-    okhttp3Version = '4.9.0'
+    daggerVersion = '2.35.1'
+    okhttp3Version = '4.9.3'
+    butterknifeVersion = '10.2.3'
+    jjwtVersion = '0.11.5'
 }

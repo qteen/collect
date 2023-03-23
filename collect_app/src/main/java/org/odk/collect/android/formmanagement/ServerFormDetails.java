@@ -31,6 +31,8 @@ public class ServerFormDetails implements Serializable {
     private final boolean isNotOnDevice;
     private final boolean isUpdated;
     private final ManifestFile manifest;
+    private final int dataCount;
+    private final int dataToDownload;
 
     public ServerFormDetails(String formName, String downloadUrl, String manifestUrl, String formID,
                              String formVersion, String hash,
@@ -44,6 +46,25 @@ public class ServerFormDetails implements Serializable {
         this.isNotOnDevice = isNotOnDevice;
         this.isUpdated = isUpdated;
         this.manifest = manifest;
+        this.dataCount = -1;
+        this.dataToDownload = -1;
+    }
+
+    public ServerFormDetails(String formName, String downloadUrl, String manifestUrl, String formID,
+                             String formVersion, String hash,
+                             boolean isNotOnDevice, boolean isUpdated, ManifestFile manifest,
+                             int dataCount, int dataToDownload) {
+        this.formName = formName;
+        this.downloadUrl = downloadUrl;
+        this.manifestUrl = manifestUrl;
+        this.formID = formID;
+        this.formVersion = formVersion;
+        this.hash = hash;
+        this.isNotOnDevice = isNotOnDevice;
+        this.isUpdated = isUpdated;
+        this.manifest = manifest;
+        this.dataCount = dataCount;
+        this.dataToDownload = dataToDownload;
     }
 
     public String getFormName() {
@@ -80,5 +101,13 @@ public class ServerFormDetails implements Serializable {
 
     public ManifestFile getManifest() {
         return manifest;
+    }
+
+    public int getDataCount() {
+        return dataCount;
+    }
+
+    public int getDataToDownload() {
+        return dataToDownload;
     }
 }

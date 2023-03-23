@@ -32,6 +32,7 @@ import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.LiveData;
@@ -44,6 +45,7 @@ import org.odk.collect.android.R;
 import org.odk.collect.android.audio.AudioButton;
 import org.odk.collect.android.audio.AudioHelper;
 import org.odk.collect.android.listeners.SelectItemClickListener;
+import org.odk.collect.android.utilities.ClickSpan;
 import org.odk.collect.android.utilities.ContentUriProvider;
 import org.odk.collect.android.utilities.FileUtils;
 import org.odk.collect.android.utilities.FormEntryPromptUtils;
@@ -55,6 +57,10 @@ import org.odk.collect.android.utilities.ToastUtils;
 import org.odk.collect.audioclips.Clip;
 
 import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -127,9 +133,27 @@ public class AudioVideoImageTextLabel extends RelativeLayout implements View.OnC
         this.questionText = questionText;
 
         if (questionText != null && !questionText.isEmpty()) {
+            Pattern pattern = Pattern.compile("(?s)\\[\\[([^\\]]*)\\]\\(([^\\)]+)\\)\\]");
+            Matcher matcher = pattern.matcher(questionText);
+            Map<String, String> clickMap = new HashMap();
+            while(matcher.find() && matcher.groupCount()==2) {
+                String label = "["+matcher.group(1)+"]";
+                String path = matcher.group(2);
+                String oldLabel = "[["+matcher.group(1)+"]("+path+")]";
+                questionText = questionText.replace(oldLabel, label);
+                clickMap.put(label, path);
+            }
             labelTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, fontSize);
             labelTextView.setText(StringUtils.textToHtml(FormEntryPromptUtils.markQuestionIfIsRequired(questionText, isRequiredQuestion)));
             labelTextView.setMovementMethod(LinkMovementMethod.getInstance());
+
+            if(getContext() instanceof ClickSpan.OnClickListener) {
+                ClickSpan.OnClickListener listener = (ClickSpan.OnClickListener) getContext();
+                for(String label: clickMap.keySet()) {
+                    String path = clickMap.get(label);
+                    ClickSpan.clickify(labelTextView, label, path, listener);
+                }
+            }
 
             // Wrap to the size of the parent view
             labelTextView.setHorizontallyScrolling(false);

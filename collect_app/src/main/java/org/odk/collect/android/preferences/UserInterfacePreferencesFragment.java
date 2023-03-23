@@ -26,7 +26,7 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceManager;
 
 import org.odk.collect.android.R;
-import org.odk.collect.android.activities.MainMenuActivity;
+import org.odk.collect.android.activities.FillBlankFormActivity;
 import org.odk.collect.android.injection.DaggerUtils;
 import org.odk.collect.android.utilities.LocaleHelper;
 import org.odk.collect.android.utilities.MediaUtils;
@@ -81,7 +81,7 @@ public class UserInterfacePreferencesFragment extends BasePreferenceFragment {
                 String entry = (String) ((ListPreference) preference).getEntries()[index];
                 if (pref.getEntry() == null || !pref.getEntry().equals(entry)) {
                     preference.setSummary(entry);
-                    startActivityAndCloseAllOthers(getActivity(), MainMenuActivity.class);
+                    startActivityAndCloseAllOthers(getActivity(), FillBlankFormActivity.class);
                 }
                 return true;
             });
@@ -146,7 +146,7 @@ public class UserInterfacePreferencesFragment extends BasePreferenceFragment {
                 edit.putString(KEY_APP_LANGUAGE, newValue.toString());
                 edit.apply();
 
-                startActivityAndCloseAllOthers(getActivity(), MainMenuActivity.class);
+                startActivityAndCloseAllOthers(getActivity(), FillBlankFormActivity.class);
                 return true;
             });
         }

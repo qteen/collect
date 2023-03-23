@@ -209,6 +209,7 @@ public class FillBlankFormActivity extends FormListActivity implements
             if (Intent.ACTION_PICK.equals(action)) {
                 // caller is waiting on a picked form
                 setResult(RESULT_OK, new Intent().setData(formUri));
+                finish();
             } else {
                 // caller wants to view/edit a form, so launch formentryactivity
                 Intent intent = new Intent(Intent.ACTION_EDIT, formUri);

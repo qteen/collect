@@ -50,20 +50,20 @@ public class GeneralPreferencesFragment extends BasePreferenceFragment implement
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
         setPreferencesFromResource(R.xml.general_preferences, rootKey);
 
-        findPreference("protocol").setOnPreferenceClickListener(this);
+//        findPreference("protocol").setOnPreferenceClickListener(this);
         findPreference("user_interface").setOnPreferenceClickListener(this);
         findPreference("maps").setOnPreferenceClickListener(this);
         findPreference("form_management").setOnPreferenceClickListener(this);
-        findPreference("user_and_device_identity").setOnPreferenceClickListener(this);
-        findPreference("experimental").setOnPreferenceClickListener(this);
+//        findPreference("user_and_device_identity").setOnPreferenceClickListener(this);
+//        findPreference("experimental").setOnPreferenceClickListener(this);
 
         if (!isInAdminMode()) {
             setPreferencesVisibility();
         }
 
-        if (versionInformation.isRelease()) {
-            findPreference("experimental").setVisible(false);
-        }
+//        if (versionInformation.isRelease()) {
+//            findPreference("experimental").setVisible(false);
+//        }
     }
 
     @Override
@@ -86,8 +86,8 @@ public class GeneralPreferencesFragment extends BasePreferenceFragment implement
 
     private PreferenceFragmentCompat getPreferenceFragment(String preferenceKey) {
         switch (preferenceKey) {
-            case "protocol":
-                return new ServerPreferencesFragment();
+//            case "protocol":
+//                return new ServerPreferencesFragment();
             case "user_interface":
                 return new UserInterfacePreferencesFragment();
             case "maps":
@@ -96,8 +96,8 @@ public class GeneralPreferencesFragment extends BasePreferenceFragment implement
                 return new FormManagementPreferences();
             case "user_and_device_identity":
                 return new IdentityPreferences();
-            case "experimental":
-                return new ExperimentalPreferencesFragment();
+//            case "experimental":
+//                return new ExperimentalPreferencesFragment();
             default:
                 return null;
         }

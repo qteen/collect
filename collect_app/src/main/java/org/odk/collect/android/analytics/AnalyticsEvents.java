@@ -6,6 +6,12 @@ public class AnalyticsEvents {
 
     }
 
+    public static final String LOGIN_SUCCESSFUL = "LoginSuccessful";
+    public static final String LOGIN_FAILED = "LoginFailed";
+
+    public static final String DATA_DOWNLOAD_SUCCESSFUL = "DatdDownloadSuccessful";
+    public static final String DATA_DOWNLOAD_FAILED = "DatdDownloadFailed";
+
     /**
      * Used to measure how popular different methods of adding repeats are. The "action" should
      * describe the way the repeat was added. The label should be the form hash identifier.

@@ -37,6 +37,14 @@ import java.util.List;
  */
 public class InstancesDao {
 
+    public Cursor getSentInstancesCursorByName(String instanceName) {
+        String selection = InstanceColumns.STATUS + " =? and "+ InstanceColumns.DISPLAY_NAME+" =?";
+        String[] selectionArgs = {Instance.STATUS_SUBMITTED, instanceName};
+        String sortOrder = InstanceColumns.DISPLAY_NAME + " ASC";
+
+        return getInstancesCursor(null, selection, selectionArgs, sortOrder);
+    }
+
     public Cursor getSentInstancesCursor() {
         String selection = InstanceColumns.STATUS + " =? ";
         String[] selectionArgs = {Instance.STATUS_SUBMITTED};

@@ -2,7 +2,6 @@ package org.odk.collect.android.application.initialization;
 
 import android.content.SharedPreferences;
 
-import com.google.android.gms.maps.GoogleMap;
 import com.mapbox.mapboxsdk.maps.Style;
 
 import org.odk.collect.android.application.initialization.migration.KeyRenamer;
@@ -65,13 +64,6 @@ public class CollectSettingsPreferenceMigrator implements SettingsPreferenceMigr
                 // Note that unfortunately there was a hidden U+200E character in the preference
                 // value for "terrain" in previous versions of ODK Collect, so we need to
                 // include that character to match that value correctly.
-                translateKey("map_basemap_behavior").toKey(KEY_GOOGLE_MAP_STYLE)
-                        .fromValue("streets").toValue(Integer.toString(GoogleMap.MAP_TYPE_NORMAL))
-                        .fromValue("terrain\u200e").toValue(Integer.toString(GoogleMap.MAP_TYPE_TERRAIN))
-                        .fromValue("terrain").toValue(Integer.toString(GoogleMap.MAP_TYPE_TERRAIN))
-                        .fromValue("hybrid").toValue(Integer.toString(GoogleMap.MAP_TYPE_HYBRID))
-                        .fromValue("satellite").toValue(Integer.toString(GoogleMap.MAP_TYPE_SATELLITE)),
-
                 translateKey("map_basemap_behavior").toKey(KEY_MAPBOX_MAP_STYLE)
                         .fromValue("mapbox_streets").toValue(Style.MAPBOX_STREETS)
                         .fromValue("mapbox_light").toValue(Style.LIGHT)
