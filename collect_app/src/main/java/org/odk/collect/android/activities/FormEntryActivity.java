@@ -225,7 +225,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
         AudioControllerView.SwipableParent, FormIndexAnimationHandler.Listener,
         QuitFormDialogFragment.Listener, DeleteRepeatDialogFragment.DeleteRepeatDialogCallback,
         SelectMinimalDialog.SelectMinimalDialogListener, CustomDatePickerDialog.DateChangeListener,
-        CustomTimePickerDialog.TimeChangeListener {
+        CustomTimePickerDialog.TimeChangeListener, ClickSpan.OnClickListener {
 
     // Defines for FormEntryActivity
     private static final boolean EXIT = true;
@@ -1177,6 +1177,9 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
 
             case R.id.menu_change_itemsets:
                 createChangeItemsetsDialog();
+                return true;
+            case R.id.menu_delete_child:
+                DialogUtils.showIfNotShowing(DeleteRepeatDialogFragment.class, getSupportFragmentManager());
                 return true;
         }
 

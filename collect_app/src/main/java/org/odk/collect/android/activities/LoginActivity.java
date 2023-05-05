@@ -13,6 +13,8 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+
 import org.odk.collect.android.R;
 import org.odk.collect.android.analytics.Analytics;
 import org.odk.collect.android.analytics.AnalyticsEvents;
@@ -37,7 +39,7 @@ public class LoginActivity extends CollectAbstractActivity implements View.OnCli
     @Inject
     Analytics analytics;
 
-    private AutoCompleteTextView url;
+    private MaterialAutoCompleteTextView url;
     private EditText username;
     private EditText password;
 

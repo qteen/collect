@@ -17,6 +17,7 @@ package org.odk.collect.android.widgets;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.util.TypedValue;
 import android.view.View;
 
@@ -93,8 +94,6 @@ public class DateWidget extends QuestionWidget implements WidgetDataReceiver {
         super.cancelLongPress();
         binding.dateButton.cancelLongPress();
         binding.dateAnswerText.cancelLongPress();
-                datePickerDialog.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(themeUtils.getColorOnSurface());
-                datePickerDialog.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(themeUtils.getColorOnSurface());
     }
 
     @Override
