@@ -9,7 +9,7 @@ buildscript {
         }
     }
 
-    ext.kotlin_version = '1.4.10'
+    ext.kotlin_version = '1.5.10'
 
     dependencies {
         classpath 'com.android.tools.build:gradle:4.0.1'
@@ -69,7 +69,7 @@ task checkInstrumented(type: GradleBuild) {
 }
 
 ext {
-    androidCompileSdk = 30
+    androidCompileSdk = 31
     androidMinSdk = 21
     androidTargetSdk = 28
 

@@ -16,7 +16,7 @@ ant.condition(property: 'os', value: 'unix') {
 }
 
 // Build numbers were manually set until 1067
-def LEGACY_BUILD_NUMBER_OFFSET = 1078
+def LEGACY_BUILD_NUMBER_OFFSET = 1079
 
 // Based on http://stackoverflow.com/questions/17097263#24121734
 def getMasterCommitCount = { ->
@@ -77,8 +77,8 @@ if (keystorePropertiesFile.exists()) {
 android {
     compileSdkVersion rootProject.androidCompileSdk
 
-    viewBinding {
-        enabled = true
+    buildFeatures {
+        viewBinding true
     }
 
     defaultConfig {
@@ -86,7 +86,7 @@ android {
         minSdkVersion rootProject.androidMinSdk
         targetSdkVersion rootProject.androidTargetSdk
         versionCode LEGACY_BUILD_NUMBER_OFFSET + getMasterCommitCount()
-        versionName "1.29.0"
+        versionName "1.29.1"
         testInstrumentationRunner('androidx.test.runner.AndroidJUnitRunner')
         multiDexEnabled true
         vectorDrawables.useSupportLibrary = true
