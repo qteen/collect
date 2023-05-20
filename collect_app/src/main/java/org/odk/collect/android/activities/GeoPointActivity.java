@@ -78,6 +78,7 @@ public class GeoPointActivity extends CollectAbstractActivity implements Locatio
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
         super.onCreate(savedInstanceState);
 
         if (!areLocationPermissionsGranted(this)) {
@@ -85,8 +86,6 @@ public class GeoPointActivity extends CollectAbstractActivity implements Locatio
             finish();
             return;
         }
-
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
 
         if (savedInstanceState != null) {
             locationCount = savedInstanceState.getInt(LOCATION_COUNT);

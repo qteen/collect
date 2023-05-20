@@ -1206,7 +1206,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
             if(event==FormEntryController.EVENT_REPEAT
                     || event==FormEntryController.EVENT_GROUP) {
                 TreeReference reference = formController.getFormIndex().getReference();
-                if(reference.isAncestorOf(current.getReference(), true)) {
+                if(current.getReference()!=null && reference.isAncestorOf(current.getReference(), true)) {
                     selectedIndex = dataList.size();
                 }
 
@@ -1281,7 +1281,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
         });
         sp.setSelection(selectedIndex,false);
 
-        formController.jumpToIndex(current);
+//        formController.jumpToIndex(current);
         alertDialog = new AlertDialog.Builder(this)
                 .setView(sp)
                 .setTitle(R.string.jump_to_group)
@@ -1289,6 +1289,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
         WindowManager.LayoutParams wmlp = alertDialog.getWindow().getAttributes();
         wmlp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
 
+        formController.jumpToIndex(current);
         alertDialog.show();
     }
 
