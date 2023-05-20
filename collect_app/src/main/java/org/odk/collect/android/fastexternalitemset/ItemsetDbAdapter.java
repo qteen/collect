@@ -1,11 +1,13 @@
-package org.odk.collect.android.database;
+package org.odk.collect.android.fastexternalitemset;
 
+import android.annotation.SuppressLint;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 
+import org.odk.collect.android.database.DatabaseContext;
 import org.odk.collect.android.storage.StoragePathProvider;
 import org.odk.collect.android.storage.StorageSubdirectory;
 
@@ -59,7 +61,7 @@ public class ItemsetDbAdapter {
             if (c != null) {
                 c.move(-1);
                 while (c.moveToNext()) {
-                    String table = c.getString(c.getColumnIndex(KEY_ITEMSET_HASH));
+                    @SuppressLint("Range") String table = c.getString(c.getColumnIndex(KEY_ITEMSET_HASH));
                     db.execSQL("DROP TABLE IF EXISTS " + DATABASE_TABLE + table);
                 }
                 c.close();
@@ -186,7 +188,7 @@ public class ItemsetDbAdapter {
         if (c != null) {
             if (c.getCount() == 1) {
                 c.moveToFirst();
-                String table = getMd5FromString(getAbsoluteFilePath(storagePathProvider.getDirPath(StorageSubdirectory.FORMS), c.getString(c.getColumnIndex(KEY_PATH))));
+                @SuppressLint("Range") String table = getMd5FromString(getAbsoluteFilePath(storagePathProvider.getDirPath(StorageSubdirectory.FORMS), c.getString(c.getColumnIndex(KEY_PATH))));
                 db.execSQL("DROP TABLE IF EXISTS " + DATABASE_TABLE + table);
             }
             c.close();

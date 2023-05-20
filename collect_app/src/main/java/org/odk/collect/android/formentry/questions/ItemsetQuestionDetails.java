@@ -3,7 +3,7 @@ package org.odk.collect.android.formentry.questions;
 import androidx.annotation.NonNull;
 
 import org.javarosa.form.api.FormEntryPrompt;
-import org.odk.collect.android.database.ItemsetDbAdapter;
+import org.odk.collect.android.fastexternalitemset.ItemsetDbAdapter;
 import org.odk.collect.android.utilities.FileUtil;
 import org.odk.collect.android.utilities.XPathParseTool;
 

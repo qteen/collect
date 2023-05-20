@@ -1,15 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <style name="Theme.Collect.Moda" parent="Theme.MaterialComponents.Light.NoActionBar">
+    <style name="Theme.Collect.Moda" parent="Theme.Material3.Light.NoActionBar">
 
         <!--Material theme attributes from https://material.io/develop/android/theming -->
-        <item name="colorPrimary">#004ecb</item>
-        <item name="colorSecondary">#ff5722</item>
+        <item name="colorPrimary">#3D3B8E</item>
+        <item name="colorSecondary">#E072A4</item>
         <item name="colorError">#d32f2f</item>
         <item name="colorSecondaryVariant">#c41c00</item>
 
-        <item name="colorSurface">#75a7ff</item>
+        <!--<item name="colorSurface">#75a7ff</item>--> <!-- blue 2021 -->
+        <item name="colorSurface">#BBCA28</item> <!-- yellow -->
+        <!--<item name="colorSurface">#4CAF50</item>--> <!-- green -->
+        <!--<item name="colorSurface">#C330DC</item>--> <!-- purple -->
         <item name="colorOnPrimary">#FFFFFF</item>
         <item name="colorOnSecondary">#FFFFFF</item>
         <item name="colorOnBackground">#000000</item>

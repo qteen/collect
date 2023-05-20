@@ -25,7 +25,8 @@ import org.javarosa.core.model.data.IAnswerData;
 import org.javarosa.core.model.data.MultipleItemsData;
 import org.javarosa.core.model.data.helper.Selection;
 import org.javarosa.form.api.FormEntryPrompt;
-import org.odk.collect.android.dao.ItemsetDao;
+import org.odk.collect.android.fastexternalitemset.ItemsetDao;
+import org.odk.collect.android.fastexternalitemset.ItemsetDbAdapter;
 import org.odk.collect.android.javarosawrapper.FormController;
 import org.odk.collect.android.widgets.utilities.DateTimeWidgetUtils;
 
@@ -108,7 +109,7 @@ public class FormEntryPromptUtils {
                 language = formController.getLanguage();
             }
 
-            return new ItemsetDao().getItemLabel(fep.getAnswerValue().getDisplayText(), formController.getMediaFolder().getAbsolutePath(), language);
+            return new ItemsetDao(new ItemsetDbAdapter()).getItemLabel(fep.getAnswerValue().getDisplayText(), formController.getMediaFolder().getAbsolutePath(), language);
         }
 
         return fep.getAnswerText();
