@@ -73,7 +73,7 @@ ext {
     androidMinSdk = 21
     androidTargetSdk = 28
 
-    fragmentVersion = '1.2.5'
+    fragmentVersion = '1.5.7'
     daggerVersion = '2.35.1'
     okhttp3Version = '4.9.3'
     butterknifeVersion = '10.2.3'
