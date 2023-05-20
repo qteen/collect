@@ -147,7 +147,7 @@ public class WidgetFactory {
                     case Constants.DATATYPE_TEXT:
                         String query = prompt.getQuestion().getAdditionalAttribute(null, "query");
                         if (query != null) {
-                            questionWidget = new ItemsetWidget(context, questionDetails, appearance.startsWith(WidgetAppearanceUtils.QUICK));
+                            questionWidget = getSelectOneWidget(context, appearance, questionDetails, waitingForDataRegistry);
                         } else if (appearance.startsWith(WidgetAppearanceUtils.PRINTER)) {
                             questionWidget = new ExPrinterWidget(context, questionDetails, waitingForDataRegistry);
                         } else if (appearance.startsWith(WidgetAppearanceUtils.EX)) {
@@ -200,25 +200,7 @@ public class WidgetFactory {
                 questionWidget = new VideoWidget(context, questionDetails, questionMediaManager, waitingForDataRegistry);
                 break;
             case Constants.CONTROL_SELECT_ONE:
-                boolean isQuick = appearance.contains(WidgetAppearanceUtils.QUICK);
-                // search() appearance/function (not part of XForms spec) added by SurveyCTO gets
-                // considered in each widget by calls to ExternalDataUtil.getSearchXPathExpression.
-                // This means normal appearances should be put before search().
-                if (appearance.contains(WidgetAppearanceUtils.MINIMAL)) {
-                    questionWidget = new SelectOneMinimalWidget(context, questionDetails, isQuick, waitingForDataRegistry);
-                } else if (appearance.contains(WidgetAppearanceUtils.LIKERT)) {
-                    questionWidget = new LikertWidget(context, questionDetails);
-                } else if (appearance.contains(WidgetAppearanceUtils.LIST_NO_LABEL)) {
-                    questionWidget = new ListWidget(context, questionDetails, false, isQuick);
-                } else if (appearance.contains(WidgetAppearanceUtils.LIST)) {
-                    questionWidget = new ListWidget(context, questionDetails, true, isQuick);
-                } else if (appearance.equals(WidgetAppearanceUtils.LABEL)) {
-                    questionWidget = new LabelWidget(context, questionDetails);
-                } else if (appearance.contains(WidgetAppearanceUtils.IMAGE_MAP)) {
-                    questionWidget = new SelectOneImageMapWidget(context, questionDetails, isQuick);
-                } else {
-                    questionWidget = new SelectOneWidget(context, questionDetails, isQuick);
-                }
+                questionWidget = getSelectOneWidget(context, appearance, questionDetails, waitingForDataRegistry);
                 break;
             case Constants.CONTROL_SELECT_MULTI:
                 // search() appearance/function (not part of XForms spec) added by SurveyCTO gets
@@ -278,6 +260,29 @@ public class WidgetFactory {
                 break;
         }
 
+        return questionWidget;
+    }
+
+    private static QuestionWidget getSelectOneWidget(Context context, String appearance, QuestionDetails questionDetails, WaitingForDataRegistry waitingForDataRegistry) {
+        final QuestionWidget questionWidget;
+        boolean isQuick = appearance.contains(WidgetAppearanceUtils.QUICK);
+        // search() appearance/function (not part of XForms spec) added by SurveyCTO gets
+        // considered in each widget by calls to ExternalDataUtil.getSearchXPathExpression.
+        if (appearance.contains(WidgetAppearanceUtils.MINIMAL)) {
+            questionWidget = new SelectOneMinimalWidget(context, questionDetails, isQuick, waitingForDataRegistry);
+        } else if (appearance.contains(WidgetAppearanceUtils.LIKERT)) {
+            questionWidget = new LikertWidget(context, questionDetails);
+        } else if (appearance.contains(WidgetAppearanceUtils.LIST_NO_LABEL)) {
+            questionWidget = new ListWidget(context, questionDetails, false, isQuick);
+        } else if (appearance.contains(WidgetAppearanceUtils.LIST)) {
+            questionWidget = new ListWidget(context, questionDetails, true, isQuick);
+        } else if (appearance.contains(WidgetAppearanceUtils.LABEL)) {
+            questionWidget = new LabelWidget(context, questionDetails);
+        } else if (appearance.contains(WidgetAppearanceUtils.IMAGE_MAP)) {
+            questionWidget = new SelectOneImageMapWidget(context, questionDetails, isQuick);
+        } else {
+            questionWidget = new SelectOneWidget(context, questionDetails, isQuick);
+        }
         return questionWidget;
     }
 }
