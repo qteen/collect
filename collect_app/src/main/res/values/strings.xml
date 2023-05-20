@@ -1,17 +1,17 @@
 <resources>
-    <string name="new_entry">New</string>
-    <string name="edit_entry">Edit</string>
-    <string name="view_sent">Sent</string>
-    <string name="send_entry">Send</string>
-    <string name="get_form">Get</string>
-    <string name="get_data">Data</string>
-    <string name="manage_forms">Forms</string>
-    <string name="wait_loading">Please wait...</string>
+    <string name="new_entry" translatable="false">New</string>
+    <string name="edit_entry" translatable="false">Edit</string>
+    <string name="view_sent" translatable="false">Sent</string>
+    <string name="send_entry" translatable="false">Send</string>
+    <string name="get_form" translatable="false">Get</string>
+    <string name="get_data" translatable="false">Data</string>
+    <string name="manage_forms" translatable="false">Forms</string>
+    <string name="wait_loading">Please wait…</string>
     <string name="logout_menu">Logout</string>
     <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
-    <string name="server_url_hint">Server URL</string>
+    <string name="hello_blank_fragment" translatable="false">Hello blank fragment</string>
+    <string name="server_url_hint" translatable="false">Server URL</string>
     <string name="username_hint">Username</string>
-    <string name="password_hint">Kata Sandi</string>
-    <string name="submit_hint">Masuk</string>
+    <string name="password_hint">Password</string>
+    <string name="submit_hint">Login</string>
 </resources>
