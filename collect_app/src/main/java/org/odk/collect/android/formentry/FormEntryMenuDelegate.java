@@ -53,10 +53,12 @@ public class FormEntryMenuDelegate implements MenuDelegate, RequiresFormControll
 
         menu.findItem(R.id.menu_save).setVisible(useability).setEnabled(useability);
 
-        useability = (boolean) AdminSharedPreferences.getInstance().get(AdminKeys.KEY_JUMP_TO);
-
-        menu.findItem(R.id.menu_goto).setVisible(useability)
-                .setEnabled(useability);
+//        useability = (boolean) AdminSharedPreferences.getInstance().get(AdminKeys.KEY_JUMP_TO);
+//
+//        menu.findItem(R.id.menu_goto).setVisible(useability)
+//                .setEnabled(useability);
+        menu.findItem(R.id.menu_goto).setVisible(false)
+                .setEnabled(false);
 
         useability = (boolean) AdminSharedPreferences.getInstance().get(AdminKeys.KEY_CHANGE_LANGUAGE)
                 && (formController != null)
@@ -78,7 +80,8 @@ public class FormEntryMenuDelegate implements MenuDelegate, RequiresFormControll
 //            backgroundLocation.setChecked(GeneralSharedPreferences.getInstance().getBoolean(KEY_BACKGROUND_LOCATION, true));
 //        }
 
-        menu.findItem(R.id.menu_add_repeat).setVisible(getFormEntryViewModel().canAddRepeat());
+//        menu.findItem(R.id.menu_add_repeat).setVisible(getFormEntryViewModel().canAddRepeat());
+        menu.findItem(R.id.menu_add_repeat).setVisible(false);
         menu.findItem(R.id.menu_delete_child).setVisible(formController != null && formController.indexContainsRepeatableGroup());
     }
 
