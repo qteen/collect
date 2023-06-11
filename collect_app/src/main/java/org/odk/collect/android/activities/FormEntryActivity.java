@@ -1217,6 +1217,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
                 FormEntryCaption fc = formController.getCaptionPrompt();
                 String label = fc.getShortText();
 
+                boolean dontAdd = false;
                 if(event==FormEntryController.EVENT_REPEAT) {
                     if(fc.getMultiplicity()==0 && label!=null && label.length()>0) {
                         selectedIndex = selectedIndex==dataList.size()?(selectedIndex+1):selectedIndex;
@@ -1224,6 +1225,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
                         data.put("label", extraSpace + label);
                         data.put("path", formController.getXPath(formController.getFormIndex()));
                         dataList.add(data);
+                        dontAdd = true;
                     }
                     if(fc.getFormElement().getChildren().size() == 1
                             && fc.getFormElement().getChild(0) instanceof GroupDef) {
@@ -1233,6 +1235,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
                             // e.g. `1. Alice`
                             label = "  " + itemLabel;
                         }
+                        dontAdd = false;
                     }
                 } else if(event==FormEntryController.EVENT_GROUP) {
                     if (!formController.isDisplayableGroup(formController.getFormIndex())) {
@@ -1240,7 +1243,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
                     }
                 }
 
-                if(label!=null && label.length()>0) {
+                if(!dontAdd && label!=null && label.length()>0) {
                     Map<String, String> data = new HashMap<>();
                     data.put("label", extraSpace + label);
                     data.put("path", formController.getXPath(formController.getFormIndex()));
@@ -1503,6 +1506,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
     private ODKView createODKView(boolean advancingPage, FormEntryPrompt[] prompts, FormEntryCaption[] groups) {
         odkViewLifecycle.start();
 
+        Timber.i("Cek MediaPlayer");
         AudioClipViewModel.Factory factory = new AudioClipViewModel.Factory(MediaPlayer::new, scheduler);
         ViewModelAudioPlayer viewModelAudioPlayer = new ViewModelAudioPlayer(ViewModelProviders
                 .of(this, factory)
