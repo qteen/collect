@@ -79,8 +79,10 @@ class AudioClipViewModel(private val mediaPlayerFactory: Supplier<MediaPlayer>, 
     }
 
     fun background() {
-        cleanUpAfterClip()
-        releaseMediaPlayer()
+        if(_mediaPlayer!=null) {
+            cleanUpAfterClip()
+            releaseMediaPlayer()
+        }
     }
 
     public override fun onCleared() {

@@ -2,8 +2,10 @@ package org.odk.collect.android.audio;
 
 import android.media.MediaPlayer;
 
+import androidx.annotation.NonNull;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.Lifecycle;
+import androidx.lifecycle.LifecycleEventObserver;
 import androidx.lifecycle.LifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LiveData;
@@ -17,6 +19,8 @@ import org.odk.collect.audioclips.Clip;
 
 import java.util.List;
 import java.util.function.Supplier;
+
+import timber.log.Timber;
 
 /**
  * Object for setting up playback of audio clips with {@link AudioButton} and
@@ -121,7 +125,7 @@ public class AudioHelper {
         }
     }
 
-    private static class BackgroundObserver implements LifecycleObserver {
+    private static class BackgroundObserver implements LifecycleEventObserver {
 
         private final AudioClipViewModel viewModel;
 
@@ -129,9 +133,11 @@ public class AudioHelper {
             this.viewModel = viewModel;
         }
 
-        @OnLifecycleEvent(Lifecycle.Event.ON_PAUSE)
-        void onPause() {
-            viewModel.background();
+        @Override
+        public void onStateChanged(@NonNull LifecycleOwner source, @NonNull Lifecycle.Event event) {
+            if(Lifecycle.Event.ON_PAUSE.equals(event)) {
+                viewModel.background();
+            }
         }
     }
 }
