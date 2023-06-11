@@ -27,6 +27,7 @@ import org.javarosa.core.model.data.helper.Selection;
 import org.odk.collect.android.activities.FormEntryActivity;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.listeners.AdvanceToNextListener;
+import org.odk.collect.android.utilities.SelectOneWidgetUtils;
 
 /**
  * A widget which is responsible for multi select questions represented by
@@ -50,8 +51,7 @@ public class SelectOneImageMapWidget extends SelectImageMapWidget {
         }
 
         if (questionDetails.getPrompt().getAnswerValue() != null) {
-
-            selections.add((Selection) questionDetails.getPrompt().getAnswerValue().getValue());
+            selections.add(SelectOneWidgetUtils.getSelectedItem(questionDetails.getPrompt(), items));
             refreshSelectedItemsLabel();
         }
     }
