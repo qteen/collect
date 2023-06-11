@@ -7,7 +7,6 @@ apply from: '../config/quality.gradle'
 
 android {
     compileSdkVersion rootProject.androidCompileSdk
-    buildToolsVersion "30.0.0"
 
     defaultConfig {
         minSdkVersion rootProject.androidMinSdk
@@ -26,8 +25,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_6
-        targetCompatibility JavaVersion.VERSION_1_6
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 }
 
