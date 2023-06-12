@@ -14,26 +14,27 @@
 
 package org.odk.collect.android.widgets;
 
+import static org.odk.collect.android.utilities.WidgetAppearanceUtils.MAPS;
+import static org.odk.collect.android.utilities.WidgetAppearanceUtils.PLACEMENT_MAP;
+import static org.odk.collect.android.utilities.WidgetAppearanceUtils.hasAppearance;
+
 import android.app.Activity;
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.hardware.SensorManager;
 
 import org.javarosa.core.model.Constants;
 import org.javarosa.form.api.FormEntryPrompt;
 import org.odk.collect.android.R;
-import org.odk.collect.android.analytics.Analytics;
 import org.odk.collect.android.application.Collect;
+import org.odk.collect.android.formentry.FormEntryViewModel;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.geo.MapProvider;
-import org.odk.collect.android.preferences.GeneralKeys;
 import org.odk.collect.android.utilities.ActivityAvailability;
 import org.odk.collect.android.utilities.CameraUtils;
 import org.odk.collect.android.utilities.CustomTabHelper;
 import org.odk.collect.android.utilities.PermissionUtils;
 import org.odk.collect.android.utilities.QuestionMediaManager;
 import org.odk.collect.android.utilities.WidgetAppearanceUtils;
-import org.odk.collect.android.widgets.items.ItemsetWidget;
 import org.odk.collect.android.widgets.items.LabelWidget;
 import org.odk.collect.android.widgets.items.LikertWidget;
 import org.odk.collect.android.widgets.items.ListMultiWidget;
@@ -47,17 +48,11 @@ import org.odk.collect.android.widgets.items.SelectOneMinimalWidget;
 import org.odk.collect.android.widgets.items.SelectOneWidget;
 import org.odk.collect.android.widgets.utilities.ActivityGeoDataRequester;
 import org.odk.collect.android.widgets.utilities.AudioPlayer;
-import org.odk.collect.android.widgets.utilities.ExternalAppRecordingRequester;
-import org.odk.collect.android.widgets.utilities.GetContentAudioFileRequester;
-import org.odk.collect.android.widgets.utilities.InternalRecordingRequester;
-import org.odk.collect.android.widgets.utilities.RecordingRequester;
 import org.odk.collect.android.widgets.utilities.DateTimeWidgetUtils;
+import org.odk.collect.android.widgets.utilities.GetContentAudioFileRequester;
+import org.odk.collect.android.widgets.utilities.RecordingRequester;
+import org.odk.collect.android.widgets.utilities.RecordingRequesterFactory;
 import org.odk.collect.android.widgets.utilities.WaitingForDataRegistry;
-
-import static org.odk.collect.android.analytics.AnalyticsEvents.PROMPT;
-import static org.odk.collect.android.utilities.WidgetAppearanceUtils.MAPS;
-import static org.odk.collect.android.utilities.WidgetAppearanceUtils.PLACEMENT_MAP;
-import static org.odk.collect.android.utilities.WidgetAppearanceUtils.hasAppearance;
 
 /**
  * Convenience class that handles creation of widgets.
@@ -68,27 +63,42 @@ public class WidgetFactory {
 
     private static final String PICKER_APPEARANCE = "picker";
 
-    private WidgetFactory() {
+    private final Activity context;
+    private final boolean readOnlyOverride;
+    private final boolean useExternalRecorder;
+    private final WaitingForDataRegistry waitingForDataRegistry;
+    private final QuestionMediaManager questionMediaManager;
+    private final AudioPlayer audioPlayer;
+    private final ActivityAvailability activityAvailability;
+    private final RecordingRequesterFactory recordingRequesterFactory;
+    private final FormEntryViewModel formEntryViewModel;
 
+    public WidgetFactory(Activity activity,
+                         boolean readOnlyOverride,
+                         boolean useExternalRecorder,
+                         WaitingForDataRegistry waitingForDataRegistry,
+                         QuestionMediaManager questionMediaManager,
+                         AudioPlayer audioPlayer,
+                         ActivityAvailability activityAvailability,
+                         RecordingRequesterFactory recordingRequesterFactory,
+                         FormEntryViewModel formEntryViewModel) {
+        this.context = activity;
+        this.readOnlyOverride = readOnlyOverride;
+        this.useExternalRecorder = useExternalRecorder;
+        this.waitingForDataRegistry = waitingForDataRegistry;
+        this.questionMediaManager = questionMediaManager;
+        this.audioPlayer = audioPlayer;
+        this.activityAvailability = activityAvailability;
+        this.recordingRequesterFactory = recordingRequesterFactory;
+        this.formEntryViewModel = formEntryViewModel;
     }
 
     /**
      * Returns the appropriate QuestionWidget for the given FormEntryPrompt.
      *
      * @param prompt                   prompt element to be rendered
-     * @param context                  Android context
-     * @param readOnlyOverride         a flag to be ORed with JR readonly attribute.
-     * @param generalSharedPreferences shared preferences where general settings live
      */
-    public static QuestionWidget createWidgetFromPrompt(FormEntryPrompt prompt,
-                                                        Context context,
-                                                        boolean readOnlyOverride,
-                                                        WaitingForDataRegistry waitingForDataRegistry,
-                                                        QuestionMediaManager questionMediaManager,
-                                                        Analytics analytics,
-                                                        AudioPlayer audioPlayer,
-                                                        SharedPreferences generalSharedPreferences) {
-
+    public QuestionWidget createWidgetFromPrompt(FormEntryPrompt prompt) {
         String appearance = WidgetAppearanceUtils.getSanitizedAppearanceHint(prompt);
         QuestionDetails questionDetails = new QuestionDetails(prompt, Collect.getCurrentFormIdentifierHash(), readOnlyOverride);
         PermissionUtils permissionUtils = new PermissionUtils(R.style.Theme_Collect_Dialog_PermissionAlert);
@@ -147,7 +157,7 @@ public class WidgetFactory {
                     case Constants.DATATYPE_TEXT:
                         String query = prompt.getQuestion().getAdditionalAttribute(null, "query");
                         if (query != null) {
-                            questionWidget = getSelectOneWidget(context, appearance, questionDetails, waitingForDataRegistry);
+                            questionWidget = getSelectOneWidget(appearance, questionDetails);
                         } else if (appearance.startsWith(WidgetAppearanceUtils.PRINTER)) {
                             questionWidget = new ExPrinterWidget(context, questionDetails, waitingForDataRegistry);
                         } else if (appearance.startsWith(WidgetAppearanceUtils.EX)) {
@@ -156,8 +166,6 @@ public class WidgetFactory {
                             questionWidget = new StringNumberWidget(context, questionDetails);
                         } else if (appearance.equals(WidgetAppearanceUtils.URL)) {
                             questionWidget = new UrlWidget(context, questionDetails, new CustomTabHelper());
-
-                            analytics.logEvent(PROMPT, "Url", questionDetails.getFormAnalyticsID());
                         } else {
                             questionWidget = new StringWidget(context, questionDetails);
                         }
@@ -185,22 +193,15 @@ public class WidgetFactory {
                 questionWidget = new OSMWidget(context, questionDetails, waitingForDataRegistry);
                 break;
             case Constants.CONTROL_AUDIO_CAPTURE:
-                RecordingRequester recordingRequester;
-
-                if (generalSharedPreferences.getBoolean(GeneralKeys.KEY_EXTERNAL_APP_RECORDING, true)) {
-                    recordingRequester = new ExternalAppRecordingRequester((Activity) context, activityAvailability, waitingForDataRegistry, permissionUtils);
-                } else {
-                    recordingRequester = new InternalRecordingRequester((Activity) context, waitingForDataRegistry, permissionUtils);
-                }
-
-                questionWidget = new AudioWidget(context, questionDetails, questionMediaManager, audioPlayer, recordingRequester, new GetContentAudioFileRequester((Activity) context, activityAvailability, waitingForDataRegistry));
-
+                RecordingRequester recordingRequester = recordingRequesterFactory.create(prompt, useExternalRecorder);
+                questionWidget = new AudioWidget(context, questionDetails, questionMediaManager, audioPlayer, recordingRequester,
+                        new GetContentAudioFileRequester(context, activityAvailability, waitingForDataRegistry, formEntryViewModel));
                 break;
             case Constants.CONTROL_VIDEO_CAPTURE:
                 questionWidget = new VideoWidget(context, questionDetails, questionMediaManager, waitingForDataRegistry);
                 break;
             case Constants.CONTROL_SELECT_ONE:
-                questionWidget = getSelectOneWidget(context, appearance, questionDetails, waitingForDataRegistry);
+                questionWidget = getSelectOneWidget(appearance, questionDetails);
                 break;
             case Constants.CONTROL_SELECT_MULTI:
                 // search() appearance/function (not part of XForms spec) added by SurveyCTO gets
@@ -263,7 +264,7 @@ public class WidgetFactory {
         return questionWidget;
     }
 
-    private static QuestionWidget getSelectOneWidget(Context context, String appearance, QuestionDetails questionDetails, WaitingForDataRegistry waitingForDataRegistry) {
+    private QuestionWidget getSelectOneWidget(String appearance, QuestionDetails questionDetails) {
         final QuestionWidget questionWidget;
         boolean isQuick = appearance.contains(WidgetAppearanceUtils.QUICK);
         // search() appearance/function (not part of XForms spec) added by SurveyCTO gets

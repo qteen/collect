@@ -149,4 +149,27 @@ public class AnalyticsEvents {
      * should be a hash of the endpoint setting.
      */
     public static final String CUSTOM_ENDPOINT_SUB = "CustomEndpointSub";
+
+    /**
+     * Tracks how often the audio player seek bar is used.
+     */
+    public static final String AUDIO_PLAYER_SEEK = "AudioPlayerSeek";
+
+    /**
+     * Tracks how often pause action is used while recording audio
+     */
+    public static final String AUDIO_RECORDING_PAUSE = "AudioRecordingPause";
+
+    /**
+     * Tracks usage or internal recording vs external recording vs choosing files for
+     * audio question
+     */
+    public static final String AUDIO_RECORDING_INTERNAL = "AudioRecordingInternal";
+    public static final String AUDIO_RECORDING_EXTERNAL = "AudioRecordingExternal";
+    public static final String AUDIO_RECORDING_CHOOSE = "AudioRecordingChoose";
+
+    /**
+     * Tracks how often people see the URL question
+     */
+    public static final String URL_QUESTION = "UrlQuestion";
 }

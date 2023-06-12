@@ -87,6 +87,8 @@ import org.odk.collect.android.R;
 import org.odk.collect.android.analytics.Analytics;
 import org.odk.collect.android.application.Collect;
 import org.odk.collect.android.audio.AudioControllerView;
+import org.odk.collect.android.formentry.saving.SaveAnswerFileErrorDialogFragment;
+import org.odk.collect.android.formentry.saving.SaveAnswerFileProgressDialogFragment;
 import org.odk.collect.android.listeners.SkipAllRequiredListener;
 import org.odk.collect.android.utilities.ClickSpan;
 import org.odk.collect.android.widgets.utilities.ViewModelAudioPlayer;
@@ -171,6 +173,8 @@ import org.odk.collect.android.widgets.utilities.FormControllerWaitingForDataReg
 import org.odk.collect.android.widgets.utilities.WaitingForDataRegistry;
 import org.odk.collect.async.Scheduler;
 import org.odk.collect.audioclips.AudioClipViewModel;
+import org.odk.collect.audiorecorder.recording.AudioRecorderViewModel;
+import org.odk.collect.audiorecorder.recording.AudioRecorderViewModelFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -307,6 +311,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
     private FormEntryMenuDelegate menuDelegate;
     private FormIndexAnimationHandler formIndexAnimationHandler;
     private WaitingForDataRegistry waitingForDataRegistry;
+    private AudioRecorderViewModel audioRecorderViewModel;
 
     @Override
     public void allowSwiping(boolean doSwipe) {
@@ -377,6 +382,12 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
 
     @Inject
     Scheduler scheduler;
+
+    @Inject
+    AudioRecorderViewModelFactory audioRecorderViewModelFactory;
+
+    @Inject
+    FormSaveViewModel.FactoryFactory formSaveViewModelFactoryFactory;
 
     private final LocationProvidersReceiver locationProvidersReceiver = new LocationProvidersReceiver();
 
@@ -511,10 +522,23 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
             }
         });
 
-        FormSaveViewModel.Factory factory = new FormSaveViewModel.Factory(this, null, analytics);
-        formSaveViewModel = new ViewModelProvider(this, factory).get(FormSaveViewModel.class);
-
+        formSaveViewModel = new ViewModelProvider(this, formSaveViewModelFactoryFactory.create(this, null)).get(FormSaveViewModel.class);
         formSaveViewModel.getSaveResult().observe(this, this::handleSaveResult);
+        formSaveViewModel.isSavingAnswerFile().observe(this, isSavingAnswerFile -> {
+            if (isSavingAnswerFile) {
+                DialogUtils.showIfNotShowing(SaveAnswerFileProgressDialogFragment.class, getSupportFragmentManager());
+            } else {
+                DialogUtils.dismissDialog(SaveAnswerFileProgressDialogFragment.class, getSupportFragmentManager());
+            }
+        });
+
+        formSaveViewModel.getAnswerFileError().observe(this, file -> {
+            if (file != null) {
+                DialogUtils.showIfNotShowing(SaveAnswerFileErrorDialogFragment.class, getSupportFragmentManager());
+            }
+        });
+
+        audioRecorderViewModel = new ViewModelProvider(this, audioRecorderViewModelFactory).get(AudioRecorderViewModel.class);
     }
 
     private void formControllerAvailable(@NonNull FormController formController) {
@@ -1512,7 +1536,8 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
                 .of(this, factory)
                 .get(AudioClipViewModel.class), odkViewLifecycle);
 
-        return new ODKView(this, prompts, groups, advancingPage, formSaveViewModel, waitingForDataRegistry, viewModelAudioPlayer);
+        return new ODKView(this, prompts, groups, advancingPage, formSaveViewModel, waitingForDataRegistry,
+                viewModelAudioPlayer, audioRecorderViewModel, formEntryViewModel);
     }
 
     @Override
@@ -2984,7 +3009,7 @@ public class FormEntryActivity extends CollectAbstractActivity implements Animat
                     && !questionsAfterSave[i].getIndex().equals(lastChangedIndex)) {
                 // The values of widgets in intent groups are set by the view so widgetValueChanged
                 // is never called. This means readOnlyOverride can always be set to false.
-                odkView.addWidgetForQuestion(questionsAfterSave[i], false, i);
+                odkView.addWidgetForQuestion(questionsAfterSave[i], i);
             }
         }
     }

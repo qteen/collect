@@ -78,4 +78,5 @@ ext {
     okhttp3Version = '4.9.3'
     butterknifeVersion = '10.2.3'
     jjwtVersion = '0.11.5'
+    timberVersion = '4.7.1'
 }

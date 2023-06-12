@@ -11,8 +11,10 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.SavedStateHandle;
 import androidx.lifecycle.ViewModel;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.savedstate.SavedStateRegistryOwner;
 
+import org.apache.commons.io.IOUtils;
 import org.javarosa.core.model.FormIndex;
 import org.javarosa.core.model.data.IAnswerData;
 import org.javarosa.form.api.FormEntryController;
@@ -32,9 +34,16 @@ import org.odk.collect.android.tasks.SaveToDiskResult;
 import org.odk.collect.android.utilities.FileUtils;
 import org.odk.collect.android.utilities.MediaUtils;
 import org.odk.collect.android.utilities.QuestionMediaManager;
+import org.odk.collect.android.utilities.Result;
+import org.odk.collect.async.Scheduler;
 import org.odk.collect.utilities.Clock;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -59,6 +68,8 @@ public class FormSaveViewModel extends ViewModel implements ProgressDialogFragme
 
     private Map<String, String> originalFiles = new HashMap<>();
     private Map<String, String> recentFiles = new HashMap<>();
+    private final MutableLiveData<Boolean> isSavingAnswerFile = new MutableLiveData<>(false);
+    private final MutableLiveData<String> answerFileError = new MutableLiveData<>(null);
 
     @Nullable
     private FormController formController;
@@ -67,13 +78,16 @@ public class FormSaveViewModel extends ViewModel implements ProgressDialogFragme
     private AsyncTask<Void, String, SaveToDiskResult> saveTask;
 
     private final Analytics analytics;
+    private final Scheduler scheduler;
 
-    public FormSaveViewModel(SavedStateHandle stateHandle, Clock clock, FormSaver formSaver, MediaUtils mediaUtils, Analytics analytics) {
+    public FormSaveViewModel(SavedStateHandle stateHandle, Clock clock, FormSaver formSaver,
+                             MediaUtils mediaUtils, Analytics analytics, Scheduler scheduler) {
         this.stateHandle = stateHandle;
         this.clock = clock;
         this.formSaver = formSaver;
         this.mediaUtils = mediaUtils;
         this.analytics = analytics;
+        this.scheduler = scheduler;
 
         if (stateHandle.get(ORIGINAL_FILES) != null) {
             originalFiles = stateHandle.get(ORIGINAL_FILES);
@@ -314,6 +328,50 @@ public class FormSaveViewModel extends ViewModel implements ProgressDialogFragme
     }
 
     @Override
+    public LiveData<Result<String>> createAnswerFile(File file) {
+        MutableLiveData<Result<String>> liveData = new MutableLiveData<>(null);
+
+        isSavingAnswerFile.setValue(true);
+        scheduler.immediate(() -> {
+            String newFileHash = FileUtils.getMd5Hash(file);
+            String instanceDir = formController.getInstanceFile().getParent();
+
+            File[] answerFiles = new File(instanceDir).listFiles();
+            for (File answerFile : answerFiles) {
+                if (FileUtils.getMd5Hash(answerFile).equals(newFileHash)) {
+                    return answerFile.getName();
+                }
+            }
+
+            String fileName = file.getName();
+            String extension = fileName.substring(fileName.lastIndexOf('.') + 1);
+            String newFileName = System.currentTimeMillis() + "." + extension;
+            String newFilePath = instanceDir + File.separator + newFileName;
+
+            try (InputStream inputStream = new FileInputStream(file)) {
+                try (OutputStream outputStream = new FileOutputStream(newFilePath)) {
+                    IOUtils.copy(inputStream, outputStream);
+                }
+            } catch (IOException e) {
+                Timber.e(e);
+                return null;
+            }
+
+            return newFileName;
+        }, fileName -> {
+            String fileName1 = fileName;
+            liveData.setValue(new Result(fileName1));
+            isSavingAnswerFile.setValue(false);
+
+            if (fileName == null) {
+                answerFileError.setValue(file.getAbsolutePath());
+            }
+        });
+
+        return liveData;
+    }
+
+    @Override
     @Nullable
     public File getAnswerFile(String fileName) {
         if (formController != null && formController.getInstanceFile() != null) {
@@ -323,9 +381,21 @@ public class FormSaveViewModel extends ViewModel implements ProgressDialogFragme
         }
     }
 
+    public LiveData<Boolean> isSavingAnswerFile() {
+        return isSavingAnswerFile;
+    }
+
     private void clearMediaFiles() {
         originalFiles.clear();
         recentFiles.clear();
+    }
+
+    public LiveData<String> getAnswerFileError() {
+        return answerFileError;
+    }
+
+    public void answerFileErrorDisplayed() {
+        answerFileError.setValue(null);
     }
 
     public static class SaveResult {
@@ -436,18 +506,14 @@ public class FormSaveViewModel extends ViewModel implements ProgressDialogFragme
         }
     }
 
-    public static class Factory extends AbstractSavedStateViewModelFactory {
-        private final Analytics analytics;
+    /**
+     * The ViewModel factory here needs a reference to the Activity (the SavedStateRegistry) so
+     * we need factory to be able to create it in Dagger (as we won't have access to the Activity).
+     *
+     * Could potentially be solved using Dagger's per Activity scopes.
+     */
+    public interface FactoryFactory {
 
-        public Factory(@NonNull SavedStateRegistryOwner owner, @Nullable Bundle defaultArgs, Analytics analytics) {
-            super(owner, defaultArgs);
-            this.analytics = analytics;
-        }
-
-        @NonNull
-        @Override
-        protected <T extends ViewModel> T create(@NonNull String key, @NonNull Class<T> modelClass, @NonNull SavedStateHandle handle) {
-            return (T) new FormSaveViewModel(handle, System::currentTimeMillis, new DiskFormSaver(), new MediaUtils(), analytics);
-        }
+        ViewModelProvider.Factory create(@NonNull SavedStateRegistryOwner owner, @Nullable Bundle defaultArgs);
     }
 }

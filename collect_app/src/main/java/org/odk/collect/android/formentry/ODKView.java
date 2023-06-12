@@ -35,8 +35,10 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.ComponentActivity;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.lifecycle.LifecycleOwner;
 
 import com.google.android.material.button.MaterialButton;
 
@@ -51,11 +53,16 @@ import org.javarosa.form.api.FormEntryCaption;
 import org.javarosa.form.api.FormEntryPrompt;
 import org.odk.collect.android.R;
 import org.odk.collect.android.analytics.Analytics;
+import org.odk.collect.android.analytics.AnalyticsEvents;
 import org.odk.collect.android.application.Collect;
 import org.odk.collect.android.audio.AudioHelper;
+import org.odk.collect.android.preferences.GeneralKeys;
 import org.odk.collect.android.preferences.PreferencesProvider;
 import org.odk.collect.android.dao.helpers.ContentResolverHelper;
+import org.odk.collect.android.utilities.ActivityAvailability;
 import org.odk.collect.android.utilities.FileUtils;
+import org.odk.collect.android.utilities.PermissionUtils;
+import org.odk.collect.android.widgets.UrlWidget;
 import org.odk.collect.android.widgets.interfaces.WidgetDataReceiver;
 import org.odk.collect.android.widgets.utilities.AudioPlayer;
 import org.odk.collect.android.exception.ExternalParamsException;
@@ -74,8 +81,10 @@ import org.odk.collect.android.utilities.ToastUtils;
 import org.odk.collect.android.widgets.QuestionWidget;
 import org.odk.collect.android.widgets.StringWidget;
 import org.odk.collect.android.widgets.WidgetFactory;
+import org.odk.collect.android.widgets.utilities.RecordingRequesterFactory;
 import org.odk.collect.android.widgets.utilities.WaitingForDataRegistry;
 import org.odk.collect.audioclips.PlaybackFailedException;
+import org.odk.collect.audiorecorder.recording.AudioRecorderViewModel;
 
 import java.io.File;
 import java.io.Serializable;
@@ -105,14 +114,11 @@ public class ODKView extends FrameLayout implements OnLongClickListener, WidgetV
     private final LinearLayout.LayoutParams layout;
     private final ArrayList<QuestionWidget> widgets;
     private final AudioHelper audioHelper;
-    private final QuestionMediaManager questionMediaManager;
 
     public static final String FIELD_LIST = "field-list";
     public static final String BOOKMARK = "bookmark";
     public static final String LIST_NOLABEL = "list-nolabel";
     public static final String LABEL = "label";
-    private final WaitingForDataRegistry waitingForDataRegistry;
-    private final AudioPlayer audioPlayer;
 
     private WidgetValueChangedListener widgetValueChangedListener;
 
@@ -125,6 +131,14 @@ public class ODKView extends FrameLayout implements OnLongClickListener, WidgetV
     @Inject
     PreferencesProvider preferencesProvider;
 
+    @Inject
+    ActivityAvailability activityAvailability;
+
+    private final WidgetFactory widgetFactory;
+    private final LifecycleOwner viewLifecycle;
+    private final AudioRecorderViewModel audioRecorderViewModel;
+    private final FormEntryViewModel formEntryViewModel;
+
     /**
      * Builds the view for a specified question or field-list of questions.
      * @param context         the activity creating this view
@@ -132,25 +146,18 @@ public class ODKView extends FrameLayout implements OnLongClickListener, WidgetV
      * @param groups          the group hierarchy that this question or field list is in
      * @param advancingPage   whether this view is being created after a forward swipe through the
      */
-    public ODKView(Context context, final FormEntryPrompt[] questionPrompts, FormEntryCaption[] groups,
-                   boolean advancingPage, QuestionMediaManager questionMediaManager, WaitingForDataRegistry waitingForDataRegistry, AudioPlayer audioPlayer) {
+    public ODKView(ComponentActivity context, final FormEntryPrompt[] questionPrompts, FormEntryCaption[] groups,
+                   boolean advancingPage, QuestionMediaManager questionMediaManager,
+                   WaitingForDataRegistry waitingForDataRegistry, AudioPlayer audioPlayer,
+                   AudioRecorderViewModel audioRecorderViewModel, FormEntryViewModel formEntryViewModel) {
         super(context);
-        this.questionMediaManager = questionMediaManager;
-        this.waitingForDataRegistry = waitingForDataRegistry;
-        this.audioPlayer = audioPlayer;
+        viewLifecycle = ((ScreenContext) context).getViewLifecycle();
+        this.audioRecorderViewModel = audioRecorderViewModel;
+        this.formEntryViewModel = formEntryViewModel;
 
         getComponent(context).inject(this);
         this.audioHelper = audioHelperFactory.create(context);
-
         inflate(getContext(), R.layout.odk_view, this); // keep in an xml file to enable the vertical scrollbar
-
-        widgets = new ArrayList<>();
-        widgetsList = findViewById(R.id.widgets);
-
-        layout = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT);
-        // display which group you are in as well as the question
-        setGroupText(groups);
 
         // when the grouped fields are populated by an external app, this will get true.
         boolean readOnlyOverride = false;
@@ -162,17 +169,39 @@ public class ODKView extends FrameLayout implements OnLongClickListener, WidgetV
             final String intentString = c.getFormElement().getAdditionalAttribute(null, "intent");
             if (intentString != null && intentString.length() != 0) {
                 readOnlyOverride = true;
-
                 addIntentLaunchButton(context, questionPrompts, c, intentString);
             }
         }
 
+        PermissionUtils permissionUtils = new PermissionUtils(R.style.Theme_Collect_Dialog_PermissionAlert);
+
+        this.widgetFactory = new WidgetFactory(
+                context,
+                readOnlyOverride,
+                preferencesProvider.getGeneralSharedPreferences().getBoolean(GeneralKeys.KEY_EXTERNAL_APP_RECORDING, true),
+                waitingForDataRegistry,
+                questionMediaManager,
+                audioPlayer,
+                activityAvailability,
+                new RecordingRequesterFactory(waitingForDataRegistry, questionMediaManager, activityAvailability, audioRecorderViewModel, permissionUtils, context, viewLifecycle, formEntryViewModel),
+                formEntryViewModel);
+
+        widgets = new ArrayList<>();
+        widgetsList = findViewById(R.id.widgets);
+
+        layout = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        // display which group you are in as well as the question
+        setGroupText(groups);
+
         for (FormEntryPrompt question : questionPrompts) {
-            addWidgetForQuestion(question, readOnlyOverride);
+            addWidgetForQuestion(question);
         }
 
         setupAudioErrors();
         autoplayIfNeeded(advancingPage);
+
+        logAnalyticsForWidgets();
     }
 
     private void setupAudioErrors() {
@@ -237,8 +266,8 @@ public class ODKView extends FrameLayout implements OnLongClickListener, WidgetV
      * and adds it to the end of the view. If this widget is not the first one, add a divider above
      * it.
      */
-    private void addWidgetForQuestion(FormEntryPrompt question, boolean readOnlyOverride) {
-        QuestionWidget qw = configureWidgetForQuestion(question, readOnlyOverride);
+    private void addWidgetForQuestion(FormEntryPrompt question) {
+        QuestionWidget qw = configureWidgetForQuestion(question);
 
         widgets.add(qw);
 
@@ -254,13 +283,13 @@ public class ODKView extends FrameLayout implements OnLongClickListener, WidgetV
      * add a divider above it. If the specified {@code index} is beyond the end of the widget list,
      * add it to the end.
      */
-    public void addWidgetForQuestion(FormEntryPrompt question, boolean readOnlyOverride, int index) {
+    public void addWidgetForQuestion(FormEntryPrompt question, int index) {
         if (index > widgets.size() - 1) {
-            addWidgetForQuestion(question, readOnlyOverride);
+            addWidgetForQuestion(question);
             return;
         }
 
-        QuestionWidget qw = configureWidgetForQuestion(question, readOnlyOverride);
+        QuestionWidget qw = configureWidgetForQuestion(question);
 
         widgets.add(index, qw);
 
@@ -277,9 +306,8 @@ public class ODKView extends FrameLayout implements OnLongClickListener, WidgetV
      * <p>
      * Note: if the given question is of an unsupported type, a text widget will be created.
      */
-    private QuestionWidget configureWidgetForQuestion(FormEntryPrompt question, boolean readOnlyOverride) {
-        QuestionWidget qw = WidgetFactory.createWidgetFromPrompt(question, getContext(), readOnlyOverride,
-                waitingForDataRegistry, questionMediaManager, analytics, audioPlayer, preferencesProvider.getGeneralSharedPreferences());
+    private QuestionWidget configureWidgetForQuestion(FormEntryPrompt question) {
+        QuestionWidget qw = widgetFactory.createWidgetFromPrompt(question);
         qw.setOnLongClickListener(this);
         qw.setValueChangedListener(this);
 
@@ -658,6 +686,14 @@ public class ODKView extends FrameLayout implements OnLongClickListener, WidgetV
     public void widgetValueChanged(QuestionWidget changedWidget) {
         if (widgetValueChangedListener != null) {
             widgetValueChangedListener.widgetValueChanged(changedWidget);
+        }
+    }
+
+    private void logAnalyticsForWidgets() {
+        for (QuestionWidget widget : widgets) {
+            if (widget instanceof UrlWidget) {
+                formEntryViewModel.logFormEvent(AnalyticsEvents.URL_QUESTION);
+            }
         }
     }
 }

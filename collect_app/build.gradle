@@ -16,7 +16,7 @@ ant.condition(property: 'os', value: 'unix') {
 }
 
 // Build numbers were manually set until 1067
-def LEGACY_BUILD_NUMBER_OFFSET = 1080
+def LEGACY_BUILD_NUMBER_OFFSET = 1082
 
 // Based on http://stackoverflow.com/questions/17097263#24121734
 def getMasterCommitCount = { ->
@@ -86,7 +86,7 @@ android {
         minSdkVersion rootProject.androidMinSdk
         targetSdkVersion rootProject.androidTargetSdk
         versionCode LEGACY_BUILD_NUMBER_OFFSET + getMasterCommitCount()
-        versionName "1.29.2"
+        versionName "1.29.4"
         testInstrumentationRunner('androidx.test.runner.AndroidJUnitRunner')
         multiDexEnabled true
         vectorDrawables.useSupportLibrary = true
@@ -291,7 +291,7 @@ dependencies {
         exclude group: 'com.google.guava'
     }
 
-    implementation "com.jakewharton.timber:timber:4.7.1"
+    implementation "com.jakewharton.timber:timber:${rootProject.timberVersion}"
     implementation "org.slf4j:slf4j-api:2.0.0-alpha0"
     implementation "com.arcao:slf4j-timber:3.1@aar"
 

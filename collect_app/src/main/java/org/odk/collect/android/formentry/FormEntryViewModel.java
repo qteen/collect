@@ -128,6 +128,18 @@ public class FormEntryViewModel extends ViewModel implements RequiresFormControl
         }
     }
 
+    public void logFormEvent(String event) {
+        analytics.logFormEvent(event, getFormIdentifierHash());
+    }
+
+    private String getFormIdentifierHash() {
+        if (formController != null) {
+            return formController.getCurrentFormIdentifierHash();
+        } else {
+            return "";
+        }
+    }
+
     public static class Factory implements ViewModelProvider.Factory {
 
         private final Analytics analytics;

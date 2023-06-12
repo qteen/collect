@@ -717,4 +717,6 @@
     <string name="recording">Recording…</string>
     <string name="recording_channel">Audio recording</string>
     <string name="welcome_username">Hello %s</string>
+    <string name="answer_file_copy_failed_message">Media could not be attached to form but is available at %1$s</string>
+    <string name="saving_file">Saving file</string>
 </resources>

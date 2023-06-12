@@ -1,46 +1,34 @@
 package org.odk.collect.audiorecorder.recording
 
-import android.app.Application
-import android.content.Intent
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import org.odk.collect.audiorecorder.recording.AudioRecorderService.Companion.ACTION_CANCEL
-import org.odk.collect.audiorecorder.recording.AudioRecorderService.Companion.ACTION_START
-import org.odk.collect.audiorecorder.recording.AudioRecorderService.Companion.ACTION_STOP
+import org.odk.collect.audiorecorder.recorder.Output
 import java.io.File
-import javax.inject.Inject
 
-internal class AudioRecorderViewModel(private val application: Application, private val recordingRepository: RecordingRepository) : ViewModel() {
+/**
+ * Interface for a ViewModel that records audio. Can only record once session
+ * at a time.
+ */
+abstract class AudioRecorderViewModel : ViewModel() {
+    abstract fun isRecording(): Boolean
+    abstract fun getCurrentSession(): LiveData<RecordingSession?>
 
-    val recording: LiveData<File?> = recordingRepository.getRecording()
+    abstract fun start(sessionId: String, output: Output)
+    abstract fun pause()
+    abstract fun resume()
+    abstract fun stop()
 
-    fun start() {
-        application.startService(
-            Intent(application, AudioRecorderService::class.java).apply { action = ACTION_START }
-        )
-    }
-
-    fun stop() {
-        application.startService(
-            Intent(application, AudioRecorderService::class.java).apply { action = ACTION_STOP }
-        )
-    }
-
-    fun cancel() {
-        application.startService(
-            Intent(application, AudioRecorderService::class.java).apply { action = ACTION_CANCEL }
-        )
-    }
-
-    fun endSession() {
-        recordingRepository.clear()
-    }
-
-    class Factory @Inject constructor(private val application: Application, private val recordingRepository: RecordingRepository) : ViewModelProvider.Factory {
-
-        override fun <T : ViewModel?> create(modelClass: Class<T>): T {
-            return AudioRecorderViewModel(application, recordingRepository) as T
-        }
-    }
+    /**
+     * Stops any in progress recordings, clears recordings (returned from `getRecordings`). Should
+     * be called after in-progress or finished recordings are no longer needed
+     */
+    abstract fun cleanUp()
 }
+
+data class RecordingSession(val id: String, val file: File?, val duration: Long, val amplitude: Int, val paused: Boolean, val failedToStart: Exception?) {
+
+    constructor(id: String, file: File?, duration: Long, amplitude: Int, paused: Boolean) : this(id, file, duration, amplitude, paused, null)
+}
+
+class SetupException : java.lang.Exception()
+class MicInUseException : java.lang.Exception()

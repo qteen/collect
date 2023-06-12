@@ -8,6 +8,10 @@ import android.media.MediaPlayer;
 import android.telephony.TelephonyManager;
 import android.webkit.MimeTypeMap;
 
+import androidx.annotation.NonNull;
+import androidx.lifecycle.AbstractSavedStateViewModelFactory;
+import androidx.lifecycle.SavedStateHandle;
+import androidx.lifecycle.ViewModel;
 import androidx.work.WorkManager;
 
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
@@ -45,6 +49,8 @@ import org.odk.collect.android.database.DatabaseMediaFileRepository;
 import org.odk.collect.android.events.RxEventBus;
 import org.odk.collect.android.formentry.media.AudioHelperFactory;
 import org.odk.collect.android.formentry.media.ScreenContextAudioHelperFactory;
+import org.odk.collect.android.formentry.saving.DiskFormSaver;
+import org.odk.collect.android.formentry.saving.FormSaveViewModel;
 import org.odk.collect.android.formmanagement.DiskFormsSynchronizer;
 import org.odk.collect.android.formmanagement.FormDownloader;
 import org.odk.collect.android.formmanagement.FormMetadataParser;
@@ -90,12 +96,14 @@ import org.odk.collect.android.utilities.DeviceDetailsProvider;
 import org.odk.collect.android.utilities.FileProvider;
 import org.odk.collect.android.utilities.FileUtil;
 import org.odk.collect.android.utilities.FormsDirDiskFormsSynchronizer;
+import org.odk.collect.android.utilities.MediaUtils;
 import org.odk.collect.android.utilities.PermissionUtils;
 import org.odk.collect.android.utilities.WebCredentialsUtils;
 import org.odk.collect.android.version.VersionInformation;
 import org.odk.collect.android.views.BarcodeViewDecoder;
 import org.odk.collect.async.CoroutineAndWorkManagerScheduler;
 import org.odk.collect.async.Scheduler;
+import org.odk.collect.audiorecorder.recording.AudioRecorderViewModelFactory;
 import org.odk.collect.utilities.UserAgentProvider;
 
 import java.io.File;
@@ -444,4 +452,19 @@ public class AppDependencyModule {
         return new DatabaseInstancesRepository();
     }
 
+    @Provides
+    public AudioRecorderViewModelFactory providesAudioRecorderViewModelFactory(Application application) {
+        return new AudioRecorderViewModelFactory(application);
+    }
+
+    @Provides
+    public FormSaveViewModel.FactoryFactory providesFormSaveViewModelFactoryFactory(Analytics analytics, Scheduler scheduler) {
+        return (owner, defaultArgs) -> new AbstractSavedStateViewModelFactory(owner, defaultArgs) {
+            @NonNull
+            @Override
+            protected <T extends ViewModel> T create(@NonNull String key, @NonNull Class<T> modelClass, @NonNull SavedStateHandle handle) {
+                return (T) new FormSaveViewModel(handle, System::currentTimeMillis, new DiskFormSaver(), new MediaUtils(), analytics, scheduler);
+            }
+        };
+    }
 }
