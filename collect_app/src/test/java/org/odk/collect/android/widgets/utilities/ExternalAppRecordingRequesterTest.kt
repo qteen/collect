@@ -4,8 +4,8 @@ import android.app.Activity
 import android.provider.MediaStore
 import androidx.test.espresso.matcher.ViewMatchers.assertThat
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.CoreMatchers.equalTo
+import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.CoreMatchers.nullValue
 import org.junit.Before
 import org.junit.Test
@@ -53,8 +53,8 @@ class ExternalAppRecordingRequesterTest {
             toastMessage,
             equalTo(
                 activity.getString(
-                    R.string.activity_not_found,
-                    activity.getString(R.string.capture_audio)
+                    org.odk.collect.strings.R.string.activity_not_found,
+                    activity.getString(org.odk.collect.strings.R.string.capture_audio)
                 )
             )
         )

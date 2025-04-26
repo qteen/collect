@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <style name="TextAppearance.Collect.Headline4" parent="TextAppearance.MaterialComponents.Headline4">
         <item name="android:textColor">@color/color_on_surface_high_emphasis</item>
     </style>
@@ -32,6 +32,13 @@
         <item name="android:textColor">@color/color_on_surface_medium_emphasis</item>
     </style>
 
+    <style name="TextAppearance.Collect.TitleLarge" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textSize">20sp</item>
+        <item name="android:lineHeight" tools:targetApi="p">24sp</item>
+        <item name="lineHeight">24sp</item>
+        <item name="fontFamily">sans-serif-medium</item>
+    </style>
+
     <style name="TextAppearance.Collect.Button" parent="TextAppearance.MaterialComponents.Button">
         <item name="fontFamily">sans-serif</item>
         <item name="android:fontFamily">sans-serif</item>
@@ -40,7 +47,7 @@
         <item name="android:letterSpacing">0.009375</item>
     </style>
 
-    <style name="TextAppearance.Collect.Link" parent="TextAppearance.MaterialComponents.Body2">
-        <item name="android:textColor">?colorPrimary</item>
+    <style name="TextAppearance.Collect.LabelExtraLarge" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textSize">18sp</item>
     </style>
 </resources>

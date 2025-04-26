@@ -13,16 +13,13 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.odk.collect.android.R;
 import org.odk.collect.fragmentstest.FragmentScenarioLauncherRule;
 
 @RunWith(AndroidJUnit4.class)
 public class BackgroundAudioHelpDialogFragmentTest {
 
     @Rule
-    public FragmentScenarioLauncherRule launcherRule = new FragmentScenarioLauncherRule(
-            R.style.Theme_MaterialComponents
-    );
+    public FragmentScenarioLauncherRule launcherRule = new FragmentScenarioLauncherRule();
 
     @Test
     public void hasOkButton() {

@@ -10,10 +10,10 @@ import org.odk.collect.analytics.Analytics
 import org.odk.collect.android.R
 import org.odk.collect.android.activities.ActivityUtils
 import org.odk.collect.android.activities.FirstLaunchActivity
-import org.odk.collect.android.activities.MainMenuActivity
 import org.odk.collect.android.analytics.AnalyticsEvents
 import org.odk.collect.android.configure.qr.QRCodeTabsActivity
 import org.odk.collect.android.injection.DaggerUtils
+import org.odk.collect.android.mainmenu.MainMenuActivity
 import org.odk.collect.android.preferences.dialogs.ResetDialogPreference
 import org.odk.collect.android.preferences.dialogs.ResetDialogPreferenceFragmentCompat
 import org.odk.collect.android.projects.DeleteProjectResult
@@ -65,56 +65,59 @@ class ProjectManagementPreferencesFragment :
                     val pref = Intent(activity, QRCodeTabsActivity::class.java)
                     startActivity(pref)
                 }
-                DELETE_PROJECT_KEY -> MaterialAlertDialogBuilder(requireActivity())
-                    .setTitle(R.string.delete_project)
-                    .setMessage(R.string.delete_project_confirm_message)
-                    .setNegativeButton(R.string.delete_project_no) { _: DialogInterface?, _: Int -> }
-                    .setPositiveButton(R.string.delete_project_yes) { _: DialogInterface?, _: Int -> deleteProject() }
-                    .show()
+                DELETE_PROJECT_KEY -> {
+                    MaterialAlertDialogBuilder(requireActivity())
+                        .setTitle(org.odk.collect.strings.R.string.delete_project)
+                        .setMessage(org.odk.collect.strings.R.string.delete_project_confirm_message)
+                        .setNegativeButton(org.odk.collect.strings.R.string.delete_project_no) { _: DialogInterface?, _: Int -> }
+                        .setPositiveButton(org.odk.collect.strings.R.string.delete_project_yes) { _: DialogInterface?, _: Int -> deleteProject() }
+                        .show()
+                }
             }
             return true
         }
         return false
     }
 
-    fun deleteProject() {
+    private fun deleteProject() {
         Analytics.log(AnalyticsEvents.DELETE_PROJECT)
 
-        when (val deleteProjectResult = projectDeleter.deleteCurrentProject()) {
+        when (val deleteProjectResult = projectDeleter.deleteProject()) {
             is DeleteProjectResult.UnsentInstances -> {
                 MaterialAlertDialogBuilder(requireActivity())
-                    .setTitle(R.string.cannot_delete_project_title)
-                    .setMessage(R.string.cannot_delete_project_message_one)
-                    .setPositiveButton(R.string.ok, null)
+                    .setTitle(org.odk.collect.strings.R.string.cannot_delete_project_title)
+                    .setMessage(org.odk.collect.strings.R.string.cannot_delete_project_message_one)
+                    .setPositiveButton(org.odk.collect.strings.R.string.ok, null)
                     .show()
             }
             is DeleteProjectResult.RunningBackgroundJobs -> {
                 MaterialAlertDialogBuilder(requireActivity())
-                    .setTitle(R.string.cannot_delete_project_title)
-                    .setMessage(R.string.cannot_delete_project_message_two)
-                    .setPositiveButton(R.string.ok, null)
+                    .setTitle(org.odk.collect.strings.R.string.cannot_delete_project_title)
+                    .setMessage(org.odk.collect.strings.R.string.cannot_delete_project_message_two)
+                    .setPositiveButton(org.odk.collect.strings.R.string.ok, null)
                     .show()
             }
-            is DeleteProjectResult.DeletedSuccessfully -> {
+            is DeleteProjectResult.DeletedSuccessfullyCurrentProject -> {
                 val newCurrentProject = deleteProjectResult.newCurrentProject
-                if (newCurrentProject != null) {
-                    ActivityUtils.startActivityAndCloseAllOthers(
-                        requireActivity(),
-                        MainMenuActivity::class.java
+                ActivityUtils.startActivityAndCloseAllOthers(
+                    requireActivity(),
+                    MainMenuActivity::class.java
+                )
+                ToastUtils.showLongToast(
+                    getString(
+                        org.odk.collect.strings.R.string.switched_project,
+                        newCurrentProject.name
                     )
-                    ToastUtils.showLongToast(
-                        requireContext(),
-                        getString(
-                            R.string.switched_project,
-                            newCurrentProject.name
-                        )
-                    )
-                } else {
-                    ActivityUtils.startActivityAndCloseAllOthers(
-                        requireActivity(),
-                        FirstLaunchActivity::class.java
-                    )
-                }
+                )
+            }
+            is DeleteProjectResult.DeletedSuccessfullyLastProject -> {
+                ActivityUtils.startActivityAndCloseAllOthers(
+                    requireActivity(),
+                    FirstLaunchActivity::class.java
+                )
+            }
+            is DeleteProjectResult.DeletedSuccessfullyInactiveProject -> {
+                // not possible here
             }
         }
     }

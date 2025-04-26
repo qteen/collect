@@ -2,7 +2,7 @@ package org.odk.collect.android.feature.formentry;
 
 import static androidx.test.espresso.intent.Intents.intending;
 import static androidx.test.espresso.intent.matcher.IntentMatchers.hasAction;
-import static org.odk.collect.android.support.FileUtils.copyFileFromAssets;
+import static org.odk.collect.android.utilities.FileUtils.copyFileFromResources;
 
 import android.app.Activity;
 import android.app.Instrumentation;
@@ -16,7 +16,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.runner.RunWith;
-import org.odk.collect.android.R;
 import org.odk.collect.android.support.pages.MainMenuPage;
 import org.odk.collect.android.support.rules.CollectTestRule;
 import org.odk.collect.android.support.rules.RunnableRule;
@@ -40,7 +39,7 @@ public class ExternalAudioRecordingTest {
                 try {
                     File stubRecording = File.createTempFile("test", ".m4a");
                     stubRecording.deleteOnExit();
-                    copyFileFromAssets("media/test.m4a", stubRecording.getAbsolutePath());
+                    copyFileFromResources("media/test.m4a", stubRecording.getAbsolutePath());
 
                     Intent intent = new Intent();
                     intent.setData(Uri.fromFile(stubRecording));
@@ -57,9 +56,9 @@ public class ExternalAudioRecordingTest {
         new MainMenuPage()
                 .copyForm("external-audio-question.xml")
                 .startBlankForm("External Audio Question")
-                .clickOnString(R.string.capture_audio)
-                .assertContentDescriptionNotDisplayed(R.string.stop_recording)
-                .assertTextDoesNotExist(R.string.capture_audio)
-                .assertContentDescriptionDisplayed(R.string.play_audio);
+                .clickOnString(org.odk.collect.strings.R.string.capture_audio)
+                .assertContentDescriptionNotDisplayed(org.odk.collect.strings.R.string.stop_recording)
+                .assertTextDoesNotExist(org.odk.collect.strings.R.string.capture_audio)
+                .assertContentDescriptionDisplayed(org.odk.collect.strings.R.string.play_audio);
     }
 }

@@ -157,7 +157,8 @@
           "type": "boolean"
         },
         "default_completed": {
-          "type": "boolean"
+          "type": "boolean",
+          "deprecated": true
         },
         "constraint_behavior": {
           "type": "string",
@@ -273,9 +274,6 @@
         "delete_after_send": {
           "type": "boolean"
         },
-        "default_to_finalized": {
-          "type": "boolean"
-        },
         "change_constraint_behavior": {
           "type": "boolean"
         },
@@ -315,10 +313,21 @@
         "save_mid": {
           "type": "boolean"
         },
-        "save_as": {
+        "mark_as_finalized": {
+          "type": "boolean",
+          "deprecated": true
+        },
+        "save_as_draft": {
           "type": "boolean"
         },
-        "mark_as_finalized": {
+        "finalize": {
+          "type": "boolean",
+          "deprecated": true
+        },
+        "finalize_in_form_entry": {
+          "type": "boolean"
+        },
+        "bulk_finalize": {
           "type": "boolean"
         }
       }

@@ -1,26 +1,24 @@
 package org.odk.collect.android.feature.settings
 
-import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
-import org.odk.collect.android.R
 import org.odk.collect.android.injection.config.AppDependencyModule
-import org.odk.collect.android.metadata.InstallIDProvider
 import org.odk.collect.android.support.pages.MainMenuPage
 import org.odk.collect.android.support.pages.ProjectSettingsPage
-import org.odk.collect.android.support.pages.SaveOrIgnoreDialog
+import org.odk.collect.android.support.pages.SaveOrDiscardFormDialog
 import org.odk.collect.android.support.pages.UserAndDeviceIdentitySettingsPage
 import org.odk.collect.android.support.rules.CollectTestRule
 import org.odk.collect.android.support.rules.ResetStateRule
 import org.odk.collect.android.support.rules.TestRuleChain
-import org.odk.collect.android.utilities.DeviceDetailsProvider
+import org.odk.collect.metadata.InstallIDProvider
+import org.odk.collect.settings.SettingsProvider
 
 @RunWith(AndroidJUnit4::class)
 class FormMetadataSettingsTest {
-    private val deviceDetailsProvider: DeviceDetailsProvider = FakeDeviceDetailsProvider()
+    private val installIDProvider = FakeInstallIDProvider()
     var rule = CollectTestRule()
 
     @get:Rule
@@ -28,11 +26,8 @@ class FormMetadataSettingsTest {
         .around(
             ResetStateRule(
                 object : AppDependencyModule() {
-                    override fun providesDeviceDetailsProvider(
-                        context: Context,
-                        installIDProvider: InstallIDProvider
-                    ): DeviceDetailsProvider {
-                        return deviceDetailsProvider
+                    override fun providesInstallIDProvider(settingsProvider: SettingsProvider): InstallIDProvider {
+                        return installIDProvider
                     }
                 }
             )
@@ -40,9 +35,34 @@ class FormMetadataSettingsTest {
         .around(rule)
 
     @Test
-    fun settingMetadata_letsThemBeIncludedInAForm() {
+    fun metadataShouldBeDisplayedInPreferences() {
+        rule.startAtMainMenu()
+            .openProjectSettingsDialog()
+            .clickSettings()
+            .clickUserAndDeviceIdentity()
+            .clickFormMetadata()
+
+            .clickUsername()
+            .inputText("Chino")
+            .clickOKOnDialog()
+            .clickPhoneNumber()
+            .inputText("123")
+            .clickOKOnDialog()
+            .clickEmail()
+            .inputText("chino@whitepony.com")
+            .clickOKOnDialog()
+
+            .assertPreference(org.odk.collect.strings.R.string.username, "Chino")
+            .assertPreference(org.odk.collect.strings.R.string.phone_number, "123")
+            .assertPreference(org.odk.collect.strings.R.string.email, "chino@whitepony.com")
+            .assertPreference(org.odk.collect.strings.R.string.device_id, installIDProvider.installID)
+    }
+
+    @Test
+    fun metadataShouldBeDisplayedInForm() {
         rule.startAtMainMenu()
             .copyForm("metadata.xml")
+
             .openProjectSettingsDialog()
             .clickSettings()
             .clickUserAndDeviceIdentity()
@@ -50,23 +70,22 @@ class FormMetadataSettingsTest {
             .clickUsername()
             .inputText("Chino")
             .clickOKOnDialog()
-            .assertPreference(R.string.username, "Chino")
-            .clickEmail()
-            .inputText("chino@whitepony.com")
-            .clickOKOnDialog()
-            .assertPreference(R.string.email, "chino@whitepony.com")
             .clickPhoneNumber()
             .inputText("664615")
             .clickOKOnDialog()
-            .assertPreference(R.string.phone_number, "664615")
+            .clickEmail()
+            .inputText("chino@whitepony.com")
+            .clickOKOnDialog()
             .pressBack(UserAndDeviceIdentitySettingsPage())
             .pressBack(ProjectSettingsPage())
             .pressBack(MainMenuPage())
+
+            // And verify that new metadata is displayed
             .startBlankForm("Metadata")
-            .assertTexts("Chino", "chino@whitepony.com", "664615")
+            .assertTexts("Chino", "664615", "chino@whitepony.com", installIDProvider.installID)
     }
 
-    @Test // Issue number NODK-238 TestCase4 TestCase5
+    @Test
     fun settingServerUsername_usedAsFallbackForMetadataUsername() {
         rule.startAtMainMenu()
             .copyForm("metadata.xml")
@@ -80,7 +99,7 @@ class FormMetadataSettingsTest {
             .pressBack(MainMenuPage())
             .startBlankForm("Metadata")
             .assertText("Chino")
-            .pressBack(SaveOrIgnoreDialog("Metadata", MainMenuPage()))
+            .pressBack(SaveOrDiscardFormDialog(MainMenuPage()))
             .clickDiscardForm()
             .openProjectSettingsDialog()
             .clickSettings()
@@ -94,25 +113,6 @@ class FormMetadataSettingsTest {
             .pressBack(MainMenuPage())
             .startBlankForm("Metadata")
             .assertText("Stephen")
-    }
-
-    @Test
-    fun deviceIdentifiersAreDisplayedInSettings() {
-        rule.startAtMainMenu()
-            .copyForm("metadata.xml")
-            .openProjectSettingsDialog()
-            .clickSettings()
-            .clickUserAndDeviceIdentity()
-            .clickFormMetadata()
-            .assertPreference(R.string.device_id, deviceDetailsProvider.deviceId)
-    }
-
-    @Test
-    fun deviceIdentifiersCanBeIncludedInAForm() {
-        rule.startAtMainMenu()
-            .copyForm("metadata.xml")
-            .startBlankForm("Metadata")
-            .assertText(deviceDetailsProvider.deviceId)
     }
 
     @Test // https://github.com/getodk/collect/issues/4792
@@ -137,7 +137,7 @@ class FormMetadataSettingsTest {
             .pressBack(MainMenuPage())
 
             .addAndSwitchToProject("https://second-project.com")
-            .copyForm("metadata.xml", projectName = "second-project.com")
+            .copyForm("metadata.xml", "second-project.com")
             .openProjectSettingsDialog()
             .clickSettings()
             .clickUserAndDeviceIdentity()
@@ -157,30 +157,39 @@ class FormMetadataSettingsTest {
 
             .clickFillBlankForm()
             .clickOnForm("Metadata")
-            .assertText("john@second-project.com")
-            .assertText("987654321")
-            .assertText("John Smith")
+            .assertTexts("john@second-project.com", "987654321", "John Smith")
             .swipeToEndScreen()
-            .clickSaveAndExit()
+            .clickFinalize()
 
             .openProjectSettingsDialog()
             .selectProject("Demo project")
             .clickFillBlankForm()
             .clickOnForm("Metadata")
-            .assertText("demo@getodk.com")
-            .assertText("123456789")
-            .assertText("Demo user")
+            .assertTexts("demo@getodk.com", "123456789", "Demo user")
             .swipeToEndScreen()
-            .clickSaveAndExit()
+            .clickFinalize()
     }
 
-    private class FakeDeviceDetailsProvider : DeviceDetailsProvider {
-        override fun getDeviceId(): String {
-            return "deviceID"
-        }
+    @Test
+    fun setEmail_validatesEmail() {
+        rule.startAtMainMenu()
+            .copyForm("metadata.xml")
+            .openProjectSettingsDialog()
+            .clickSettings()
+            .clickUserAndDeviceIdentity()
+            .clickFormMetadata()
+            .clickEmail()
+            .inputText("aabb")
+            .clickOKOnDialog()
+            .checkIsToastWithMessageDisplayed(org.odk.collect.strings.R.string.invalid_email_address)
+            .clickEmail()
+            .inputText("aa@bb")
+            .clickOKOnDialog()
+            .assertText("aa@bb")
+    }
 
-        override fun getLine1Number(): String {
-            return "line1Number"
-        }
+    private class FakeInstallIDProvider : InstallIDProvider {
+        override val installID: String
+            get() = "deviceID"
     }
 }

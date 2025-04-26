@@ -3,7 +3,6 @@ package org.odk.collect.android.feature.formentry
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
-import org.odk.collect.android.R
 import org.odk.collect.android.support.pages.FormEntryPage
 import org.odk.collect.android.support.pages.MainMenuPage
 import org.odk.collect.android.support.pages.ProjectSettingsPage
@@ -52,16 +51,16 @@ class FormStylingTest {
             .clickSettings()
             .openFormManagement()
             .openShowGuidanceForQuestions()
-            .clickOnString(R.string.guidance_yes)
+            .clickOnString(org.odk.collect.strings.R.string.guidance_yes)
             .pressBack(ProjectSettingsPage())
             .pressBack(MainMenuPage())
             .startBlankForm(FORM_NAME)
             .assertText("Guidance text")
             .clickOptionsIcon()
-            .clickGeneralSettings()
+            .clickProjectSettings()
             .openFormManagement()
             .openShowGuidanceForQuestions()
-            .clickOnString(R.string.guidance_yes_collapsed)
+            .clickOnString(org.odk.collect.strings.R.string.guidance_yes_collapsed)
             .pressBack(ProjectSettingsPage())
             .pressBack(FormEntryPage(FORM_NAME))
             .clickOnText("Hint text")
@@ -223,7 +222,7 @@ class FormStylingTest {
             .startBlankForm(FORM_NAME)
             .clickGoToArrow()
             .clickOnGroup("selectOneQuestions")
-            .assertText("selectOneQuestions")
+            .assertPath("selectOneQuestions")
             .clickOnQuestion("Select one widget")
             .assertText("selectOneQuestions")
     }

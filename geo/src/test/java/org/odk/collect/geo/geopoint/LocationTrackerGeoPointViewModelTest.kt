@@ -35,7 +35,7 @@ class LocationTrackerGeoPointViewModelTest {
     @Test
     fun `start() starts LocationTracker with with retain mock accuracy value when set`() {
         val viewModel = createViewModel()
-        viewModel.start(retainMockAccuracy = true,)
+        viewModel.start(retainMockAccuracy = true)
 
         verify(locationTracker).start(true, 1000L)
     }
@@ -43,7 +43,7 @@ class LocationTrackerGeoPointViewModelTest {
     @Test
     fun `acceptedLocation is null when no location`() {
         val viewModel = createViewModel()
-        viewModel.start(accuracyThreshold = 0.0f,)
+        viewModel.start(accuracyThreshold = 0.0f)
 
         val location = viewModel.acceptedLocation
         whenever(locationTracker.getCurrentLocation()).thenReturn(null)
@@ -54,7 +54,7 @@ class LocationTrackerGeoPointViewModelTest {
     @Test
     fun `acceptedLocation is null when accuracy is higher than threshold value`() {
         val viewModel = createViewModel()
-        viewModel.start(accuracyThreshold = 1.0f,)
+        viewModel.start(accuracyThreshold = 1.0f)
 
         val location = viewModel.acceptedLocation
         whenever(locationTracker.getCurrentLocation()).thenReturn(Location(0.0, 0.0, 0.0, 1.1f))
@@ -65,7 +65,7 @@ class LocationTrackerGeoPointViewModelTest {
     @Test
     fun `acceptedLocation is tracker location when accuracy is equal to threshold value`() {
         val viewModel = createViewModel()
-        viewModel.start(accuracyThreshold = 1.0f,)
+        viewModel.start(accuracyThreshold = 1.0f)
 
         val location = viewModel.acceptedLocation
         val locationTrackerLocation = Location(0.0, 0.0, 0.0, 1.0f)
@@ -77,7 +77,7 @@ class LocationTrackerGeoPointViewModelTest {
     @Test
     fun `acceptedLocation is tracker location when accuracy is lower than threshold value`() {
         val viewModel = createViewModel()
-        viewModel.start(accuracyThreshold = 1.0f,)
+        viewModel.start(accuracyThreshold = 1.0f)
 
         val location = viewModel.acceptedLocation
         val locationTrackerLocation = Location(0.0, 0.0, 0.0, 0.9f)
@@ -89,7 +89,7 @@ class LocationTrackerGeoPointViewModelTest {
     @Test
     fun `acceptedLocation does not update after it has met the threshold`() {
         val viewModel = createViewModel()
-        viewModel.start(accuracyThreshold = 1.0f,)
+        viewModel.start(accuracyThreshold = 1.0f)
 
         val location = viewModel.acceptedLocation
         val locationTrackerLocation = Location(0.0, 0.0, 0.0, 1.0f)
@@ -122,15 +122,15 @@ class LocationTrackerGeoPointViewModelTest {
 
         whenever(locationTracker.getCurrentLocation()).thenReturn(Location(0.0, 0.0, 0.0, 6.1f))
         scheduler.runForeground()
-        assertThat(currentAccuracy.getOrAwaitValue(), equalTo(GeoPointAccuracy.Improving(6.1f)))
+        assertThat(currentAccuracy.getOrAwaitValue(), equalTo(LocationAccuracy.Improving(6.1f)))
 
         whenever(locationTracker.getCurrentLocation()).thenReturn(Location(0.0, 0.0, 0.0, 5.0f + 5.1f))
         scheduler.runForeground()
-        assertThat(currentAccuracy.getOrAwaitValue(), equalTo(GeoPointAccuracy.Poor(5.0f + 5.1f)))
+        assertThat(currentAccuracy.getOrAwaitValue(), equalTo(LocationAccuracy.Poor(5.0f + 5.1f)))
 
         whenever(locationTracker.getCurrentLocation()).thenReturn(Location(0.0, 0.0, 0.0, 20.1f))
         scheduler.runForeground()
-        assertThat(currentAccuracy.getOrAwaitValue(), equalTo(GeoPointAccuracy.Unacceptable(20.1f)))
+        assertThat(currentAccuracy.getOrAwaitValue(), equalTo(LocationAccuracy.Unacceptable(20.1f)))
     }
 
     @Test
@@ -142,11 +142,11 @@ class LocationTrackerGeoPointViewModelTest {
 
         whenever(locationTracker.getCurrentLocation()).thenReturn(Location(0.0, 0.0, 0.0, 11f))
         scheduler.runForeground()
-        assertThat(currentAccuracy.getOrAwaitValue(), equalTo(GeoPointAccuracy.Unacceptable(11f)))
+        assertThat(currentAccuracy.getOrAwaitValue(), equalTo(LocationAccuracy.Unacceptable(11f)))
 
         whenever(locationTracker.getCurrentLocation()).thenReturn(Location(0.0, 0.0, 0.0, 10f))
         scheduler.runForeground()
-        assertThat(currentAccuracy.getOrAwaitValue(), equalTo(GeoPointAccuracy.Improving(10f)))
+        assertThat(currentAccuracy.getOrAwaitValue(), equalTo(LocationAccuracy.Improving(10f)))
     }
 
     @Test
@@ -158,11 +158,11 @@ class LocationTrackerGeoPointViewModelTest {
 
         whenever(locationTracker.getCurrentLocation()).thenReturn(Location(0.0, 0.0, 0.0, 10f))
         scheduler.runForeground()
-        assertThat(currentAccuracy.getOrAwaitValue(), equalTo(GeoPointAccuracy.Unacceptable(10f)))
+        assertThat(currentAccuracy.getOrAwaitValue(), equalTo(LocationAccuracy.Unacceptable(10f)))
 
         whenever(locationTracker.getCurrentLocation()).thenReturn(Location(0.0, 0.0, 0.0, 9f))
         scheduler.runForeground()
-        assertThat(currentAccuracy.getOrAwaitValue(), equalTo(GeoPointAccuracy.Improving(9f)))
+        assertThat(currentAccuracy.getOrAwaitValue(), equalTo(LocationAccuracy.Improving(9f)))
     }
 
     @Test
@@ -183,7 +183,7 @@ class LocationTrackerGeoPointViewModelTest {
     @Test
     fun `forceLocation() sets acceptedLocation to location tracker location regardless of threshold`() {
         val viewModel = createViewModel()
-        viewModel.start(accuracyThreshold = 1.0f,)
+        viewModel.start(accuracyThreshold = 1.0f)
 
         val location = viewModel.acceptedLocation
         val locationTrackerLocation = Location(0.0, 0.0, 0.0, 2.5f)

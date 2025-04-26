@@ -16,8 +16,6 @@
 
 package org.odk.collect.android.widgets;
 
-import static org.odk.collect.android.formentry.questions.WidgetViewUtils.createAnswerImageView;
-
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -35,8 +33,7 @@ import androidx.annotation.Nullable;
 import org.javarosa.core.model.data.IAnswerData;
 import org.javarosa.core.model.data.StringData;
 import org.javarosa.core.reference.InvalidReferenceException;
-import org.odk.collect.android.R;
-import org.odk.collect.android.draw.DrawActivity;
+import org.odk.collect.draw.DrawActivity;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.utilities.ApplicationConstants;
 import org.odk.collect.android.utilities.QuestionMediaManager;
@@ -65,11 +62,13 @@ public abstract class BaseImageWidget extends QuestionWidget implements FileWidg
     protected final String tmpImageFilePath;
 
     public BaseImageWidget(Context context, QuestionDetails prompt, QuestionMediaManager questionMediaManager,
-                           WaitingForDataRegistry waitingForDataRegistry, String tmpImageFilePath) {
-        super(context, prompt);
+                           WaitingForDataRegistry waitingForDataRegistry, String tmpImageFilePath, Dependencies dependencies) {
+        super(context, dependencies, prompt);
         this.questionMediaManager = questionMediaManager;
         this.waitingForDataRegistry = waitingForDataRegistry;
         this.tmpImageFilePath = tmpImageFilePath;
+
+        binaryName = getFormEntryPrompt().getAnswerText();
     }
 
     @Override
@@ -151,24 +150,6 @@ public abstract class BaseImageWidget extends QuestionWidget implements FileWidg
         }
     }
 
-    protected void setUpLayout() {
-        errorTextView = new TextView(getContext());
-        errorTextView.setId(View.generateViewId());
-        errorTextView.setText(R.string.selected_invalid_image);
-
-        answerLayout = new LinearLayout(getContext());
-        answerLayout.setOrientation(LinearLayout.VERTICAL);
-
-        binaryName = getFormEntryPrompt().getAnswerText();
-
-        imageView = createAnswerImageView(getContext());
-        imageView.setOnClickListener(v -> {
-            if (imageClickHandler != null) {
-                imageClickHandler.clickImage("viewImage");
-            }
-        });
-    }
-
     /**
      * Enables a subclass to add extras to the intent before launching the draw activity.
      *
@@ -222,7 +203,7 @@ public abstract class BaseImageWidget extends QuestionWidget implements FileWidg
             Intent i = new Intent(getContext(), DrawActivity.class);
             i.putExtra(DrawActivity.OPTION, drawOption);
             File file = getFile();
-            if (file != null) {
+            if (file != null && file.exists()) {
                 i.putExtra(DrawActivity.REF_IMAGE, Uri.fromFile(file));
             }
 
@@ -272,7 +253,7 @@ public abstract class BaseImageWidget extends QuestionWidget implements FileWidg
             ((Activity) getContext()).startActivityForResult(intent, resourceCode);
         } catch (ActivityNotFoundException e) {
             Toast.makeText(getContext(),
-                    getContext().getString(R.string.activity_not_found, getContext().getString(errorStringResource)),
+                    getContext().getString(org.odk.collect.strings.R.string.activity_not_found, getContext().getString(errorStringResource)),
                     Toast.LENGTH_SHORT).show();
             waitingForDataRegistry.cancelWaitingForData();
         }

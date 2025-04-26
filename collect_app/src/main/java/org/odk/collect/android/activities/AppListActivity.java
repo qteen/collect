@@ -24,9 +24,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.CursorAdapter;
-import android.widget.LinearLayout;
 import android.widget.ListView;
-import android.widget.ProgressBar;
 
 import androidx.annotation.LayoutRes;
 import androidx.annotation.Nullable;
@@ -39,6 +37,7 @@ import org.odk.collect.android.database.instances.DatabaseInstanceColumns;
 import org.odk.collect.android.formlists.sorting.FormListSortingBottomSheetDialog;
 import org.odk.collect.android.formlists.sorting.FormListSortingOption;
 import org.odk.collect.android.injection.DaggerUtils;
+import org.odk.collect.androidshared.ui.ObviousProgressBar;
 import org.odk.collect.androidshared.ui.multiclicksafe.MultiClickGuard;
 import org.odk.collect.settings.SettingsProvider;
 import org.odk.collect.strings.localization.LocalizedActivity;
@@ -53,7 +52,7 @@ import timber.log.Timber;
 
 public abstract class AppListActivity extends LocalizedActivity {
 
-    protected static final int LOADER_ID = 0x01;
+    public static final int LOADER_ID = 0x01;
     private static final String SELECTED_INSTANCES = "selectedInstances";
     private static final String IS_SEARCH_BOX_SHOWN = "isSearchBoxShown";
     private static final String SEARCH_TEXT = "searchText";
@@ -63,8 +62,7 @@ public abstract class AppListActivity extends LocalizedActivity {
     protected List<FormListSortingOption> sortingOptions;
     protected Integer selectedSortingOrder;
     protected ListView listView;
-    protected LinearLayout llParent;
-    protected ProgressBar progressBar;
+    protected ObviousProgressBar progressBar;
 
     private String filterText;
     private String savedFilterText;
@@ -114,9 +112,9 @@ public abstract class AppListActivity extends LocalizedActivity {
     // Function to toggle button label
     public static void toggleButtonLabel(Button toggleButton, ListView lv) {
         if (lv.getCheckedItemCount() != lv.getCount()) {
-            toggleButton.setText(R.string.select_all);
+            toggleButton.setText(org.odk.collect.strings.R.string.select_all);
         } else {
-            toggleButton.setText(R.string.clear_all);
+            toggleButton.setText(org.odk.collect.strings.R.string.clear_all);
         }
     }
 
@@ -133,17 +131,16 @@ public abstract class AppListActivity extends LocalizedActivity {
     }
 
     private void init() {
-        listView = findViewById(android.R.id.list);
+        listView = findViewById(R.id.scrollable_container);
         listView.setOnItemClickListener((AdapterView.OnItemClickListener) this);
         listView.setEmptyView(findViewById(android.R.id.empty));
-        progressBar = findViewById(R.id.progressBar);
-        llParent = findViewById(R.id.llParent);
+        progressBar = findViewById(org.odk.collect.androidshared.R.id.progressBar);
 
         // Use the nicer-looking drawable with Material Design insets.
-        listView.setDivider(ContextCompat.getDrawable(this, R.drawable.list_item_divider));
+        listView.setDivider(ContextCompat.getDrawable(this, org.odk.collect.androidshared.R.drawable.list_item_divider));
         listView.setDividerHeight(1);
 
-        setSupportActionBar(findViewById(R.id.toolbar));
+        setSupportActionBar(findViewById(org.odk.collect.androidshared.R.id.toolbar));
     }
 
     @Override
@@ -175,11 +172,11 @@ public abstract class AppListActivity extends LocalizedActivity {
 
     @Override
     public boolean onCreateOptionsMenu(final Menu menu) {
-        getMenuInflater().inflate(R.menu.form_list_menu, menu);
+        getMenuInflater().inflate(R.menu.blank_form_list_menu, menu);
         final MenuItem sortItem = menu.findItem(R.id.menu_sort);
         final MenuItem searchItem = menu.findItem(R.id.menu_filter);
         searchView = (SearchView) MenuItemCompat.getActionView(searchItem);
-        searchView.setQueryHint(getResources().getString(R.string.search));
+        searchView.setQueryHint(getResources().getString(org.odk.collect.strings.R.string.search));
         searchView.setMaxWidth(Integer.MAX_VALUE);
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
@@ -302,10 +299,10 @@ public abstract class AppListActivity extends LocalizedActivity {
     }
 
     private void hideProgressBar() {
-        progressBar.setVisibility(View.GONE);
+        progressBar.hide();
     }
 
     protected void showProgressBar() {
-        progressBar.setVisibility(View.VISIBLE);
+        progressBar.show();
     }
 }

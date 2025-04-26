@@ -5,15 +5,15 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
+import android.os.StrictMode;
 
-import org.apache.commons.io.FileUtils;
-import org.odk.collect.android.database.DatabaseConnection;
+import org.odk.collect.db.sqlite.DatabaseConnection;
 import org.odk.collect.android.database.DatabaseConstants;
 import org.odk.collect.forms.instances.Instance;
 import org.odk.collect.forms.instances.InstancesRepository;
+import org.odk.collect.shared.files.FileExt;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
@@ -22,6 +22,7 @@ import static android.provider.BaseColumns._ID;
 import static org.odk.collect.android.database.DatabaseConstants.INSTANCES_TABLE_NAME;
 import static org.odk.collect.android.database.DatabaseObjectMapper.getInstanceFromCurrentCursorPosition;
 import static org.odk.collect.android.database.DatabaseObjectMapper.getValuesFromInstance;
+import static org.odk.collect.android.database.instances.DatabaseInstanceColumns.CAN_DELETE_BEFORE_SEND;
 import static org.odk.collect.android.database.instances.DatabaseInstanceColumns.CAN_EDIT_WHEN_COMPLETE;
 import static org.odk.collect.android.database.instances.DatabaseInstanceColumns.DELETED_DATE;
 import static org.odk.collect.android.database.instances.DatabaseInstanceColumns.DISPLAY_NAME;
@@ -84,6 +85,8 @@ public final class DatabaseInstancesRepository implements InstancesRepository {
 
     @Override
     public List<Instance> getAll() {
+        StrictMode.noteSlowCall("Accessing readable DB");
+
         try (Cursor cursor = query(null, null, null, null)) {
             return getInstancesFromCursor(cursor, instancesPath);
         }
@@ -91,6 +94,8 @@ public final class DatabaseInstancesRepository implements InstancesRepository {
 
     @Override
     public List<Instance> getAllNotDeleted() {
+        StrictMode.noteSlowCall("Accessing readable DB");
+
         try (Cursor cursor = query(null, DELETED_DATE + " IS NULL ", null, null)) {
             return getInstancesFromCursor(cursor, instancesPath);
         }
@@ -113,6 +118,8 @@ public final class DatabaseInstancesRepository implements InstancesRepository {
 
     @Override
     public List<Instance> getAllByFormId(String formId) {
+        StrictMode.noteSlowCall("Accessing readable DB");
+
         try (Cursor c = query(null, JR_FORM_ID + " = ?", new String[]{formId}, null)) {
             return getInstancesFromCursor(c, instancesPath);
         }
@@ -120,6 +127,8 @@ public final class DatabaseInstancesRepository implements InstancesRepository {
 
     @Override
     public List<Instance> getAllNotDeletedByFormIdAndVersion(String jrFormId, String jrVersion) {
+        StrictMode.noteSlowCall("Accessing readable DB");
+
         if (jrVersion != null) {
             try (Cursor cursor = query(null, JR_FORM_ID + " = ? AND " + JR_VERSION + " = ? AND " + DELETED_DATE + " IS NULL", new String[]{jrFormId, jrVersion}, null)) {
                 return getInstancesFromCursor(cursor, instancesPath);
@@ -135,7 +144,7 @@ public final class DatabaseInstancesRepository implements InstancesRepository {
     public void delete(Long id) {
         Instance instance = get(id);
 
-        databaseConnection.getWriteableDatabase().delete(
+        databaseConnection.getWritableDatabase().delete(
                 INSTANCES_TABLE_NAME,
                 _ID + "=?",
                 new String[]{String.valueOf(id)}
@@ -148,7 +157,7 @@ public final class DatabaseInstancesRepository implements InstancesRepository {
     public void deleteAll() {
         List<Instance> instances = getAll();
 
-        databaseConnection.getWriteableDatabase().delete(
+        databaseConnection.getWritableDatabase().delete(
                 INSTANCES_TABLE_NAME,
                 null,
                 null
@@ -222,6 +231,9 @@ public final class DatabaseInstancesRepository implements InstancesRepository {
             /*
              For some reason passing null as the projection doesn't always give us all the
              columns so we hardcode them here so it's explicit that we need these all back.
+             The problem can occur, for example, when a new column is added to a database and the
+             database needs to be updated. After the upgrade, the new column might not be returned,
+             even though it already exists.
              */
             projection = new String[]{
                     _ID,
@@ -235,7 +247,8 @@ public final class DatabaseInstancesRepository implements InstancesRepository {
                     LAST_STATUS_CHANGE_DATE,
                     DELETED_DATE,
                     GEOMETRY,
-                    GEOMETRY_TYPE
+                    GEOMETRY_TYPE,
+                    CAN_DELETE_BEFORE_SEND
             };
         }
 
@@ -243,7 +256,7 @@ public final class DatabaseInstancesRepository implements InstancesRepository {
     }
 
     private long insert(ContentValues values) {
-        return databaseConnection.getWriteableDatabase().insertOrThrow(
+        return databaseConnection.getWritableDatabase().insertOrThrow(
                 INSTANCES_TABLE_NAME,
                 null,
                 values
@@ -251,7 +264,7 @@ public final class DatabaseInstancesRepository implements InstancesRepository {
     }
 
     private void update(Long instanceId, ContentValues values) {
-        databaseConnection.getWriteableDatabase().update(
+        databaseConnection.getWritableDatabase().update(
                 INSTANCES_TABLE_NAME,
                 values,
                 _ID + "=?",
@@ -260,11 +273,7 @@ public final class DatabaseInstancesRepository implements InstancesRepository {
     }
 
     private void deleteInstanceFiles(Instance instance) {
-        try {
-            FileUtils.deleteDirectory(new File(instance.getInstanceFilePath()).getParentFile());
-        } catch (IOException e) {
-            // Ignored
-        }
+        FileExt.deleteDirectory(new File(instance.getInstanceFilePath()).getParentFile());
     }
 
     private static List<Instance> getInstancesFromCursor(Cursor cursor, String instancesPath) {

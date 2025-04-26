@@ -9,11 +9,8 @@ import android.widget.TextView;
 
 import androidx.fragment.app.FragmentActivity;
 
-import com.google.android.material.slider.Slider;
-
 import org.javarosa.core.model.RangeQuestion;
 import org.javarosa.form.api.FormEntryPrompt;
-import org.odk.collect.android.R;
 import org.odk.collect.android.databinding.RangePickerWidgetAnswerBinding;
 import org.odk.collect.android.databinding.RangeWidgetHorizontalBinding;
 import org.odk.collect.android.databinding.RangeWidgetVerticalBinding;
@@ -63,7 +60,7 @@ public class RangeWidgetUtils {
         TextView minValue;
         TextView maxValue;
 
-        String appearance = prompt.getQuestion().getAppearanceAttr();
+        String appearance = prompt.getAppearanceHint();
 
         if (appearance != null && appearance.contains(VERTICAL_APPEARANCE)) {
             RangeWidgetVerticalBinding rangeWidgetVerticalBinding = RangeWidgetVerticalBinding
@@ -89,6 +86,8 @@ public class RangeWidgetUtils {
         if (prompt.isReadOnly()) {
             slider.setEnabled(false);
         }
+
+        slider.setId(View.generateViewId());
 
         return new RangeWidgetLayoutElements(answerView, slider, currentValue);
     }
@@ -118,6 +117,11 @@ public class RangeWidgetUtils {
         }
 
         if (isRangeSliderWidgetValid(rangeQuestion, slider)) {
+            if (prompt.getAppearanceHint() != null && prompt.getAppearanceHint().contains(NO_TICKS_APPEARANCE)) {
+                slider.setTickVisible(false);
+                slider.setTrackStopIndicatorSize(0);
+            }
+
             if (rangeEnd.compareTo(rangeStart) > -1) {
                 slider.setValueFrom(rangeStart.floatValue());
                 slider.setValueTo(rangeEnd.floatValue());
@@ -126,12 +130,10 @@ public class RangeWidgetUtils {
                 slider.setValueTo(rangeStart.floatValue());
             }
 
-            if (prompt.getQuestion().getAppearanceAttr() == null || !prompt.getQuestion().getAppearanceAttr().contains(NO_TICKS_APPEARANCE)) {
-                if (isIntegerType) {
-                    slider.setStepSize(rangeStep.intValue());
-                } else {
-                    slider.setStepSize(rangeStep.floatValue());
-                }
+            if (isIntegerType) {
+                slider.setStepSize(rangeStep.intValue());
+            } else {
+                slider.setStepSize(rangeStep.floatValue());
             }
 
             if (actualValue != null) {
@@ -157,7 +159,7 @@ public class RangeWidgetUtils {
             if (prompt.getAnswerValue() != null) {
                 BigDecimal actualValue = new BigDecimal(prompt.getAnswerValue().getValue().toString());
                 binding.widgetAnswerText.setText(String.valueOf(actualValue));
-                binding.widgetButton.setText(context.getString(R.string.edit_value));
+                binding.widgetButton.setText(context.getString(org.odk.collect.strings.R.string.edit_value));
             }
         }
         if (prompt.isReadOnly()) {
@@ -165,25 +167,12 @@ public class RangeWidgetUtils {
         }
     }
 
-    public static BigDecimal getActualValue(FormEntryPrompt prompt, Slider slider, float value) {
+    public static BigDecimal getActualValue(FormEntryPrompt prompt, float value) {
         RangeQuestion rangeQuestion = (RangeQuestion) prompt.getQuestion();
         BigDecimal rangeStart = rangeQuestion.getRangeStart();
-        BigDecimal rangeStep = rangeQuestion.getRangeStep() == null ? BigDecimal.ONE : rangeQuestion.getRangeStep().abs();
         BigDecimal rangeEnd = rangeQuestion.getRangeEnd();
-
-        if (rangeEnd.compareTo(rangeStart) < 0) {
-            rangeStart = rangeQuestion.getRangeEnd();
-        }
-
         BigDecimal actualValue = BigDecimal.valueOf(value);
-        if (prompt.getQuestion().getAppearanceAttr() != null && prompt.getQuestion().getAppearanceAttr().contains(NO_TICKS_APPEARANCE)) {
-            int progress = (actualValue.subtract(rangeStart).abs().divide(rangeStep)).intValue();
-            actualValue = rangeStart.add(rangeStep.multiply(new BigDecimal(String.valueOf(progress))));
 
-            slider.setValue(actualValue.floatValue());
-        }
-
-        rangeStart = rangeQuestion.getRangeStart();
         if (rangeEnd.compareTo(rangeStart) < 0) {
             actualValue = rangeEnd.add(rangeStart).subtract(actualValue);
         }
@@ -212,7 +201,7 @@ public class RangeWidgetUtils {
             actualValue = rangeStart.subtract(multiply);
         }
         binding.widgetAnswerText.setText(String.valueOf(actualValue));
-        binding.widgetButton.setText(R.string.edit_value);
+        binding.widgetButton.setText(org.odk.collect.strings.R.string.edit_value);
 
         return actualValue.subtract(rangeStart).abs().divide(rangeStep).intValue();
     }
@@ -232,7 +221,7 @@ public class RangeWidgetUtils {
         boolean result = true;
         if (rangeStep.compareTo(BigDecimal.ZERO) == 0
                 || rangeEnd.subtract(rangeStart).remainder(rangeStep).compareTo(BigDecimal.ZERO) != 0) {
-            ToastUtils.showLongToast(context, R.string.invalid_range_widget);
+            ToastUtils.showLongToast(org.odk.collect.strings.R.string.invalid_range_widget);
             result = false;
         }
         return result;

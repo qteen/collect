@@ -18,7 +18,6 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.net.Uri;
-import android.util.TypedValue;
 import android.view.View;
 
 import org.javarosa.core.model.data.IAnswerData;
@@ -26,8 +25,8 @@ import org.javarosa.core.model.data.StringData;
 import org.javarosa.form.api.FormEntryPrompt;
 import org.odk.collect.android.databinding.UrlWidgetAnswerBinding;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
-import org.odk.collect.android.utilities.ExternalWebPageHelper;
 import org.odk.collect.androidshared.ui.ToastUtils;
+import org.odk.collect.webpage.ExternalWebPageHelper;
 
 @SuppressLint("ViewConstructor")
 public class UrlWidget extends QuestionWidget {
@@ -35,8 +34,8 @@ public class UrlWidget extends QuestionWidget {
 
     private final ExternalWebPageHelper externalWebPageHelper;
 
-    public UrlWidget(Context context, QuestionDetails questionDetails, ExternalWebPageHelper externalWebPageHelper) {
-        super(context, questionDetails);
+    public UrlWidget(Context context, QuestionDetails questionDetails, ExternalWebPageHelper externalWebPageHelper, Dependencies dependencies) {
+        super(context, dependencies, questionDetails);
         render();
 
         this.externalWebPageHelper = externalWebPageHelper;
@@ -45,8 +44,6 @@ public class UrlWidget extends QuestionWidget {
     @Override
     protected View onCreateAnswerView(Context context, FormEntryPrompt prompt, int answerFontSize) {
         binding = UrlWidgetAnswerBinding.inflate(((Activity) context).getLayoutInflater());
-
-        binding.urlButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, answerFontSize);
         binding.urlButton.setOnClickListener(v -> onButtonClick());
 
         return binding.getRoot();
@@ -54,7 +51,7 @@ public class UrlWidget extends QuestionWidget {
 
     @Override
     public void clearAnswer() {
-        ToastUtils.showShortToast(getContext(), "URL is readonly");
+        ToastUtils.showShortToast("URL is readonly");
     }
 
     @Override
@@ -88,7 +85,7 @@ public class UrlWidget extends QuestionWidget {
             externalWebPageHelper.bindCustomTabsService(getContext(), null);
             externalWebPageHelper.openWebPageInCustomTab((Activity) getContext(), Uri.parse(getFormEntryPrompt().getAnswerText()));
         } else {
-            ToastUtils.showShortToast(getContext(), "No URL set");
+            ToastUtils.showShortToast("No URL set");
         }
     }
 }

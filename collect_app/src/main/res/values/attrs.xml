@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <attr name="icon" format="reference" />
+
     <declare-styleable name="Collect">
         <attr name="iconColor" format="color" />
         <attr name="dividerCompat" format="reference" />
@@ -7,5 +9,15 @@
 
     <declare-styleable name="Waveform">
         <attr name="mini" format="boolean" />
+    </declare-styleable>
+
+    <declare-styleable name="MainMenuButton">
+        <attr name="icon" />
+        <attr name="name" format="string" />
+        <attr name="highlightable" format="boolean" />
+    </declare-styleable>
+
+    <declare-styleable name="CollectCustomAttributes">
+        <attr name="widgetButtonIconQuestionWidgetStyle" format="reference" />
     </declare-styleable>
 </resources>

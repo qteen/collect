@@ -25,7 +25,6 @@ public class ApplicationConstants {
     }
 
     public abstract static class BundleKeys {
-        public static final String FORM_MODE = "formMode";
         public static final String SUCCESS_KEY = "SUCCESSFUL";
         public static final String FORM_IDS = "FORM_IDS";
         public static final String MESSAGE = "MESSAGE";
@@ -33,11 +32,6 @@ public class ApplicationConstants {
         public static final String PASSWORD = "PASSWORD";
         public static final String URL = "URL";
         public static final String DELETE_INSTANCE_AFTER_SUBMISSION = "DELETE_INSTANCE_AFTER_SUBMISSION";
-    }
-
-    public abstract static class FormModes {
-        public static final String EDIT_SAVED = "editSaved";
-        public static final String VIEW_SENT = "viewSent";
     }
 
     public abstract static class SortingOrder {
@@ -78,10 +72,6 @@ public class ApplicationConstants {
         public static final int EX_AUDIO_CHOOSER  = 26;
         public static final int CHANGE_SETTINGS = 27;
         public static final int MEDIA_FILE_PATH = 28;
-
-        public static final int FORMS_UPLOADED_NOTIFICATION = 97;
-        public static final int FORMS_DOWNLOADED_NOTIFICATION = 98;
-        public static final int FORM_UPDATES_AVAILABLE_NOTIFICATION = 99;
     }
 
     public abstract static class Namespaces {

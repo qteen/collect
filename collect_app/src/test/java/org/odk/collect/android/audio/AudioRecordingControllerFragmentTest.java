@@ -28,13 +28,13 @@ import org.odk.collect.android.formentry.BackgroundAudioViewModel;
 import org.odk.collect.android.formentry.FormEntryViewModel;
 import org.odk.collect.android.injection.config.AppDependencyModule;
 import org.odk.collect.android.support.CollectHelpers;
-import org.odk.collect.android.utilities.ExternalWebPageHelper;
 import org.odk.collect.androidshared.livedata.MutableNonNullLiveData;
 import org.odk.collect.androidshared.ui.FragmentFactoryBuilder;
 import org.odk.collect.audiorecorder.recorder.Output;
 import org.odk.collect.audiorecorder.recording.AudioRecorder;
 import org.odk.collect.audiorecorder.testsupport.StubAudioRecorder;
 import org.odk.collect.fragmentstest.FragmentScenarioLauncherRule;
+import org.odk.collect.webpage.ExternalWebPageHelper;
 import org.robolectric.annotation.Config;
 
 import java.io.File;
@@ -65,7 +65,7 @@ public class AudioRecordingControllerFragmentTest {
     };
 
     @Rule
-    public FragmentScenarioLauncherRule launcherRule = new FragmentScenarioLauncherRule(R.style.Theme_MaterialComponents, new FragmentFactoryBuilder()
+    public FragmentScenarioLauncherRule launcherRule = new FragmentScenarioLauncherRule(new FragmentFactoryBuilder()
             .forClass(AudioRecordingControllerFragment.class, () -> new AudioRecordingControllerFragment(viewModelFactory))
             .build());
 
@@ -154,8 +154,8 @@ public class AudioRecordingControllerFragmentTest {
 
         FragmentScenario<AudioRecordingControllerFragment> scenario = launcherRule.launchInContainer(AudioRecordingControllerFragment.class);
         scenario.onFragment(fragment -> {
-            assertThat(shadowOf(fragment.binding.pauseRecording.getIcon()).getCreatedFromResId(), is(R.drawable.ic_baseline_mic_24));
-            assertThat(fragment.binding.pauseRecording.getContentDescription(), is(fragment.getString(R.string.resume_recording)));
+            assertThat(shadowOf(fragment.binding.pauseRecording.getIcon()).getCreatedFromResId(), is(org.odk.collect.icons.R.drawable.ic_baseline_mic_24));
+            assertThat(fragment.binding.pauseRecording.getContentDescription(), is(fragment.getString(org.odk.collect.strings.R.string.resume_recording)));
         });
     }
 
@@ -179,7 +179,7 @@ public class AudioRecordingControllerFragmentTest {
         FragmentScenario<AudioRecordingControllerFragment> scenario = launcherRule.launchInContainer(AudioRecordingControllerFragment.class);
         scenario.onFragment(fragment -> {
             assertThat(shadowOf(fragment.binding.pauseRecording.getIcon()).getCreatedFromResId(), is(R.drawable.ic_pause_24dp));
-            assertThat(fragment.binding.pauseRecording.getContentDescription(), is(fragment.getString(R.string.pause_recording)));
+            assertThat(fragment.binding.pauseRecording.getContentDescription(), is(fragment.getString(org.odk.collect.strings.R.string.pause_recording)));
         });
     }
 
@@ -191,7 +191,7 @@ public class AudioRecordingControllerFragmentTest {
 
         FragmentScenario<AudioRecordingControllerFragment> scenario = launcherRule.launchInContainer(AudioRecordingControllerFragment.class);
         scenario.onFragment(fragment -> {
-            assertThat(shadowOf(fragment.binding.recordingIcon.getDrawable()).getCreatedFromResId(), is(R.drawable.ic_baseline_mic_24));
+            assertThat(shadowOf(fragment.binding.recordingIcon.getDrawable()).getCreatedFromResId(), is(org.odk.collect.icons.R.drawable.ic_baseline_mic_24));
         });
     }
 
@@ -274,7 +274,7 @@ public class AudioRecordingControllerFragmentTest {
         FragmentScenario<AudioRecordingControllerFragment> scenario = launcherRule.launchInContainer(AudioRecordingControllerFragment.class);
         scenario.onFragment(fragment -> {
             assertThat(fragment.binding.getRoot().getVisibility(), is(View.VISIBLE));
-            assertThat(fragment.binding.timeCode.getText(), is(fragment.getString(R.string.recording_disabled, "⋮")));
+            assertThat(fragment.binding.timeCode.getText(), is(fragment.getString(org.odk.collect.strings.R.string.recording_disabled, "⋮")));
             assertThat(fragment.binding.volumeBar.getVisibility(), is(View.GONE));
             assertThat(fragment.binding.controls.getVisibility(), is(View.GONE));
             assertThat(fragment.binding.help.getVisibility(), is(View.GONE));
@@ -305,7 +305,7 @@ public class AudioRecordingControllerFragmentTest {
 
         scenario.onFragment(fragment -> {
             assertThat(fragment.binding.getRoot().getVisibility(), is(View.VISIBLE));
-            assertThat(fragment.binding.timeCode.getText(), is(fragment.getString(R.string.start_recording_failed)));
+            assertThat(fragment.binding.timeCode.getText(), is(fragment.getString(org.odk.collect.strings.R.string.start_recording_failed)));
             assertThat(fragment.binding.volumeBar.getVisibility(), is(View.GONE));
             assertThat(fragment.binding.controls.getVisibility(), is(View.GONE));
             assertThat(fragment.binding.help.getVisibility(), is(View.GONE));

@@ -39,8 +39,8 @@ public class ArbitraryFileWidget extends BaseArbitraryFileWidget implements File
     private final WaitingForDataRegistry waitingForDataRegistry;
 
     ArbitraryFileWidget(Context context, QuestionDetails questionDetails,
-                        QuestionMediaManager questionMediaManager, WaitingForDataRegistry waitingForDataRegistry) {
-        super(context, questionDetails, questionMediaManager, waitingForDataRegistry);
+                        QuestionMediaManager questionMediaManager, WaitingForDataRegistry waitingForDataRegistry, Dependencies dependencies) {
+        super(context, questionDetails, questionMediaManager, waitingForDataRegistry, dependencies);
         this.waitingForDataRegistry = waitingForDataRegistry;
     }
 
@@ -49,7 +49,6 @@ public class ArbitraryFileWidget extends BaseArbitraryFileWidget implements File
         binding = ArbitraryFileWidgetAnswerBinding.inflate(((Activity) context).getLayoutInflater());
         setupAnswerFile(prompt.getAnswerText());
 
-        binding.arbitraryFileButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, answerFontSize);
         binding.arbitraryFileAnswerText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, answerFontSize);
 
         binding.arbitraryFileButton.setVisibility(questionDetails.isReadOnly() ? GONE : VISIBLE);

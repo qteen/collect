@@ -15,7 +15,7 @@
 package org.odk.collect.android.preferences.screens;
 
 import static org.odk.collect.android.preferences.utilities.PreferencesUtils.displayDisabled;
-import static org.odk.collect.android.preferences.utilities.SettingsUtils.getFormUpdateMode;
+import static org.odk.collect.settings.enums.StringIdEnumUtils.getFormUpdateMode;
 import static org.odk.collect.settings.keys.ProjectKeys.KEY_AUTOMATIC_UPDATE;
 import static org.odk.collect.settings.keys.ProjectKeys.KEY_AUTOSEND;
 import static org.odk.collect.settings.keys.ProjectKeys.KEY_CONSTRAINT_BEHAVIOR;
@@ -23,7 +23,6 @@ import static org.odk.collect.settings.keys.ProjectKeys.KEY_FORM_UPDATE_MODE;
 import static org.odk.collect.settings.keys.ProjectKeys.KEY_GUIDANCE_HINT;
 import static org.odk.collect.settings.keys.ProjectKeys.KEY_IMAGE_SIZE;
 import static org.odk.collect.settings.keys.ProjectKeys.KEY_PERIODIC_FORM_UPDATES_CHECK;
-import static org.odk.collect.settings.keys.ProjectKeys.KEY_PROTOCOL;
 import static org.odk.collect.settings.keys.ProtectedProjectKeys.ALLOW_OTHER_WAYS_OF_EDITING_FORM;
 
 import android.content.Context;
@@ -40,7 +39,8 @@ import org.odk.collect.android.R;
 import org.odk.collect.android.application.Collect;
 import org.odk.collect.android.backgroundwork.FormUpdateScheduler;
 import org.odk.collect.android.backgroundwork.InstanceSubmitScheduler;
-import org.odk.collect.settings.keys.ProjectKeys;
+import org.odk.collect.settings.enums.AutoSend;
+import org.odk.collect.settings.enums.StringIdEnumUtils;
 import org.odk.collect.shared.settings.Settings;
 
 import javax.inject.Inject;
@@ -82,8 +82,8 @@ public class FormManagementPreferencesFragment extends BaseProjectPreferencesFra
             updateDisabledPrefs();
         }
 
-        if (key.equals(KEY_AUTOSEND) && !settingsProvider.getUnprotectedSettings().getString(KEY_AUTOSEND).equals("off")) {
-            instanceSubmitScheduler.scheduleSubmit(currentProjectProvider.getCurrentProject().getUuid());
+        if (key.equals(KEY_AUTOSEND) && !StringIdEnumUtils.getAutoSend(settingsProvider.getUnprotectedSettings(), requireContext()).equals(AutoSend.OFF)) {
+            instanceSubmitScheduler.scheduleAutoSend(projectsDataService.requireCurrentProject().getUuid());
         }
     }
 
@@ -94,42 +94,32 @@ public class FormManagementPreferencesFragment extends BaseProjectPreferencesFra
         @Nullable Preference updateFrequency = findPreference(KEY_PERIODIC_FORM_UPDATES_CHECK);
         @Nullable CheckBoxPreference automaticDownload = findPreference(KEY_AUTOMATIC_UPDATE);
 
-        if (generalSettings.getString(KEY_PROTOCOL).equals(ProjectKeys.PROTOCOL_GOOGLE_SHEETS)) {
-            displayDisabled(findPreference(KEY_FORM_UPDATE_MODE), getString(R.string.manual));
-            if (automaticDownload != null) {
-                displayDisabled(automaticDownload, false);
-            }
-            if (updateFrequency != null) {
-                updateFrequency.setEnabled(false);
-            }
-        } else {
-            switch (getFormUpdateMode(requireContext(), generalSettings)) {
-                case MANUAL:
-                    if (automaticDownload != null) {
-                        displayDisabled(automaticDownload, false);
-                    }
-                    if (updateFrequency != null) {
-                        updateFrequency.setEnabled(false);
-                    }
-                    break;
-                case PREVIOUSLY_DOWNLOADED_ONLY:
-                    if (automaticDownload != null) {
-                        automaticDownload.setEnabled(true);
-                        automaticDownload.setChecked(generalSettings.getBoolean(KEY_AUTOMATIC_UPDATE));
-                    }
-                    if (updateFrequency != null) {
-                        updateFrequency.setEnabled(true);
-                    }
-                    break;
-                case MATCH_EXACTLY:
-                    if (automaticDownload != null) {
-                        displayDisabled(automaticDownload, true);
-                    }
-                    if (updateFrequency != null) {
-                        updateFrequency.setEnabled(true);
-                    }
-                    break;
-            }
+        switch (getFormUpdateMode(generalSettings, requireContext())) {
+            case MANUAL:
+                if (automaticDownload != null) {
+                    displayDisabled(automaticDownload, false);
+                }
+                if (updateFrequency != null) {
+                    updateFrequency.setEnabled(false);
+                }
+                break;
+            case PREVIOUSLY_DOWNLOADED_ONLY:
+                if (automaticDownload != null) {
+                    automaticDownload.setEnabled(true);
+                    automaticDownload.setChecked(generalSettings.getBoolean(KEY_AUTOMATIC_UPDATE));
+                }
+                if (updateFrequency != null) {
+                    updateFrequency.setEnabled(true);
+                }
+                break;
+            case MATCH_EXACTLY:
+                if (automaticDownload != null) {
+                    displayDisabled(automaticDownload, true);
+                }
+                if (updateFrequency != null) {
+                    updateFrequency.setEnabled(true);
+                }
+                break;
         }
     }
 
@@ -158,7 +148,7 @@ public class FormManagementPreferencesFragment extends BaseProjectPreferencesFra
                 String formUpdateCheckPeriod = settingsProvider.getUnprotectedSettings().getString(KEY_PERIODIC_FORM_UPDATES_CHECK);
 
                 // Only enable automatic form updates if periodic updates are set
-                pref.setEnabled(!formUpdateCheckPeriod.equals(getString(R.string.never_value)));
+                pref.setEnabled(!formUpdateCheckPeriod.equals(getString(org.odk.collect.strings.R.string.never_value)));
             }
         }
     }

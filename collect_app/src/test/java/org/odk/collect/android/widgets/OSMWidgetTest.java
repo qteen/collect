@@ -16,7 +16,6 @@ import org.javarosa.form.api.FormEntryPrompt;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.odk.collect.android.R;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.javarosawrapper.FormController;
 import org.odk.collect.android.javarosawrapper.InstanceMetadata;
@@ -42,6 +41,7 @@ import static org.mockito.Mockito.when;
 import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.mockValueChangedListener;
 import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.promptWithAnswer;
 import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.promptWithReadOnly;
+import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.widgetDependencies;
 import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.widgetTestActivity;
 import static org.robolectric.Shadows.shadowOf;
 
@@ -99,14 +99,14 @@ public class OSMWidgetTest {
         OSMWidget widget = createWidget(promptWithAnswer(new StringData("blah")));
 
         assertThat(widget.binding.errorText.getVisibility(), is(View.GONE));
-        assertThat(widget.binding.osmFileHeaderText.getText(), is(widgetActivity.getString(R.string.edited_osm_file)));
+        assertThat(widget.binding.osmFileHeaderText.getText(), is(widgetActivity.getString(org.odk.collect.strings.R.string.edited_osm_file)));
         assertThat(widget.binding.osmFileText.getText(), is("blah"));
     }
 
     @Test
     public void whenPromptHasAnswer_recaptureOsmButtonIsDisplayed() {
         OSMWidget widget = createWidget(promptWithAnswer(new StringData("blah")));
-        assertThat(widget.binding.launchOpenMapKitButton.getText(), is(widgetActivity.getString(R.string.recapture_osm)));
+        assertThat(widget.binding.launchOpenMapKitButton.getText(), is(widgetActivity.getString(org.odk.collect.strings.R.string.recapture_osm)));
     }
 
     @Test
@@ -132,7 +132,7 @@ public class OSMWidgetTest {
     public void clearAnswer_showsCaptureOsmButton() {
         OSMWidget widget = createWidget(promptWithAnswer(new StringData("blah")));
         widget.clearAnswer();
-        assertThat(widget.binding.launchOpenMapKitButton.getText(), is(widgetActivity.getString(R.string.capture_osm)));
+        assertThat(widget.binding.launchOpenMapKitButton.getText(), is(widgetActivity.getString(org.odk.collect.strings.R.string.capture_osm)));
     }
 
     @Test
@@ -176,7 +176,7 @@ public class OSMWidgetTest {
     public void setData_showsRecaptureOsmButton() {
         OSMWidget widget = createWidget(promptWithAnswer(null));
         widget.setData("blah");
-        assertThat(widget.binding.launchOpenMapKitButton.getText(), is(widgetActivity.getString(R.string.recapture_osm)));
+        assertThat(widget.binding.launchOpenMapKitButton.getText(), is(widgetActivity.getString(org.odk.collect.strings.R.string.recapture_osm)));
     }
 
     @Test
@@ -239,7 +239,7 @@ public class OSMWidgetTest {
         when(questionDef.getOsmTags()).thenReturn(ImmutableList.<OSMTag>of());
 
         return new OSMWidget(widgetActivity, new QuestionDetails(prompt),
-                fakeWaitingForDataRegistry, intentLauncher, formController);
+                fakeWaitingForDataRegistry, intentLauncher, formController, widgetDependencies());
     }
 
     private void assertIntentExtrasEquals(String fileName) {

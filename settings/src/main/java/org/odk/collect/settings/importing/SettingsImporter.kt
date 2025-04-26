@@ -2,6 +2,7 @@ package org.odk.collect.settings.importing
 
 import org.json.JSONObject
 import org.odk.collect.projects.Project
+import org.odk.collect.projects.ProjectConfigurationResult
 import org.odk.collect.projects.ProjectsRepository
 import org.odk.collect.settings.SettingsProvider
 import org.odk.collect.settings.keys.AppConfigurationKeys
@@ -20,9 +21,9 @@ internal class SettingsImporter(
     private val projectDetailsCreator: ProjectDetailsCreator
 ) {
 
-    fun fromJSON(json: String, project: Project.Saved, deviceUnsupportedSettings: JSONObject): Boolean {
+    fun fromJSON(json: String, project: Project.Saved, deviceUnsupportedSettings: JSONObject): ProjectConfigurationResult {
         if (!settingsValidator.isValid(json)) {
-            return false
+            return ProjectConfigurationResult.INVALID_SETTINGS
         }
 
         val generalSettings = settingsProvider.getUnprotectedSettings(project.uuid)
@@ -32,6 +33,10 @@ internal class SettingsImporter(
         adminSettings.clear()
 
         val jsonObject = JSONObject(json)
+
+        if (isGDProject(jsonObject)) {
+            return ProjectConfigurationResult.GD_PROJECT
+        }
 
         // Import unprotected settings
         importToPrefs(jsonObject, AppConfigurationKeys.GENERAL, generalSettings, deviceUnsupportedSettings)
@@ -46,11 +51,7 @@ internal class SettingsImporter(
             JSONObject()
         }
 
-        val connectionIdentifier = if (generalSettings.getString(ProjectKeys.KEY_PROTOCOL).equals(ProjectKeys.PROTOCOL_GOOGLE_SHEETS)) {
-            generalSettings.getString(ProjectKeys.KEY_SELECTED_GOOGLE_ACCOUNT) ?: ""
-        } else {
-            generalSettings.getString(ProjectKeys.KEY_SERVER_URL) ?: ""
-        }
+        val connectionIdentifier = generalSettings.getString(ProjectKeys.KEY_SERVER_URL) ?: ""
 
         importProjectDetails(
             project,
@@ -65,7 +66,13 @@ internal class SettingsImporter(
 
         settingsChangedHandler.onSettingsChanged(project.uuid)
 
-        return true
+        return ProjectConfigurationResult.SUCCESS
+    }
+
+    private fun isGDProject(jsonObject: JSONObject): Boolean {
+        val generalSettings = jsonObject.getJSONObject(AppConfigurationKeys.GENERAL)
+        return generalSettings.has(ProjectKeys.KEY_PROTOCOL) &&
+            generalSettings.get(ProjectKeys.KEY_PROTOCOL) == ProjectKeys.PROTOCOL_GOOGLE_SHEETS
     }
 
     private fun importToPrefs(

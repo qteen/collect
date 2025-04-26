@@ -3,22 +3,22 @@ package org.odk.collect.android.formlists.blankformlist
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
-import android.widget.ProgressBar
-import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import org.odk.collect.android.R
-import org.odk.collect.android.activities.FormEntryActivity
 import org.odk.collect.android.activities.FormMapActivity
+import org.odk.collect.android.formmanagement.FormFillingIntentFactory
 import org.odk.collect.android.injection.DaggerUtils
 import org.odk.collect.android.preferences.dialogs.ServerAuthDialogFragment
-import org.odk.collect.android.utilities.ApplicationConstants
-import org.odk.collect.androidshared.network.NetworkStateProvider
 import org.odk.collect.androidshared.ui.DialogFragmentUtils
+import org.odk.collect.androidshared.ui.ObviousProgressBar
 import org.odk.collect.androidshared.ui.SnackbarUtils
+import org.odk.collect.async.network.NetworkStateProvider
+import org.odk.collect.lists.EmptyListView
+import org.odk.collect.lists.RecyclerViewUtils
 import org.odk.collect.permissions.PermissionListener
 import org.odk.collect.permissions.PermissionsProvider
 import org.odk.collect.strings.localization.LocalizedActivity
@@ -39,54 +39,39 @@ class BlankFormListActivity : LocalizedActivity(), OnFormItemClickListener {
 
     private val adapter: BlankFormListAdapter = BlankFormListAdapter(this)
 
-    private lateinit var menuDelegate: BlankFormListMenuDelegate
+    private val formLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            setResult(RESULT_OK, it.data)
+            finish()
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         DaggerUtils.getComponent(this).inject(this)
         setContentView(R.layout.activity_blank_form_list)
-        title = getString(R.string.enter_data)
-        setSupportActionBar(findViewById(R.id.toolbar))
+        title = getString(org.odk.collect.strings.R.string.enter_data)
+        setSupportActionBar(findViewById(org.odk.collect.androidshared.R.id.toolbar))
 
-        menuDelegate = BlankFormListMenuDelegate(this, viewModel, networkStateProvider)
+        val menuProvider = BlankFormListMenuProvider(this, viewModel, networkStateProvider)
+        addMenuProvider(menuProvider, this)
 
-        findViewById<RecyclerView>(R.id.form_list).adapter = adapter
+        val list = findViewById<RecyclerView>(R.id.form_list)
+        list.layoutManager = LinearLayoutManager(this)
+        list.addItemDecoration(RecyclerViewUtils.verticalLineDivider(this))
+        list.adapter = adapter
 
         initObservers()
-    }
-
-    override fun onCreateOptionsMenu(menu: Menu): Boolean {
-        menuDelegate.onCreateOptionsMenu(menuInflater, menu)
-        return true
-    }
-
-    override fun onPrepareOptionsMenu(menu: Menu): Boolean {
-        menuDelegate.onPrepareOptionsMenu(menu)
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return menuDelegate.onOptionsItemSelected(item)
     }
 
     override fun onFormClick(formUri: Uri) {
         if (Intent.ACTION_PICK == intent.action) {
             // caller is waiting on a picked form
             setResult(RESULT_OK, Intent().setData(formUri))
+            finish()
         } else {
-            // caller wants to view/edit a form, so launch formentryactivity
-            Intent(this, FormEntryActivity::class.java).apply {
-                action = Intent.ACTION_EDIT
-                data = formUri
-                putExtra(
-                    ApplicationConstants.BundleKeys.FORM_MODE,
-                    ApplicationConstants.FormModes.EDIT_SAVED
-                )
-
-                startActivity(this)
-            }
+            // caller wants to view/edit a form, so launch FormFillingActivity
+            formLauncher.launch(FormFillingIntentFactory.newFormIntent(this, formUri))
         }
-        finish()
     }
 
     override fun onMapButtonClick(id: Long) {
@@ -106,26 +91,27 @@ class BlankFormListActivity : LocalizedActivity(), OnFormItemClickListener {
 
     private fun initObservers() {
         viewModel.isLoading.observe(this) { isLoading ->
-            findViewById<ProgressBar>(R.id.progressBar).visibility =
-                if (isLoading) View.VISIBLE else View.GONE
+            if (isLoading) {
+                findViewById<ObviousProgressBar>(org.odk.collect.androidshared.R.id.progressBar).show()
+            } else {
+                findViewById<ObviousProgressBar>(org.odk.collect.androidshared.R.id.progressBar).hide()
+            }
         }
 
         viewModel.syncResult.observe(this) { result ->
-            if (!result.isConsumed()) {
-                SnackbarUtils.showShortSnackbar(findViewById(R.id.form_list), result.value)
+            if (result != null) {
+                SnackbarUtils.showShortSnackbar(findViewById(R.id.form_list), result)
             }
         }
 
         viewModel.formsToDisplay.observe(this) { forms ->
-            forms?.let {
-                findViewById<RecyclerView>(R.id.form_list).visibility =
-                    if (forms.isEmpty()) View.GONE else View.VISIBLE
+            findViewById<RecyclerView>(R.id.form_list).visibility =
+                if (forms.isEmpty()) View.GONE else View.VISIBLE
 
-                findViewById<TextView>(R.id.empty_list_message).visibility =
-                    if (forms.isEmpty()) View.VISIBLE else View.GONE
+            findViewById<EmptyListView>(R.id.empty_list_message).visibility =
+                if (forms.isEmpty()) View.VISIBLE else View.GONE
 
-                adapter.setData(forms)
-            }
+            adapter.setData(forms)
         }
 
         viewModel.isAuthenticationRequired().observe(this) { authenticationRequired ->

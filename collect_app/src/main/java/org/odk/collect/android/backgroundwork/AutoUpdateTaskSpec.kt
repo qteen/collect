@@ -17,17 +17,16 @@ package org.odk.collect.android.backgroundwork
 
 import android.content.Context
 import androidx.work.BackoffPolicy
-import androidx.work.WorkerParameters
-import org.odk.collect.android.formmanagement.FormsUpdater
+import org.odk.collect.analytics.Analytics
+import org.odk.collect.android.formmanagement.FormsDataService
 import org.odk.collect.android.injection.DaggerUtils
 import org.odk.collect.async.TaskSpec
-import org.odk.collect.async.WorkerAdapter
 import java.util.function.Supplier
 import javax.inject.Inject
 
 class AutoUpdateTaskSpec : TaskSpec {
     @Inject
-    lateinit var formsUpdater: FormsUpdater
+    lateinit var formsDataService: FormsDataService
 
     override val maxRetries: Int? = null
     override val backoffPolicy: BackoffPolicy? = null
@@ -38,7 +37,7 @@ class AutoUpdateTaskSpec : TaskSpec {
         return Supplier {
             val projectId = inputData[TaskData.DATA_PROJECT_ID]
             if (projectId != null) {
-                formsUpdater.downloadUpdates(projectId)
+                formsDataService.downloadUpdates(projectId)
                 true
             } else {
                 throw IllegalArgumentException("No project ID provided!")
@@ -46,10 +45,7 @@ class AutoUpdateTaskSpec : TaskSpec {
         }
     }
 
-    override fun getWorkManagerAdapter(): Class<out WorkerAdapter> {
-        return Adapter::class.java
+    override fun onException(exception: Throwable) {
+        Analytics.logNonFatal(exception)
     }
-
-    class Adapter(context: Context, workerParams: WorkerParameters) :
-        WorkerAdapter(AutoUpdateTaskSpec(), context, workerParams)
 }

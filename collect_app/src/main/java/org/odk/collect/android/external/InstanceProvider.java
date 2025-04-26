@@ -14,9 +14,7 @@
 
 package org.odk.collect.android.external;
 
-import static org.odk.collect.android.database.DatabaseObjectMapper.getInstanceFromCurrentCursorPosition;
 import static org.odk.collect.android.database.DatabaseObjectMapper.getInstanceFromValues;
-import static org.odk.collect.android.database.DatabaseObjectMapper.getValuesFromInstance;
 import static org.odk.collect.android.database.instances.DatabaseInstanceColumns._ID;
 import static org.odk.collect.android.external.InstancesContract.CONTENT_ITEM_TYPE;
 import static org.odk.collect.android.external.InstancesContract.CONTENT_TYPE;
@@ -24,38 +22,28 @@ import static org.odk.collect.android.external.InstancesContract.getUri;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
-import android.content.Context;
 import android.content.UriMatcher;
-import android.content.res.Resources;
 import android.database.Cursor;
 import android.net.Uri;
 
 import androidx.annotation.NonNull;
 
-import org.odk.collect.android.R;
 import org.odk.collect.android.analytics.AnalyticsEvents;
 import org.odk.collect.android.analytics.AnalyticsUtils;
 import org.odk.collect.android.dao.CursorLoaderFactory;
+import org.odk.collect.android.database.instances.DatabaseInstanceColumns;
 import org.odk.collect.android.database.instances.DatabaseInstancesRepository;
 import org.odk.collect.android.injection.DaggerUtils;
 import org.odk.collect.android.instancemanagement.InstanceDeleter;
 import org.odk.collect.android.storage.StoragePathProvider;
-import org.odk.collect.android.storage.StorageSubdirectory;
 import org.odk.collect.android.utilities.ContentUriHelper;
 import org.odk.collect.android.utilities.FormsRepositoryProvider;
 import org.odk.collect.android.utilities.InstancesRepositoryProvider;
 import org.odk.collect.forms.instances.Instance;
-import org.odk.collect.forms.instances.InstancesRepository;
 import org.odk.collect.projects.ProjectsRepository;
 import org.odk.collect.settings.SettingsProvider;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Locale;
-
 import javax.inject.Inject;
-
-import timber.log.Timber;
 
 public class InstanceProvider extends ContentProvider {
 
@@ -116,7 +104,7 @@ public class InstanceProvider extends ContentProvider {
     }
 
     private Cursor dbQuery(String projectId, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
-        return ((DatabaseInstancesRepository) instancesRepositoryProvider.get(projectId)).rawQuery(projection, selection, selectionArgs, sortOrder, null);
+        return ((DatabaseInstancesRepository) instancesRepositoryProvider.create(projectId)).rawQuery(projection, selection, selectionArgs, sortOrder, null);
     }
 
     @Override
@@ -145,40 +133,12 @@ public class InstanceProvider extends ContentProvider {
             throw new IllegalArgumentException("Unknown URI " + uri);
         }
 
-        Instance newInstance = instancesRepositoryProvider.get(projectId).save(getInstanceFromValues(initialValues));
-        return getUri(projectId, newInstance.getDbId());
-    }
-
-    public static String getDisplaySubtext(Context context, String state, Date date) {
-        return getDisplaySubtext(context.getResources(), state, date);
-    }
-
-    public static String getDisplaySubtext(Resources resources, String state, Date date) {
-        try {
-            if (state == null) {
-                return new SimpleDateFormat(resources.getString(R.string.added_on_date_at_time),
-                        Locale.getDefault()).format(date);
-            } else if (Instance.STATUS_INCOMPLETE.equalsIgnoreCase(state)) {
-                return new SimpleDateFormat(resources.getString(R.string.saved_on_date_at_time),
-                        Locale.getDefault()).format(date);
-            } else if (Instance.STATUS_COMPLETE.equalsIgnoreCase(state)) {
-                return new SimpleDateFormat(resources.getString(R.string.finalized_on_date_at_time),
-                        Locale.getDefault()).format(date);
-            } else if (Instance.STATUS_SUBMITTED.equalsIgnoreCase(state)) {
-                return new SimpleDateFormat(resources.getString(R.string.sent_on_date_at_time),
-                        Locale.getDefault()).format(date);
-            } else if (Instance.STATUS_SUBMISSION_FAILED.equalsIgnoreCase(state)) {
-                return new SimpleDateFormat(
-                        resources.getString(R.string.sending_failed_on_date_at_time),
-                        Locale.getDefault()).format(date);
-            } else {
-                return new SimpleDateFormat(resources.getString(R.string.added_on_date_at_time),
-                        Locale.getDefault()).format(date);
-            }
-        } catch (IllegalArgumentException e) {
-            Timber.e(e, "Current locale: %s", Locale.getDefault());
-            return "";
+        if (initialValues.containsKey(DatabaseInstanceColumns.SUBMISSION_URI)) {
+            throw new SecurityException();
         }
+
+        Instance newInstance = instancesRepositoryProvider.create(projectId).save(getInstanceFromValues(initialValues));
+        return getUri(projectId, newInstance.getDbId());
     }
 
     /**
@@ -200,7 +160,7 @@ public class InstanceProvider extends ContentProvider {
                 try (Cursor cursor = dbQuery(projectId, new String[]{_ID}, where, whereArgs, null)) {
                     while (cursor.moveToNext()) {
                         long id = cursor.getLong(cursor.getColumnIndex(_ID));
-                        new InstanceDeleter(instancesRepositoryProvider.get(projectId), formsRepositoryProvider.get(projectId)).delete(id);
+                        new InstanceDeleter(instancesRepositoryProvider.create(projectId), formsRepositoryProvider.create(projectId)).delete(id);
                     }
 
                     count = cursor.getCount();
@@ -212,12 +172,12 @@ public class InstanceProvider extends ContentProvider {
                 long id = ContentUriHelper.getIdFromUri(uri);
 
                 if (where == null) {
-                    new InstanceDeleter(instancesRepositoryProvider.get(projectId), formsRepositoryProvider.get(projectId)).delete(id);
+                    new InstanceDeleter(instancesRepositoryProvider.create(projectId), formsRepositoryProvider.create(projectId)).delete(id);
                 } else {
                     try (Cursor cursor = dbQuery(projectId, new String[]{_ID}, where, whereArgs, null)) {
                         while (cursor.moveToNext()) {
                             if (cursor.getLong(cursor.getColumnIndex(_ID)) == id) {
-                                new InstanceDeleter(instancesRepositoryProvider.get(), formsRepositoryProvider.get()).delete(id);
+                                new InstanceDeleter(instancesRepositoryProvider.create(), formsRepositoryProvider.create()).delete(id);
                                 break;
                             }
                         }
@@ -238,67 +198,7 @@ public class InstanceProvider extends ContentProvider {
 
     @Override
     public int update(@NonNull Uri uri, ContentValues values, String where, String[] whereArgs) {
-        DaggerUtils.getComponent(getContext()).inject(this);
-
-        String projectId = getProjectId(uri);
-        logServerEvent(projectId, AnalyticsEvents.INSTANCE_PROVIDER_UPDATE);
-
-        InstancesRepository instancesRepository = instancesRepositoryProvider.get(projectId);
-        String instancesPath = storagePathProvider.getOdkDirPath(StorageSubdirectory.INSTANCES, projectId);
-
-        int count;
-
-        switch (URI_MATCHER.match(uri)) {
-            case INSTANCES:
-                try (Cursor cursor = dbQuery(projectId, null, where, whereArgs, null)) {
-                    while (cursor.moveToNext()) {
-                        Instance instance = getInstanceFromCurrentCursorPosition(cursor, instancesPath);
-                        ContentValues existingValues = getValuesFromInstance(instance, instancesPath);
-
-                        existingValues.putAll(values);
-                        instancesRepository.save(getInstanceFromValues(existingValues));
-                    }
-
-                    count = cursor.getCount();
-                }
-
-                break;
-
-            case INSTANCE_ID:
-                long instanceId = ContentUriHelper.getIdFromUri(uri);
-                if (whereArgs == null || whereArgs.length == 0) {
-                    Instance instance = instancesRepository.get(instanceId);
-                    ContentValues existingValues = getValuesFromInstance(instance, instancesPath);
-
-                    existingValues.putAll(values);
-                    instancesRepository.save(getInstanceFromValues(existingValues));
-                    count = 1;
-                } else {
-                    try (Cursor cursor = dbQuery(projectId, new String[]{_ID}, where, whereArgs, null)) {
-                        while (cursor.moveToNext()) {
-                            if (cursor.getLong(cursor.getColumnIndex(_ID)) == instanceId) {
-                                Instance instance = getInstanceFromCurrentCursorPosition(cursor, instancesPath);
-                                ContentValues existingValues = getValuesFromInstance(instance, instancesPath);
-
-                                existingValues.putAll(values);
-                                instancesRepository.save(getInstanceFromValues(existingValues));
-                                break;
-                            }
-                        }
-                    }
-
-                    count = 1;
-                }
-
-                break;
-
-            default:
-                throw new IllegalArgumentException("Unknown URI " + uri);
-        }
-
-        getContext().getContentResolver().notifyChange(uri, null);
-
-        return count;
+        return 0;
     }
 
     private String getProjectId(@NonNull Uri uri) {

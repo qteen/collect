@@ -7,7 +7,7 @@ import android.net.Uri;
 import org.javarosa.form.api.FormEntryPrompt;
 import org.javarosa.xpath.parser.XPathSyntaxException;
 import org.odk.collect.android.exception.ExternalParamsException;
-import org.odk.collect.android.externaldata.ExternalAppsUtils;
+import org.odk.collect.android.dynamicpreload.ExternalAppsUtils;
 import org.odk.collect.android.javarosawrapper.FormController;
 
 import java.util.Map;
@@ -17,7 +17,16 @@ public class ExternalAppIntentProvider {
     private static final String URI_KEY = "uri_data";
 
     public Intent getIntentToRunExternalApp(FormController formController, FormEntryPrompt formEntryPrompt) throws ExternalParamsException, XPathSyntaxException {
-        String exSpec = formEntryPrompt.getAppearanceHint().replaceFirst("^ex[:]", "");
+        String appearance = formEntryPrompt.getAppearanceHint();
+
+        String exSpec = appearance.substring(appearance.indexOf(Appearances.EX));
+        if (exSpec.contains(")")) {
+            exSpec = exSpec.substring(0, exSpec.lastIndexOf(')') + 1);
+        } else if (exSpec.contains(" ")) {
+            exSpec = exSpec.substring(0, exSpec.indexOf(' '));
+        }
+        exSpec = exSpec.replaceFirst("^ex[:]", "");
+
         final String intentName = ExternalAppsUtils.extractIntentName(exSpec);
         final Map<String, String> exParams = ExternalAppsUtils.extractParameters(exSpec);
 

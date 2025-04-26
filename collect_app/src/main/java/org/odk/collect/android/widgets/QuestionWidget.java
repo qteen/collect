@@ -25,21 +25,20 @@ import android.text.method.LinkMovementMethod;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 
 import org.javarosa.core.reference.InvalidReferenceException;
 import org.javarosa.core.reference.ReferenceManager;
 import org.javarosa.form.api.FormEntryPrompt;
 import org.odk.collect.android.R;
-import org.odk.collect.android.audio.AudioHelper;
-import org.odk.collect.android.formentry.media.AudioHelperFactory;
 import org.odk.collect.android.formentry.questions.AudioVideoImageTextLabel;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
-import org.odk.collect.android.formentry.questions.QuestionTextSizeHelper;
 import org.odk.collect.android.listeners.WidgetValueChangedListener;
 import org.odk.collect.android.preferences.GuidanceHint;
 import org.odk.collect.android.utilities.AnimationUtils;
@@ -48,17 +47,18 @@ import org.odk.collect.android.utilities.HtmlUtils;
 import org.odk.collect.android.utilities.MediaUtils;
 import org.odk.collect.android.utilities.SoftKeyboardController;
 import org.odk.collect.android.utilities.ThemeUtils;
-import org.odk.collect.android.utilities.ViewUtils;
 import org.odk.collect.android.widgets.interfaces.Widget;
 import org.odk.collect.android.widgets.items.SelectImageMapWidget;
+import org.odk.collect.android.widgets.utilities.AudioPlayer;
+import org.odk.collect.android.widgets.utilities.QuestionFontSizeUtils;
 import org.odk.collect.androidshared.utils.ScreenUtils;
 import org.odk.collect.imageloader.ImageLoader;
 import org.odk.collect.permissions.PermissionsProvider;
 import org.odk.collect.settings.SettingsProvider;
 import org.odk.collect.settings.keys.ProjectKeys;
+import org.odk.collect.shared.settings.Settings;
 
 import java.io.File;
-import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.inject.Inject;
@@ -71,23 +71,17 @@ public abstract class QuestionWidget extends FrameLayout implements Widget {
     private final AudioVideoImageTextLabel audioVideoImageTextLabel;
     protected final QuestionDetails questionDetails;
     private final TextView helpTextView;
-    private final View helpTextLayout;
     private final View guidanceTextLayout;
     private final View textLayout;
     private final TextView warningText;
+    public final View errorLayout;
+    protected final Settings settings;
     private AtomicBoolean expanded;
     protected final ThemeUtils themeUtils;
-    protected AudioHelper audioHelper;
-    private final ViewGroup containerView;
-    private final QuestionTextSizeHelper questionTextSizeHelper;
-
     private WidgetValueChangedListener valueChangedListener;
 
     @Inject
     public ReferenceManager referenceManager;
-
-    @Inject
-    public AudioHelperFactory audioHelperFactory;
 
     @Inject
     public ScreenUtils screenUtils;
@@ -108,28 +102,31 @@ public abstract class QuestionWidget extends FrameLayout implements Widget {
     @Inject
     ImageLoader imageLoader;
 
-    public QuestionWidget(Context context, QuestionDetails questionDetails) {
+    protected AudioPlayer audioPlayer;
+
+    public QuestionWidget(Context context, Dependencies dependencies, QuestionDetails questionDetails) {
         super(context);
+
+        audioPlayer = dependencies.getAudioPlayer();
         getComponent(context).inject(this);
         setId(View.generateViewId());
-        questionTextSizeHelper = new QuestionTextSizeHelper(settingsProvider.getUnprotectedSettings());
-        this.audioHelper = audioHelperFactory.create(context);
+        settings = settingsProvider.getUnprotectedSettings();
 
         themeUtils = new ThemeUtils(context);
 
         this.questionDetails = questionDetails;
         formEntryPrompt = questionDetails.getPrompt();
 
-        containerView = inflate(context, getLayout(), this).findViewById(R.id.question_widget_container);
-
+        ViewGroup containerView = inflate(context, getLayout(), this).findViewById(R.id.question_widget_container);
         audioVideoImageTextLabel = containerView.findViewById(R.id.question_label);
         setupQuestionLabel();
 
-        helpTextLayout = findViewById(R.id.help_text);
+        View helpTextLayout = findViewById(R.id.help_text);
         guidanceTextLayout = helpTextLayout.findViewById(R.id.guidance_text_layout);
         textLayout = helpTextLayout.findViewById(R.id.text_layout);
         warningText = helpTextLayout.findViewById(R.id.warning_text);
         helpTextView = setupHelpText(helpTextLayout.findViewById(R.id.help_text_view), formEntryPrompt);
+        errorLayout = findViewById(R.id.error_message_container);
         setupGuidanceTextAndLayout(helpTextLayout.findViewById(R.id.guidance_text_view), formEntryPrompt);
 
         if (context instanceof Activity && !questionDetails.isReadOnly()) {
@@ -140,9 +137,21 @@ public abstract class QuestionWidget extends FrameLayout implements Widget {
     }
 
     public void render() {
-        View answerView = onCreateAnswerView(getContext(), questionDetails.getPrompt(), getAnswerFontSize());
+        View answerView = onCreateAnswerView(getContext(),
+                questionDetails.getPrompt(),
+                QuestionFontSizeUtils.getFontSize(settings, QuestionFontSizeUtils.FontSize.HEADLINE_6)
+        );
+
         if (answerView != null) {
-            addAnswerView(answerView);
+            ViewGroup answerContainer = findViewById(R.id.answer_container);
+
+            RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
+
+            answerContainer.addView(answerView, params);
+
+            adjustButtonFontSize(answerContainer);
         }
     }
 
@@ -170,7 +179,7 @@ public abstract class QuestionWidget extends FrameLayout implements Widget {
 
     private void setupQuestionLabel() {
         audioVideoImageTextLabel.setTag(getClipID(formEntryPrompt));
-        audioVideoImageTextLabel.setText(formEntryPrompt.getLongText(), formEntryPrompt.isRequired(), questionTextSizeHelper.getHeadline6());
+        audioVideoImageTextLabel.setText(formEntryPrompt.getLongText(), formEntryPrompt.isRequired(), QuestionFontSizeUtils.getFontSize(settings, QuestionFontSizeUtils.FontSize.TITLE_LARGE));
         audioVideoImageTextLabel.setMediaUtils(mediaUtils);
 
         String imageURI = this instanceof SelectImageMapWidget ? null : formEntryPrompt.getImageText();
@@ -188,7 +197,7 @@ public abstract class QuestionWidget extends FrameLayout implements Widget {
                 audioVideoImageTextLabel.setVideo(new File(referenceManager.deriveReference(videoURI).getLocalURI()));
             }
             if (playableAudioURI != null) {
-                audioVideoImageTextLabel.setAudio(playableAudioURI, audioHelper);
+                audioVideoImageTextLabel.setAudio(playableAudioURI, audioPlayer);
             }
         } catch (InvalidReferenceException e) {
             Timber.d(e, "Invalid media reference due to %s ", e.getMessage());
@@ -248,26 +257,13 @@ public abstract class QuestionWidget extends FrameLayout implements Widget {
     }
 
     private TextView configureGuidanceTextView(TextView guidanceTextView, String guidance) {
-        guidanceTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, questionTextSizeHelper.getSubtitle1());
+        guidanceTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, QuestionFontSizeUtils.getFontSize(settings, QuestionFontSizeUtils.FontSize.SUBTITLE_1));
         guidanceTextView.setHorizontallyScrolling(false);
 
         guidanceTextView.setText(HtmlUtils.textToHtml(guidance));
 
         guidanceTextView.setMovementMethod(LinkMovementMethod.getInstance());
         return guidanceTextView;
-    }
-
-    //source::https://stackoverflow.com/questions/18996183/identifying-rtl-language-in-android/23203698#23203698
-    public static boolean isRTL() {
-        return isRTL(Locale.getDefault());
-    }
-
-    private static boolean isRTL(Locale locale) {
-        if (locale.getDisplayName().isEmpty()) {
-            return false;
-        }
-        final int directionality = Character.getDirectionality(locale.getDisplayName().charAt(0));
-        return directionality == Character.DIRECTIONALITY_RIGHT_TO_LEFT || directionality == Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC;
     }
 
     public TextView getHelpTextView() {
@@ -295,25 +291,11 @@ public abstract class QuestionWidget extends FrameLayout implements Widget {
         return false;
     }
 
-    @Deprecated
-    protected void addQuestionLabel(View v) {
-        if (v == null) {
-            Timber.e(new Error("cannot add a null view as questionMediaLayout"));
-            return;
-        }
-        // default for questionmedialayout
-        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
-        params.addRule(RelativeLayout.ALIGN_PARENT_TOP, RelativeLayout.TRUE);
-        containerView.addView(v, params);
-    }
-
     private TextView setupHelpText(TextView helpText, FormEntryPrompt prompt) {
         String s = prompt.getHelpText();
 
         if (s != null && !s.equals("")) {
-            helpText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, questionTextSizeHelper.getSubtitle1());
+            helpText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, QuestionFontSizeUtils.getFontSize(settings, QuestionFontSizeUtils.FontSize.SUBTITLE_1));
             // wrap to the widget of vi
             helpText.setHorizontallyScrolling(false);
             if (prompt.getLongText() == null || prompt.getLongText().isEmpty()) {
@@ -327,29 +309,6 @@ public abstract class QuestionWidget extends FrameLayout implements Widget {
             helpText.setVisibility(View.GONE);
             return helpText;
         }
-    }
-
-    @Deprecated
-    protected final void addAnswerView(View v) {
-        addAnswerView(v, null);
-    }
-
-    /**
-     * Widget should use {@link #onCreateAnswerView} to define answer view
-     */
-    @Deprecated
-    protected final void addAnswerView(View v, Integer margin) {
-        ViewGroup answerContainer = findViewById(R.id.answer_container);
-
-        RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
-        params.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
-
-        if (margin != null) {
-            params.setMargins(ViewUtils.pxFromDp(getContext(), margin), 0, ViewUtils.pxFromDp(getContext(), margin), 0);
-        }
-
-        answerContainer.addView(v, params);
     }
 
     private void hideAnswerContainerIfNeeded() {
@@ -391,20 +350,8 @@ public abstract class QuestionWidget extends FrameLayout implements Widget {
         warningText.setText(warningBody);
     }
 
-    public int getAnswerFontSize() {
-        return (int) questionTextSizeHelper.getHeadline6();
-    }
-
-    public View getHelpTextLayout() {
-        return helpTextLayout;
-    }
-
     public AudioVideoImageTextLabel getAudioVideoImageTextLabel() {
         return audioVideoImageTextLabel;
-    }
-
-    public AudioHelper getAudioHelper() {
-        return audioHelper;
     }
 
     public ReferenceManager getReferenceManager() {
@@ -424,8 +371,50 @@ public abstract class QuestionWidget extends FrameLayout implements Widget {
     }
 
     public void widgetValueChanged() {
+        hideError();
         if (valueChangedListener != null) {
             valueChangedListener.widgetValueChanged(this);
+        }
+    }
+
+    /*
+    Loop through each child view to identify buttons and dynamically adjust their font size based on
+    the current settings. This efficient approach eliminates the need to manually adjust button font
+    sizes for individual widgets. Furthermore, this method lays the groundwork for potential future
+    enhancements, such as extending font size adjustments to other view types like text views etc.
+     */
+    private void adjustButtonFontSize(ViewGroup view) {
+        for (int i = 0; i < view.getChildCount(); i++) {
+            View childView = view.getChildAt(i);
+            if (childView instanceof ViewGroup) {
+                adjustButtonFontSize((ViewGroup) childView);
+            } else if (childView instanceof Button) {
+                ((Button) childView).setTextSize(QuestionFontSizeUtils.getFontSize(settings, QuestionFontSizeUtils.FontSize.BODY_LARGE));
+            }
+        }
+    }
+
+    public void hideError() {
+        errorLayout.setVisibility(GONE);
+        setBackground(null);
+    }
+
+    public void displayError(String errorMessage) {
+        ((TextView) errorLayout.findViewById(R.id.error_message)).setText(errorMessage);
+        errorLayout.setVisibility(VISIBLE);
+        setBackground(ContextCompat.getDrawable(getContext(), R.drawable.question_with_error_border));
+    }
+
+    public static class Dependencies {
+
+        private final AudioPlayer audioPlayer;
+
+        public Dependencies(AudioPlayer audioPlayer) {
+            this.audioPlayer = audioPlayer;
+        }
+
+        public AudioPlayer getAudioPlayer() {
+            return audioPlayer;
         }
     }
 }

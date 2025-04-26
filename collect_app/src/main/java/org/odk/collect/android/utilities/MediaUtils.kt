@@ -17,7 +17,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import org.odk.collect.android.BuildConfig
-import org.odk.collect.android.R
 import org.odk.collect.androidshared.system.IntentLauncher
 import org.odk.collect.androidshared.ui.ToastUtils
 import timber.log.Timber
@@ -42,9 +41,9 @@ class MediaUtils(private val intentLauncher: IntentLauncher, private val content
 
     fun openFile(context: Context, file: File, expectedMimeType: String?) {
         if (!file.exists()) {
-            val errorMsg: String = context.getString(R.string.file_missing, file)
+            val errorMsg: String = context.getString(org.odk.collect.strings.R.string.file_missing, file)
             Timber.d("File %s is missing", file)
-            ToastUtils.showLongToast(context, errorMsg)
+            ToastUtils.showLongToast(errorMsg)
             return
         }
 
@@ -55,7 +54,7 @@ class MediaUtils(private val intentLauncher: IntentLauncher, private val content
         )
 
         if (contentUri == null) {
-            ToastUtils.showLongToast(context, "Can't open file. If you are on a Huawei device, this is expected and will not be fixed.")
+            ToastUtils.showLongToast("Can't open file. If you are on a Huawei device, this is expected and will not be fixed.")
             return
         }
 
@@ -67,17 +66,20 @@ class MediaUtils(private val intentLauncher: IntentLauncher, private val content
 
         intentLauncher.launch(context, intent) {
             val message = context.getString(
-                R.string.activity_not_found,
-                context.getString(R.string.open_file)
+                org.odk.collect.strings.R.string.activity_not_found,
+                context.getString(org.odk.collect.strings.R.string.open_file)
             )
-            ToastUtils.showLongToast(context, message)
+            ToastUtils.showLongToast(message)
             Timber.w(message)
         }
     }
 
     private fun getMimeType(file: File, expectedMimeType: String?) =
-        if (expectedMimeType == null || expectedMimeType.isEmpty()) FileUtils.getMimeType(file)
-        else expectedMimeType
+        if (expectedMimeType == null || expectedMimeType.isEmpty()) {
+            FileUtils.getMimeType(file)
+        } else {
+            expectedMimeType
+        }
 
     fun pickFile(activity: Activity, mimeType: String, requestCode: Int) {
         val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {

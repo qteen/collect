@@ -14,7 +14,7 @@ import org.odk.collect.analytics.Analytics
 import org.odk.collect.android.R
 import org.odk.collect.android.analytics.AnalyticsEvents
 import org.odk.collect.android.injection.DaggerUtils
-import org.odk.collect.android.projects.CurrentProjectProvider
+import org.odk.collect.android.projects.ProjectsDataService
 import org.odk.collect.android.storage.StoragePathProvider
 import org.odk.collect.android.utilities.FileUtils
 import org.odk.collect.androidshared.ColorPickerDialog
@@ -49,11 +49,12 @@ class ProjectDisplayPreferencesFragment :
             { color: String ->
                 Analytics.log(AnalyticsEvents.CHANGE_PROJECT_COLOR)
 
-                val (uuid, name, icon) = currentProjectProvider.getCurrentProject()
+                val (uuid, name, icon) = projectsDataService.requireCurrentProject()
                 projectsRepository.save(Project.Saved(uuid, name, icon, color))
                 findPreference<Preference>(PROJECT_COLOR_KEY)!!.summaryProvider =
                     ProjectDetailsSummaryProvider(
-                        PROJECT_COLOR_KEY, currentProjectProvider
+                        PROJECT_COLOR_KEY,
+                        projectsDataService
                     )
             }
         )
@@ -66,22 +67,25 @@ class ProjectDisplayPreferencesFragment :
 
         findPreference<Preference>(PROJECT_NAME_KEY)!!.summaryProvider =
             ProjectDetailsSummaryProvider(
-                PROJECT_NAME_KEY, currentProjectProvider
+                PROJECT_NAME_KEY,
+                projectsDataService
             )
         findPreference<Preference>(PROJECT_ICON_KEY)!!.summaryProvider =
             ProjectDetailsSummaryProvider(
-                PROJECT_ICON_KEY, currentProjectProvider
+                PROJECT_ICON_KEY,
+                projectsDataService
             )
         findPreference<Preference>(PROJECT_COLOR_KEY)!!.summaryProvider =
             ProjectDetailsSummaryProvider(
-                PROJECT_COLOR_KEY, currentProjectProvider
+                PROJECT_COLOR_KEY,
+                projectsDataService
             )
         findPreference<Preference>(PROJECT_NAME_KEY)!!.onPreferenceChangeListener = this
         findPreference<Preference>(PROJECT_ICON_KEY)!!.onPreferenceChangeListener = this
         (findPreference<Preference>(PROJECT_NAME_KEY) as EditTextPreference).text =
-            currentProjectProvider.getCurrentProject().name
+            projectsDataService.requireCurrentProject().name
         (findPreference<Preference>(PROJECT_ICON_KEY) as EditTextPreference).text =
-            currentProjectProvider.getCurrentProject().icon
+            projectsDataService.requireCurrentProject().icon
         (findPreference<Preference>(PROJECT_ICON_KEY) as EditTextPreference).setOnBindEditTextListener { editText: EditText ->
             editText.addTextChangedListener(
                 OneSignTextWatcher(editText)
@@ -91,21 +95,23 @@ class ProjectDisplayPreferencesFragment :
 
     private class ProjectDetailsSummaryProvider(
         private val key: String,
-        private val currentProjectProvider: CurrentProjectProvider
+        private val projectsDataService: ProjectsDataService
     ) : Preference.SummaryProvider<Preference> {
         override fun provideSummary(preference: Preference): CharSequence {
             return when (key) {
-                PROJECT_NAME_KEY -> currentProjectProvider.getCurrentProject().name
-                PROJECT_ICON_KEY -> currentProjectProvider.getCurrentProject().icon
+                PROJECT_NAME_KEY -> projectsDataService.requireCurrentProject().name
+                PROJECT_ICON_KEY -> projectsDataService.requireCurrentProject().icon
                 PROJECT_COLOR_KEY -> {
                     val summary: Spannable = SpannableString("■")
                     summary.setSpan(
                         ForegroundColorSpan(
                             Color.parseColor(
-                                currentProjectProvider.getCurrentProject().color
+                                projectsDataService.requireCurrentProject().color
                             )
                         ),
-                        0, summary.length, 0
+                        0,
+                        summary.length,
+                        0
                     )
                     summary
                 }
@@ -118,7 +124,7 @@ class ProjectDisplayPreferencesFragment :
         if (MultiClickGuard.allowClick(javaClass.name)) {
             when (preference.key) {
                 PROJECT_COLOR_KEY -> {
-                    val (_, _, icon, color) = currentProjectProvider.getCurrentProject()
+                    val (_, _, icon, color) = projectsDataService.requireCurrentProject()
                     val bundle = Bundle()
                     bundle.putString(ColorPickerDialog.CURRENT_COLOR, color)
                     bundle.putString(ColorPickerDialog.CURRENT_ICON, icon)
@@ -135,7 +141,7 @@ class ProjectDisplayPreferencesFragment :
     }
 
     override fun onPreferenceChange(preference: Preference, newValue: Any): Boolean {
-        val (uuid, name, icon, color) = currentProjectProvider.getCurrentProject()
+        val (uuid, name, icon, color) = projectsDataService.requireCurrentProject()
         when (preference.key) {
             PROJECT_NAME_KEY -> {
                 Analytics.log(AnalyticsEvents.CHANGE_PROJECT_NAME)
@@ -168,7 +174,10 @@ class ProjectDisplayPreferencesFragment :
 
                 projectsRepository.save(
                     Project.Saved(
-                        uuid, newValue.toString(), icon, color
+                        uuid,
+                        newValue.toString(),
+                        icon,
+                        color
                     )
                 )
             }
@@ -177,7 +186,10 @@ class ProjectDisplayPreferencesFragment :
 
                 projectsRepository.save(
                     Project.Saved(
-                        uuid, name, newValue.toString(), color
+                        uuid,
+                        name,
+                        newValue.toString(),
+                        color
                     )
                 )
             }

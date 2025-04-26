@@ -23,7 +23,9 @@ class SettingLanguageTest {
             .clickOnUserInterface()
             .clickOnLanguage()
             .clickOnSelectedLanguage("dansk")
-            .assertText("Udfyld blank formular")
+            .openProjectSettingsDialog()
+            .clickSettings()
+            .assertText("Kort")
     }
 
     @Test
@@ -34,6 +36,6 @@ class SettingLanguageTest {
             .clickOnUserInterface()
             .clickOnLanguage()
             .clickOnSelectedLanguage("svenska (Sverige)")
-            .assertText("Fyll i tomt formulär")
+            .assertText("Börja nytt formulär")
     }
 }

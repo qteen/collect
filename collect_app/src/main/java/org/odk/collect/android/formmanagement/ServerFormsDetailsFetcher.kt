@@ -15,7 +15,6 @@
  */
 package org.odk.collect.android.formmanagement
 
-import org.odk.collect.android.openrosa.OpenRosaFormSource
 import org.odk.collect.android.utilities.FormUtils
 import org.odk.collect.android.utilities.WebCredentialsUtils
 import org.odk.collect.forms.Form
@@ -24,6 +23,7 @@ import org.odk.collect.forms.FormSourceException
 import org.odk.collect.forms.FormsRepository
 import org.odk.collect.forms.ManifestFile
 import org.odk.collect.forms.MediaFile
+import org.odk.collect.openrosa.forms.OpenRosaClient
 import org.odk.collect.shared.strings.Md5.getMd5Hash
 import timber.log.Timber
 import java.io.File
@@ -33,21 +33,18 @@ import java.io.File
  */
 open class ServerFormsDetailsFetcher(
     private val formsRepository: FormsRepository,
-    private val formSource: FormSource,
-    private val diskFormsSynchronizer: DiskFormsSynchronizer
+    private val formSource: FormSource
 ) {
     open fun updateUrl(url: String) {
-        (formSource as OpenRosaFormSource).updateUrl(url)
+        (formSource as OpenRosaClient).updateUrl(url)
     }
 
     open fun updateCredentials(webCredentialsUtils: WebCredentialsUtils) {
-        (formSource as OpenRosaFormSource).updateWebCredentialsUtils(webCredentialsUtils)
+        (formSource as OpenRosaClient).updateWebCredentialsUtils(webCredentialsUtils)
     }
 
     @Throws(FormSourceException::class)
     open fun fetchFormDetails(): List<ServerFormDetails> {
-        diskFormsSynchronizer.synchronize()
-
         val formList = formSource.fetchFormList()
         return formList.map { listItem ->
             val manifestFile = listItem.manifestURL?.let {
@@ -131,7 +128,7 @@ open class ServerFormsDetailsFetcher(
         }
 
         return localMediaFiles.any {
-            newMediaFile.hash == getMd5Hash(it)
+            newMediaFile.hash == it.getMd5Hash()
         }
     }
 }

@@ -1,5 +1,8 @@
 package org.odk.collect.android.support;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import android.app.Application;
 import android.content.Intent;
 
@@ -10,7 +13,6 @@ import androidx.test.core.app.ApplicationProvider;
 import org.javarosa.core.reference.InvalidReferenceException;
 import org.javarosa.core.reference.Reference;
 import org.javarosa.core.reference.ReferenceManager;
-import org.odk.collect.android.R;
 import org.odk.collect.android.application.Collect;
 import org.odk.collect.android.injection.DaggerUtils;
 import org.odk.collect.android.injection.config.AppDependencyComponent;
@@ -22,9 +24,6 @@ import org.robolectric.Robolectric;
 import org.robolectric.android.controller.ActivityController;
 
 import java.util.List;
-
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public final class CollectHelpers {
 
@@ -68,8 +67,17 @@ public final class CollectHelpers {
         return testComponent;
     }
 
+    public static void resetProcess(AppDependencyModule dependencies) {
+        Collect application = ApplicationProvider.getApplicationContext();
+
+        application.getState().clear();
+
+        AppDependencyComponent newComponent = CollectHelpers.overrideAppDependencyModule(dependencies);
+        newComponent.applicationInitializer().initialize();
+    }
+
     public static <T extends FragmentActivity> T createThemedActivity(Class<T> clazz) {
-        return RobolectricHelpers.createThemedActivity(clazz, R.style.Theme_MaterialComponents);
+        return RobolectricHelpers.createThemedActivity(clazz);
     }
 
     public static FragmentActivity createThemedActivity() {
@@ -78,14 +86,14 @@ public final class CollectHelpers {
 
     public static <T extends FragmentActivity> ActivityController<T> buildThemedActivity(Class<T> clazz) {
         ActivityController<T> activity = Robolectric.buildActivity(clazz);
-        activity.get().setTheme(R.style.Theme_MaterialComponents);
+        activity.get().setTheme(com.google.android.material.R.style.Theme_MaterialComponents);
 
         return activity;
     }
 
     public static <T extends FragmentActivity> ActivityController<T> buildThemedActivity(Class<T> clazz, Intent intent) {
         ActivityController<T> activity = Robolectric.buildActivity(clazz, intent);
-        activity.get().setTheme(R.style.Theme_MaterialComponents);
+        activity.get().setTheme(com.google.android.material.R.style.Theme_MaterialComponents);
 
         return activity;
     }

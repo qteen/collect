@@ -8,7 +8,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
-import org.odk.collect.android.R
 import org.odk.collect.android.support.TestDependencies
 import org.odk.collect.android.support.pages.MainMenuPage
 import org.odk.collect.android.support.rules.CollectTestRule
@@ -27,7 +26,7 @@ class FormManagementSettingsTest {
 
     @Test
     fun whenMatchExactlyEnabled_changingAutomaticUpdateFrequency_changesTaskFrequency() {
-        var deferredTasks = testDependencies.scheduler.deferredTasks
+        var deferredTasks = testDependencies.scheduler.getDeferredTasks()
 
         assertThat(deferredTasks, `is`(empty()))
 
@@ -36,16 +35,16 @@ class FormManagementSettingsTest {
             .clickSettings()
             .clickFormManagement()
             .clickUpdateForms()
-            .clickOption(R.string.match_exactly)
+            .clickOption(org.odk.collect.strings.R.string.match_exactly)
 
-        deferredTasks = testDependencies.scheduler.deferredTasks
+        deferredTasks = testDependencies.scheduler.getDeferredTasks()
 
         assertThat(deferredTasks.size, `is`(1))
 
         val matchExactlyTag = deferredTasks[0].tag
 
-        page.clickAutomaticUpdateFrequency().clickOption(R.string.every_one_hour)
-        deferredTasks = testDependencies.scheduler.deferredTasks
+        page.clickAutomaticUpdateFrequency().clickOption(org.odk.collect.strings.R.string.every_one_hour)
+        deferredTasks = testDependencies.scheduler.getDeferredTasks()
 
         assertThat(deferredTasks.size, `is`(1))
         assertThat(deferredTasks[0].tag, `is`(matchExactlyTag))
@@ -54,7 +53,7 @@ class FormManagementSettingsTest {
 
     @Test
     fun whenPreviouslyDownloadedOnlyEnabled_changingAutomaticUpdateFrequency_changesTaskFrequency() {
-        var deferredTasks = testDependencies.scheduler.deferredTasks
+        var deferredTasks = testDependencies.scheduler.getDeferredTasks()
 
         assertThat(deferredTasks, `is`(empty()))
 
@@ -63,37 +62,19 @@ class FormManagementSettingsTest {
             .clickSettings()
             .clickFormManagement()
             .clickUpdateForms()
-            .clickOption(R.string.previously_downloaded_only)
+            .clickOption(org.odk.collect.strings.R.string.previously_downloaded_only)
 
-        deferredTasks = testDependencies.scheduler.deferredTasks
+        deferredTasks = testDependencies.scheduler.getDeferredTasks()
 
         assertThat(deferredTasks.size, `is`(1))
 
         val previouslyDownloadedTag = deferredTasks[0].tag
-        page.clickAutomaticUpdateFrequency().clickOption(R.string.every_one_hour)
+        page.clickAutomaticUpdateFrequency().clickOption(org.odk.collect.strings.R.string.every_one_hour)
 
-        deferredTasks = testDependencies.scheduler.deferredTasks
+        deferredTasks = testDependencies.scheduler.getDeferredTasks()
 
         assertThat(deferredTasks.size, `is`(1))
         assertThat(deferredTasks[0].tag, `is`(previouslyDownloadedTag))
         assertThat(deferredTasks[0].repeatPeriod, `is`(1000L * 60 * 60))
-    }
-
-    @Test
-    fun whenGoogleDriveUsingAsServer_disablesPrefsAndOnlyAllowsManualUpdates() {
-        testDependencies.googleAccountPicker.setDeviceAccount("steph@curry.basket")
-
-        MainMenuPage().assertOnPage()
-            .enablePreviouslyDownloadedOnlyUpdates() // Enabled a different mode before setting up Google
-            .setGoogleAccount("steph@curry.basket")
-            .openProjectSettingsDialog()
-            .clickSettings()
-            .clickFormManagement()
-            .assertDisabled(R.string.form_update_mode_title)
-            .assertDisabled(R.string.form_update_frequency_title)
-            .assertDisabled(R.string.automatic_download)
-            .assertText(R.string.manual)
-
-        assertThat(testDependencies.scheduler.deferredTasks.size, `is`(0))
     }
 }

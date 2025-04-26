@@ -20,8 +20,7 @@ interface TaskSpec {
     fun getTask(context: Context, inputData: Map<String, String>, isLastUniqueExecution: Boolean): Supplier<Boolean>
 
     /**
-     * Returns class that can be used to schedule this task using Android's
-     * WorkManager framework
+     * Called if an exception is thrown while executing the work.
      */
-    fun getWorkManagerAdapter(): Class<out WorkerAdapter>
+    fun onException(exception: Throwable)
 }

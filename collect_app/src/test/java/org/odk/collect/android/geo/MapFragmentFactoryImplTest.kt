@@ -3,6 +3,7 @@ package org.odk.collect.android.geo
 import org.hamcrest.CoreMatchers.instanceOf
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Test
+import org.odk.collect.googlemaps.GoogleMapFragment
 import org.odk.collect.osmdroid.OsmDroidMapFragment
 import org.odk.collect.settings.InMemSettingsProvider
 import org.odk.collect.settings.keys.ProjectKeys
@@ -38,16 +39,6 @@ class MapFragmentFactoryImplTest {
         settingsProvider
             .getUnprotectedSettings()
             .save(ProjectKeys.KEY_BASEMAP_SOURCE, ProjectKeys.BASEMAP_SOURCE_CARTO)
-
-        assertThat(
-            mapFragmentFactoryImpl.createMapFragment(),
-            instanceOf(OsmDroidMapFragment::class.java)
-        )
-
-        // BASEMAP_SOURCE_STAMEN
-        settingsProvider
-            .getUnprotectedSettings()
-            .save(ProjectKeys.KEY_BASEMAP_SOURCE, ProjectKeys.BASEMAP_SOURCE_STAMEN)
 
         assertThat(
             mapFragmentFactoryImpl.createMapFragment(),

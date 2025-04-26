@@ -6,7 +6,6 @@ import androidx.annotation.NonNull;
 
 import com.google.android.gms.location.LocationListener;
 
-import org.odk.collect.android.R;
 import org.odk.collect.location.LocationClient;
 import org.odk.collect.android.formentry.audit.AuditConfig;
 import org.odk.collect.android.formentry.audit.AuditEvent;
@@ -222,17 +221,15 @@ public class BackgroundLocationManager implements LocationClient.LocationClientL
                 && helper.isAndroidLocationPermissionGranted()) {
             AuditConfig auditConfig = helper.getCurrentFormAuditConfig();
 
-            locationClient.setListener(this);
             locationClient.setPriority(auditConfig.getLocationPriority());
             locationClient.setUpdateIntervals(auditConfig.getLocationMinInterval(), auditConfig.getLocationMinInterval());
-            locationClient.start();
+            locationClient.start(this);
 
             currentState = BackgroundLocationState.RECEIVING_LOCATIONS;
         }
     }
 
     private void stopLocationRequests() {
-        locationClient.setListener(null);
         locationClient.stop();
 
         currentState = BackgroundLocationState.STOPPED;
@@ -288,9 +285,9 @@ public class BackgroundLocationManager implements LocationClient.LocationClientL
     }
 
     public enum BackgroundLocationMessage {
-        LOCATION_PREF_DISABLED(R.string.background_location_disabled, true),
-        PLAY_SERVICES_UNAVAILABLE(R.string.google_play_services_not_available, false),
-        COLLECTING_LOCATION(R.string.background_location_enabled, true),
+        LOCATION_PREF_DISABLED(org.odk.collect.strings.R.string.background_location_disabled, true),
+        PLAY_SERVICES_UNAVAILABLE(org.odk.collect.strings.R.string.google_play_services_not_available, false),
+        COLLECTING_LOCATION(org.odk.collect.strings.R.string.background_location_enabled, true),
         PROVIDERS_DISABLED(-1, false);
 
         private int messageTextResourceId;

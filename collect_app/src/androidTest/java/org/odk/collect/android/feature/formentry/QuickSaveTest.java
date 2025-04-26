@@ -6,7 +6,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.runner.RunWith;
-import org.odk.collect.android.R;
 import org.odk.collect.android.support.pages.FormEntryPage.QuestionAndAnswer;
 import org.odk.collect.android.support.rules.CollectTestRule;
 import org.odk.collect.android.support.rules.TestRuleChain;
@@ -32,7 +31,7 @@ public class QuickSaveTest {
                 .clickSave()
                 .pressBackAndDiscardChanges()
 
-                .clickEditSavedForm(1)
+                .clickDrafts(1)
                 .clickOnForm("Two Question")
                 .assertText("Reuben")
                 .assertText("32");
@@ -48,7 +47,7 @@ public class QuickSaveTest {
                 .clickSave()
                 .pressBackAndDiscardChanges()
 
-                .clickEditSavedForm(1)
+                .clickDrafts(1)
                 .clickOnForm("Two Question Required")
                 .assertText("Reuben");
     }
@@ -62,7 +61,7 @@ public class QuickSaveTest {
                 .clickSave()
                 .pressBackAndDiscardChanges()
 
-                .clickEditSavedForm(1)
+                .clickDrafts(1)
                 .clickOnForm("Two Question Required")
                 .clickGoToStart()
                 .answerQuestion("What is your name?", "Another Reuben")
@@ -70,64 +69,8 @@ public class QuickSaveTest {
                 .clickSave()
                 .pressBackAndDiscardChanges()
 
-                .clickEditSavedForm(1)
+                .clickDrafts(1)
                 .clickOnForm("Two Question Required")
                 .assertText("Another Reuben");
-    }
-
-    @Test
-    public void whenEditingAFinalizedForm_withViolatedConstraintsOnCurrentScreen_clickingSaveIcon_showsError() {
-        rule.startAtMainMenu()
-                .copyForm("two-question-required.xml")
-                .startBlankForm("Two Question Required")
-                .fillOutAndSave(
-                        new QuestionAndAnswer("What is your name?", "Reuben"),
-                        new QuestionAndAnswer("What is your age?", "32", true)
-                )
-
-                .clickEditSavedForm(1)
-                .clickOnForm("Two Question Required")
-                .clickGoToStart()
-                .answerQuestion("What is your name?", "Another Reuben")
-                .swipeToNextQuestion("What is your age?", true)
-                .longPressOnQuestion("What is your age?", true)
-                .removeResponse()
-                .clickSaveWithError(R.string.required_answer_error)
-
-                .pressBackAndDiscardChanges()
-
-                .clickEditSavedForm(1)
-                .clickOnForm("Two Question Required")
-                .assertText("Reuben")
-                .assertText("32");
-    }
-
-    @Test
-    public void whenEditingAFinalizedForm_withViolatedConstraintsOnAnotherScreen_clickingSaveIcon_showsConstraintViolation() {
-        rule.startAtMainMenu()
-                .copyForm("two-question-required.xml")
-                .startBlankForm("Two Question Required")
-                .fillOutAndSave(
-                        new QuestionAndAnswer("What is your name?", "Reuben"),
-                        new QuestionAndAnswer("What is your age?", "32", true)
-                )
-
-                .clickEditSavedForm(1)
-                .clickOnForm("Two Question Required")
-                .clickGoToStart()
-                .answerQuestion("What is your name?", "Another Reuben")
-                .swipeToNextQuestion("What is your age?", true)
-                .longPressOnQuestion("What is your age?", true)
-                .removeResponse()
-                .swipeToPreviousQuestion("What is your name?")
-                .clickSave()
-                .assertConstraintDisplayed("Sorry, this response is required!")
-                .assertQuestion("What is your age?", true)
-                .pressBackAndDiscardChanges()
-
-                .clickEditSavedForm(1)
-                .clickOnForm("Two Question Required")
-                .assertText("Reuben")
-                .assertText("32");
     }
 }

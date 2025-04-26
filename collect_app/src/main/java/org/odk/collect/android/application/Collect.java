@@ -19,40 +19,48 @@ import static org.odk.collect.settings.keys.MetaKeys.KEY_GOOGLE_BUG_154855417_FI
 import android.app.Application;
 import android.content.Context;
 import android.content.res.Configuration;
-import android.os.StrictMode;
 
 import androidx.annotation.NonNull;
-import androidx.multidex.MultiDex;
 
 import org.jetbrains.annotations.NotNull;
-import org.odk.collect.android.BuildConfig;
-import org.odk.collect.android.externaldata.ExternalDataManager;
+import org.odk.collect.android.dynamicpreload.ExternalDataManager;
 import org.odk.collect.android.injection.DaggerUtils;
 import org.odk.collect.android.injection.config.AppDependencyComponent;
+import org.odk.collect.android.injection.config.CollectDrawDependencyModule;
 import org.odk.collect.android.injection.config.CollectGeoDependencyModule;
+import org.odk.collect.android.injection.config.CollectGoogleMapsDependencyModule;
 import org.odk.collect.android.injection.config.CollectOsmDroidDependencyModule;
 import org.odk.collect.android.injection.config.CollectProjectsDependencyModule;
 import org.odk.collect.android.injection.config.CollectSelfieCameraDependencyModule;
 import org.odk.collect.android.injection.config.DaggerAppDependencyComponent;
+import org.odk.collect.android.utilities.CollectStrictMode;
 import org.odk.collect.android.utilities.FormsRepositoryProvider;
 import org.odk.collect.android.utilities.LocaleHelper;
 import org.odk.collect.androidshared.data.AppState;
 import org.odk.collect.androidshared.data.StateStore;
-import org.odk.collect.androidshared.network.NetworkStateProvider;
 import org.odk.collect.androidshared.system.ExternalFilesUtils;
+import org.odk.collect.async.Scheduler;
+import org.odk.collect.async.network.NetworkStateProvider;
 import org.odk.collect.audiorecorder.AudioRecorderDependencyComponent;
 import org.odk.collect.audiorecorder.AudioRecorderDependencyComponentProvider;
 import org.odk.collect.audiorecorder.DaggerAudioRecorderDependencyComponent;
 import org.odk.collect.crashhandler.CrashHandler;
+import org.odk.collect.draw.DaggerDrawDependencyComponent;
+import org.odk.collect.draw.DrawDependencyComponent;
+import org.odk.collect.draw.DrawDependencyComponentProvider;
 import org.odk.collect.entities.DaggerEntitiesDependencyComponent;
 import org.odk.collect.entities.EntitiesDependencyComponent;
 import org.odk.collect.entities.EntitiesDependencyComponentProvider;
 import org.odk.collect.entities.EntitiesDependencyModule;
-import org.odk.collect.entities.EntitiesRepository;
+import org.odk.collect.entities.storage.EntitiesRepository;
 import org.odk.collect.forms.Form;
 import org.odk.collect.geo.DaggerGeoDependencyComponent;
 import org.odk.collect.geo.GeoDependencyComponent;
 import org.odk.collect.geo.GeoDependencyComponentProvider;
+import org.odk.collect.googlemaps.DaggerGoogleMapsDependencyComponent;
+import org.odk.collect.googlemaps.GoogleMapsDependencyComponent;
+import org.odk.collect.googlemaps.GoogleMapsDependencyComponentProvider;
+import org.odk.collect.location.LocationClient;
 import org.odk.collect.maps.layers.ReferenceLayerRepository;
 import org.odk.collect.osmdroid.DaggerOsmDroidDependencyComponent;
 import org.odk.collect.osmdroid.OsmDroidDependencyComponent;
@@ -86,7 +94,9 @@ public class Collect extends Application implements
         StateStore,
         ObjectProviderHost,
         EntitiesDependencyComponentProvider,
-        SelfieCameraDependencyComponentProvider {
+        SelfieCameraDependencyComponentProvider,
+        GoogleMapsDependencyComponentProvider,
+        DrawDependencyComponentProvider {
 
     public static String defaultSysLanguage;
     private static Collect singleton;
@@ -103,6 +113,8 @@ public class Collect extends Application implements
     private OsmDroidDependencyComponent osmDroidDependencyComponent;
     private EntitiesDependencyComponent entitiesDependencyComponent;
     private SelfieCameraDependencyComponent selfieCameraDependencyComponent;
+    private GoogleMapsDependencyComponent googleMapsDependencyComponent;
+    private DrawDependencyComponent drawDependencyComponent;
 
     /**
      * @deprecated we shouldn't have to reference a static singleton of the application. Code doing this
@@ -122,16 +134,6 @@ public class Collect extends Application implements
         this.externalDataManager = externalDataManager;
     }
 
-    /*
-        Adds support for multidex support library. For more info check out the link below,
-        https://developer.android.com/studio/build/multidex.html
-    */
-    @Override
-    protected void attachBaseContext(Context base) {
-        super.attachBaseContext(base);
-        MultiDex.install(this);
-    }
-
     @Override
     public void onCreate() {
         super.onCreate();
@@ -145,28 +147,9 @@ public class Collect extends Application implements
 
                     applicationComponent.applicationInitializer().initialize();
                     fixGoogleBug154855417();
-                    setupStrictMode();
+                    CollectStrictMode.enable();
                 }
         );
-    }
-
-    /**
-     * Enable StrictMode and log violations to the system log.
-     * This catches disk and network access on the main thread, as well as leaked SQLite
-     * cursors and unclosed resources.
-     */
-    private void setupStrictMode() {
-        if (BuildConfig.DEBUG) {
-            StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
-                    .detectAll()
-                    .permitDiskReads()  // shared preferences are being read on main thread
-                    .penaltyLog()
-                    .build());
-            StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
-                    .detectAll()
-                    .penaltyLog()
-                    .build());
-        }
     }
 
     private void setupDagger() {
@@ -179,17 +162,22 @@ public class Collect extends Application implements
                 .build();
 
         projectsDependencyComponent = DaggerProjectsDependencyComponent.builder()
-                .projectsDependencyModule(new CollectProjectsDependencyModule(applicationComponent.projectsRepository()))
+                .projectsDependencyModule(new CollectProjectsDependencyModule(applicationComponent))
                 .build();
 
         selfieCameraDependencyComponent = DaggerSelfieCameraDependencyComponent.builder()
-                .selfieCameraDependencyModule(new CollectSelfieCameraDependencyModule(applicationComponent::permissionsChecker))
+                .selfieCameraDependencyModule(new CollectSelfieCameraDependencyModule(applicationComponent))
+                .build();
+
+        drawDependencyComponent = DaggerDrawDependencyComponent.builder()
+                .drawDependencyModule(new CollectDrawDependencyModule(applicationComponent))
                 .build();
 
         // Mapbox dependencies
         objectProvider.addSupplier(SettingsProvider.class, applicationComponent::settingsProvider);
         objectProvider.addSupplier(NetworkStateProvider.class, applicationComponent::networkStateProvider);
         objectProvider.addSupplier(ReferenceLayerRepository.class, applicationComponent::referenceLayerRepository);
+        objectProvider.addSupplier(LocationClient.class, applicationComponent::locationClient);
     }
 
     @NotNull
@@ -229,7 +217,7 @@ public class Collect extends Application implements
      * @return md5 hash of the form title, a space, the form ID
      */
     public static String getFormIdentifierHash(String formId, String formVersion) {
-        Form form = new FormsRepositoryProvider(Collect.getInstance()).get().getLatestByFormIdAndVersion(formId, formVersion);
+        Form form = new FormsRepositoryProvider(Collect.getInstance()).create().getLatestByFormIdAndVersion(formId, formVersion);
 
         String formTitle = form != null ? form.getDisplayName() : "";
 
@@ -277,12 +265,7 @@ public class Collect extends Application implements
         if (geoDependencyComponent == null) {
             geoDependencyComponent = DaggerGeoDependencyComponent.builder()
                     .application(this)
-                    .geoDependencyModule(new CollectGeoDependencyModule(
-                            applicationComponent.mapFragmentFactory(),
-                            applicationComponent.locationClient(),
-                            applicationComponent.scheduler(),
-                            applicationComponent.permissionsChecker()
-                    ))
+                    .geoDependencyModule(new CollectGeoDependencyModule(applicationComponent))
                     .build();
         }
 
@@ -294,11 +277,7 @@ public class Collect extends Application implements
     public OsmDroidDependencyComponent getOsmDroidDependencyComponent() {
         if (osmDroidDependencyComponent == null) {
             osmDroidDependencyComponent = DaggerOsmDroidDependencyComponent.builder()
-                    .osmDroidDependencyModule(new CollectOsmDroidDependencyModule(
-                            applicationComponent.referenceLayerRepository(),
-                            applicationComponent.locationClient(),
-                            applicationComponent.settingsProvider()
-                    ))
+                    .osmDroidDependencyModule(new CollectOsmDroidDependencyModule(applicationComponent))
                     .build();
         }
 
@@ -320,8 +299,14 @@ public class Collect extends Application implements
                         @NonNull
                         @Override
                         public EntitiesRepository providesEntitiesRepository() {
-                            String projectId = applicationComponent.currentProjectProvider().getCurrentProject().getUuid();
-                            return applicationComponent.entitiesRepositoryProvider().get(projectId);
+                            String projectId = applicationComponent.currentProjectProvider().requireCurrentProject().getUuid();
+                            return applicationComponent.entitiesRepositoryProvider().create(projectId);
+                        }
+
+                        @NonNull
+                        @Override
+                        public Scheduler providesScheduler() {
+                            return applicationComponent.scheduler();
                         }
                     })
                     .build();
@@ -334,5 +319,23 @@ public class Collect extends Application implements
     @Override
     public SelfieCameraDependencyComponent getSelfieCameraDependencyComponent() {
         return selfieCameraDependencyComponent;
+    }
+
+    @NonNull
+    @Override
+    public GoogleMapsDependencyComponent getGoogleMapsDependencyComponent() {
+        if (googleMapsDependencyComponent == null) {
+            googleMapsDependencyComponent = DaggerGoogleMapsDependencyComponent.builder()
+                    .googleMapsDependencyModule(new CollectGoogleMapsDependencyModule(applicationComponent))
+                    .build();
+        }
+
+        return googleMapsDependencyComponent;
+    }
+
+    @NonNull
+    @Override
+    public DrawDependencyComponent getDrawDependencyComponent() {
+        return drawDependencyComponent;
     }
 }

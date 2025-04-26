@@ -24,7 +24,6 @@ object ProtectedProjectKeys {
     const val KEY_HIDE_OLD_FORM_VERSIONS = "hide_old_form_versions"
     const val KEY_AUTOSEND = "change_autosend"
     const val KEY_DELETE_AFTER_SEND = "delete_after_send"
-    const val KEY_DEFAULT_TO_FINALIZED = "default_to_finalized"
     const val KEY_CONSTRAINT_BEHAVIOR = "change_constraint_behavior"
     const val KEY_HIGH_RESOLUTION = "high_resolution"
     const val KEY_IMAGE_SIZE = "image_size"
@@ -40,20 +39,19 @@ object ProtectedProjectKeys {
     const val KEY_CHANGE_LANGUAGE = "change_language"
     const val KEY_JUMP_TO = "jump_to"
     const val KEY_SAVE_MID = "save_mid"
-    const val KEY_SAVE_AS = "save_as"
-    const val KEY_MARK_AS_FINALIZED = "mark_as_finalized"
+    const val KEY_SAVE_AS_DRAFT = "save_as_draft"
+    const val KEY_FINALIZE_IN_FORM_ENTRY = "finalize_in_form_entry"
 
     const val ALLOW_OTHER_WAYS_OF_EDITING_FORM = "allow_other_ways_of_editing_form"
+    const val KEY_BULK_FINALIZE = "bulk_finalize"
 
     fun allKeys() = listOf(
         KEY_ADMIN_PW,
-
         KEY_EDIT_SAVED,
         KEY_SEND_FINALIZED,
         KEY_VIEW_SENT,
         KEY_GET_BLANK,
         KEY_DELETE_SAVED,
-
         KEY_CHANGE_SERVER,
         KEY_CHANGE_PROJECT_DISPLAY,
         KEY_APP_THEME,
@@ -67,7 +65,6 @@ object ProtectedProjectKeys {
         KEY_HIDE_OLD_FORM_VERSIONS,
         KEY_AUTOSEND,
         KEY_DELETE_AFTER_SEND,
-        KEY_DEFAULT_TO_FINALIZED,
         KEY_CONSTRAINT_BEHAVIOR,
         KEY_HIGH_RESOLUTION,
         KEY_IMAGE_SIZE,
@@ -76,14 +73,14 @@ object ProtectedProjectKeys {
         KEY_INSTANCE_FORM_SYNC,
         KEY_CHANGE_FORM_METADATA,
         KEY_ANALYTICS,
-
         KEY_MOVING_BACKWARDS,
         KEY_ACCESS_SETTINGS,
         KEY_CHANGE_LANGUAGE,
         KEY_JUMP_TO,
         KEY_SAVE_MID,
-        KEY_SAVE_AS,
-        KEY_MARK_AS_FINALIZED,
-        ALLOW_OTHER_WAYS_OF_EDITING_FORM
+        KEY_SAVE_AS_DRAFT,
+        KEY_FINALIZE_IN_FORM_ENTRY,
+        ALLOW_OTHER_WAYS_OF_EDITING_FORM,
+        KEY_BULK_FINALIZE
     )
 }

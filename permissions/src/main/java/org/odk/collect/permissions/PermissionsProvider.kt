@@ -44,12 +44,6 @@ open class PermissionsProvider internal constructor(
         )
     }
 
-    val isGetAccountsPermissionGranted: Boolean
-        get() = permissionsChecker.isPermissionGranted(Manifest.permission.GET_ACCOUNTS)
-
-    open val isReadPhoneStatePermissionGranted: Boolean
-        get() = permissionsChecker.isPermissionGranted(Manifest.permission.READ_PHONE_STATE)
-
     open fun requestCameraPermission(activity: Activity, action: PermissionListener) {
         requestPermissions(
             activity,
@@ -63,8 +57,8 @@ open class PermissionsProvider internal constructor(
 
                     permissionsDialogCreator.showAdditionalExplanation(
                         activity,
-                        R.string.camera_runtime_permission_denied_title,
-                        R.string.camera_runtime_permission_denied_desc,
+                        org.odk.collect.strings.R.string.camera_runtime_permission_denied_title,
+                        org.odk.collect.strings.R.string.camera_runtime_permission_denied_desc,
                         R.drawable.ic_photo_camera,
                         action
                     )
@@ -96,14 +90,15 @@ open class PermissionsProvider internal constructor(
 
                     permissionsDialogCreator.showAdditionalExplanation(
                         activity,
-                        R.string.location_runtime_permissions_denied_title,
-                        R.string.location_runtime_permissions_denied_desc,
-                        R.drawable.ic_room_black_24dp,
+                        org.odk.collect.strings.R.string.location_runtime_permissions_denied_title,
+                        org.odk.collect.strings.R.string.location_runtime_permissions_denied_desc,
+                        R.drawable.ic_room_24dp,
                         action
                     )
                 }
             },
-            Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION
         )
     }
 
@@ -120,9 +115,9 @@ open class PermissionsProvider internal constructor(
 
                     permissionsDialogCreator.showAdditionalExplanation(
                         activity,
-                        R.string.record_audio_runtime_permission_denied_title,
-                        R.string.record_audio_runtime_permission_denied_desc,
-                        R.drawable.ic_mic,
+                        org.odk.collect.strings.R.string.record_audio_runtime_permission_denied_title,
+                        org.odk.collect.strings.R.string.record_audio_runtime_permission_denied_desc,
+                        org.odk.collect.icons.R.drawable.ic_baseline_mic_24,
                         action
                     )
                 }
@@ -144,65 +139,15 @@ open class PermissionsProvider internal constructor(
 
                     permissionsDialogCreator.showAdditionalExplanation(
                         activity,
-                        R.string.camera_runtime_permission_denied_title,
-                        R.string.camera_runtime_permission_denied_desc,
+                        org.odk.collect.strings.R.string.camera_runtime_permission_denied_title,
+                        org.odk.collect.strings.R.string.camera_runtime_permission_denied_desc,
                         R.drawable.ic_photo_camera,
                         action
                     )
                 }
             },
-            Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO
-        )
-    }
-
-    fun requestGetAccountsPermission(activity: Activity, action: PermissionListener) {
-        requestPermissions(
-            activity,
-            object : PermissionListener {
-                override fun granted() {
-                    action.granted()
-                }
-
-                override fun denied() {
-                    action.denied()
-
-                    permissionsDialogCreator.showAdditionalExplanation(
-                        activity,
-                        R.string.get_accounts_runtime_permission_denied_title,
-                        R.string.get_accounts_runtime_permission_denied_desc,
-                        R.drawable.ic_get_accounts,
-                        action
-                    )
-                }
-            },
-            Manifest.permission.GET_ACCOUNTS
-        )
-    }
-
-    open fun requestReadPhoneStatePermission(
-        activity: Activity,
-        action: PermissionListener
-    ) {
-        requestPermissions(
-            activity,
-            object : PermissionListener {
-                override fun granted() {
-                    action.granted()
-                }
-
-                override fun denied() {
-                    action.denied()
-
-                    permissionsDialogCreator.showAdditionalExplanation(
-                        activity,
-                        R.string.read_phone_state_runtime_permission_denied_title,
-                        R.string.read_phone_state_runtime_permission_denied_desc,
-                        R.drawable.ic_phone,
-                        action
-                    )
-                }
-            },
-            Manifest.permission.READ_PHONE_STATE
+            Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO
         )
     }
 
@@ -247,8 +192,10 @@ open class PermissionsProvider internal constructor(
 
                     override fun denied() {
                         permissionsDialogCreator.showAdditionalExplanation(
-                            activity, R.string.storage_runtime_permission_denied_title,
-                            R.string.storage_runtime_permission_denied_desc, R.drawable.sd,
+                            activity,
+                            org.odk.collect.strings.R.string.storage_runtime_permission_denied_title,
+                            org.odk.collect.strings.R.string.storage_runtime_permission_denied_desc,
+                            R.drawable.ic_storage,
                             listener
                         )
                     }

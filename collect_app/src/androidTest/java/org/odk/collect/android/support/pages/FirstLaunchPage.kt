@@ -1,26 +1,35 @@
 package org.odk.collect.android.support.pages
 
-import org.odk.collect.android.R
+import androidx.test.espresso.matcher.ViewMatchers.withSubstring
+import org.odk.collect.strings.R.string
+import org.odk.collect.testshared.Interactions
 
 class FirstLaunchPage : Page<FirstLaunchPage>() {
 
     override fun assertOnPage(): FirstLaunchPage {
-        assertText(R.string.configure_with_qr_code)
+        assertText(string.configure_with_qr_code)
         return this
     }
 
     fun clickTryCollect(): MainMenuPage {
-        scrollToAndClickText(R.string.try_demo)
-        return MainMenuPage().assertOnPage()
+        Interactions.clickOn(withSubstring(getTranslatedString(string.try_demo))) {
+            MainMenuPage().assertOnPage()
+        }
+
+        return MainMenuPage()
     }
 
     fun clickManuallyEnterProjectDetails(): ManualProjectCreatorDialogPage {
-        scrollToAndClickText(R.string.configure_manually)
-        return ManualProjectCreatorDialogPage().assertOnPage()
+        return clickOnString(
+            string.configure_manually,
+            ManualProjectCreatorDialogPage()
+        )
     }
 
     fun clickConfigureWithQrCode(): QrCodeProjectCreatorDialogPage {
-        scrollToAndClickText(R.string.configure_with_qr_code)
-        return QrCodeProjectCreatorDialogPage().assertOnPage()
+        return clickOnString(
+            string.configure_with_qr_code,
+            QrCodeProjectCreatorDialogPage()
+        )
     }
 }

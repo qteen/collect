@@ -37,7 +37,7 @@ import static org.hamcrest.core.StringEndsWith.endsWith;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.odk.collect.android.support.matchers.CustomMatchers.withIndex;
-import static org.odk.collect.android.support.FileUtils.copyFileFromAssets;
+import static org.odk.collect.android.utilities.FileUtils.copyFileFromResources;
 
 import android.app.Activity;
 import android.app.Instrumentation;
@@ -57,7 +57,7 @@ import org.junit.rules.RuleChain;
 import org.odk.collect.android.BuildConfig;
 import org.odk.collect.android.R;
 import org.odk.collect.android.application.Collect;
-import org.odk.collect.android.support.rules.FormActivityTestRule;
+import org.odk.collect.android.support.rules.BlankFormTestRule;
 import org.odk.collect.android.support.rules.TestRuleChain;
 import org.odk.collect.androidtest.RecordedIntentsRule;
 
@@ -70,7 +70,7 @@ import java.io.IOException;
 public class IntentGroupTest {
     private static final String INTENT_GROUP_FORM = "intent-group.xml";
 
-    public FormActivityTestRule rule = new FormActivityTestRule(INTENT_GROUP_FORM, "intent-group");
+    public BlankFormTestRule rule = new BlankFormTestRule(INTENT_GROUP_FORM, "intent-group");
 
     @Rule
     public RuleChain copyFormChain = TestRuleChain.chain()
@@ -80,7 +80,7 @@ public class IntentGroupTest {
     // Verifies that a value given to the label text with form buttonText is used as the button text.
     @Test
     public void buttonName_ShouldComeFromSpecialFormText() {
-        onView(withText(R.string.launch_app)).check(doesNotExist());
+        onView(withText(org.odk.collect.strings.R.string.launch_app)).check(doesNotExist());
         onView(withText("This is buttonText")).check(matches(isDisplayed()));
     }
 
@@ -208,8 +208,8 @@ public class IntentGroupTest {
 
     private void assertImageWidgetWithoutAnswer() {
         onView(allOf(withTagValue(is("ImageView")), withEffectiveVisibility(ViewMatchers.Visibility.VISIBLE))).check(doesNotExist());
-        onView(withId(R.id.capture_image)).check(doesNotExist());
-        onView(withId(R.id.choose_image)).check(doesNotExist());
+        onView(withId(R.id.capture_button)).check(matches(not(isDisplayed())));
+        onView(withId(R.id.choose_button)).check(matches(not(isDisplayed())));
     }
 
     private void assertAudioWidgetWithoutAnswer() {
@@ -218,7 +218,7 @@ public class IntentGroupTest {
 
     private void assertVideoWidgetWithoutAnswer() {
         onView(withText(is("Video external"))).perform(scrollTo()).check(matches(isDisplayed()));
-        onView(withId(R.id.play_video)).check(matches(not(isDisplayed())));
+        onView(withId(R.id.play_video_button)).check(matches(not(isDisplayed())));
     }
 
     private void assertFileWidgetWithoutAnswer() {
@@ -227,8 +227,8 @@ public class IntentGroupTest {
 
     private void assertImageWidgetWithAnswer() {
         onView(allOf(withTagValue(is("ImageView")), withEffectiveVisibility(ViewMatchers.Visibility.VISIBLE))).check(matches(not(doesNotExist())));
-        onView(withId(R.id.capture_image)).check(doesNotExist());
-        onView(withId(R.id.choose_image)).check(doesNotExist());
+        onView(withId(R.id.capture_button)).check(matches(not(isDisplayed())));
+        onView(withId(R.id.choose_button)).check(matches(not(isDisplayed())));
     }
 
     private void assertAudioWidgetWithAnswer() {
@@ -236,8 +236,8 @@ public class IntentGroupTest {
     }
 
     private void assertVideoWidgetWithAnswer() {
-        onView(withId(R.id.play_video)).perform(scrollTo()).check(matches(isDisplayed()));
-        onView(withId(R.id.play_video)).check(matches(isEnabled()));
+        onView(withId(R.id.play_video_button)).perform(scrollTo()).check(matches(isDisplayed()));
+        onView(withId(R.id.play_video_button)).check(matches(isEnabled()));
     }
 
     private void assertFileWidgetWithAnswer() {
@@ -251,7 +251,7 @@ public class IntentGroupTest {
                 .getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
 
         File file = File.createTempFile(name, extension, downloadsDir);
-        copyFileFromAssets("media" + File.separator + name + "." + extension, file.getPath());
+        copyFileFromResources("media" + File.separator + name + "." + extension, file.getPath());
         return getUriForFile(file);
     }
 

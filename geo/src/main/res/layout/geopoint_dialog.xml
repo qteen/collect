@@ -37,7 +37,7 @@
             android:orientation="horizontal"
             app:layout_constraintGuide_end="@dimen/margin_standard" />
 
-        <org.odk.collect.geo.geopoint.AccuracyStatusView
+        <org.odk.collect.geo.geopoint.AccuracyProgressView
             android:id="@+id/accuracy_status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -59,7 +59,7 @@
             android:id="@+id/time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/margin_small"
+            android:layout_marginTop="@dimen/margin_extra_small"
             android:textAppearance="?textAppearanceBody2"
             app:layout_constraintStart_toStartOf="@id/guideline_start"
             app:layout_constraintTop_toBottomOf="@id/threshold"
@@ -69,7 +69,7 @@
             android:id="@+id/satellites"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/margin_small"
+            android:layout_marginTop="@dimen/margin_extra_small"
             android:textAppearance="?textAppearanceBody2"
             app:layout_constraintBottom_toTopOf="@id/guideline_bottom"
             app:layout_constraintStart_toStartOf="@id/guideline_start"

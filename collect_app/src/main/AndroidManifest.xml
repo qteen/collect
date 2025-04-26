@@ -26,15 +26,17 @@ the specific language governing permissions and limitations under the License.
     <uses-feature
         android:name="android.hardware.wifi"
         android:required="false" />
+    <uses-feature
+        android:glEsVersion="0x00030000"
+        tools:node="remove" />
 
     <!-- Dangerous permissions -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <uses-permission android:name="android.permission.GET_ACCOUNTS" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
 
     <!-- Normal permissions -->
     <uses-permission android:name="android.permission.INTERNET" />
@@ -102,7 +104,7 @@ the specific language governing permissions and limitations under the License.
         </activity>
 
         <activity
-            android:name=".activities.MainMenuActivity"
+            android:name=".mainmenu.MainMenuActivity"
             android:theme="@style/Theme.Collect.SplashScreen"
             android:exported="true">
             <intent-filter>
@@ -120,38 +122,27 @@ the specific language governing permissions and limitations under the License.
             android:stateNotNeeded="true"
             android:windowSoftInputMode="stateAlwaysHidden" />
         <activity
-            android:name=".activities.FormEntryActivity"
+            android:name=".activities.FormFillingActivity"
             android:theme="@style/Theme.Collect.FormEntry"
             android:windowSoftInputMode="adjustResize" />
         <activity
-            android:name=".draw.DrawActivity"
+            android:name="org.odk.collect.draw.DrawActivity"
             android:screenOrientation="landscape" />
-        <activity
-            android:name=".gdrive.GoogleDriveActivity"
-            android:configChanges="orientation|screenSize"
-            android:windowSoftInputMode="stateHidden" />
         <activity android:name=".activities.InstanceChooserList" />
         <activity
             android:name=".formlists.blankformlist.BlankFormListActivity"
             android:launchMode="singleTop" />
         <activity android:name=".activities.FormDownloadListActivity" />
+        <activity android:name=".activities.DeleteFormsActivity" />
         <activity
-            android:name=".activities.DeleteSavedFormActivity"
+            android:name=".instancemanagement.send.InstanceUploaderListActivity"
             android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".gdrive.GoogleSheetsUploaderActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity
-            android:name=".activities.InstanceUploaderListActivity"
-            android:configChanges="orientation|screenSize" />
-        <activity android:name=".activities.InstanceUploaderActivity" />
+        <activity android:name=".instancemanagement.send.InstanceUploaderActivity" />
         <activity android:name=".activities.AboutActivity" />
         <activity android:name=".configure.qr.QRCodeTabsActivity" />
         <activity
             android:name=".preferences.screens.ProjectPreferencesActivity"
             android:theme="@style/Theme.Collect.Settings" />
-        <activity android:name=".activities.FormHierarchyActivity" />
-        <activity android:name=".activities.ViewOnlyFormHierarchyActivity" />
         <activity
             android:name="org.odk.collect.geo.geopoint.GeoPointActivity"
             android:theme="@style/Theme.Collect"
@@ -170,13 +161,13 @@ the specific language governing permissions and limitations under the License.
             tools:replace="android:theme" />
 
         <activity
-            android:name="org.odk.collect.entities.EntityBrowserActivity"
+            android:name="org.odk.collect.entities.browser.EntityBrowserActivity"
             android:theme="@style/Theme.Collect"
             tools:replace="android:theme" />
 
         <activity android:name=".activities.FormMapActivity" />
         <activity android:name=".activities.BearingActivity" />
-        <activity android:name=".activities.WebViewActivity" />
+        <activity android:name="org.odk.collect.webpage.WebViewActivity" />
         <activity
             android:name="org.odk.collect.selfiecamera.CaptureSelfieActivity"
             android:theme="@style/Theme.Collect"
@@ -234,7 +225,7 @@ the specific language governing permissions and limitations under the License.
 
         <activity-alias
             android:name=".activities.FormEntryActivity"
-            android:targetActivity=".activities.FormEntryActivity"
+            android:targetActivity=".external.FormUriActivity"
             tools:ignore="AppLinkUrlError"
             android:exported="true">
         </activity-alias>
@@ -284,7 +275,7 @@ the specific language governing permissions and limitations under the License.
 
         <activity-alias
             android:name=".activities.InstanceUploaderList"
-            android:targetActivity=".activities.InstanceUploaderListActivity"
+            android:targetActivity=".instancemanagement.send.InstanceUploaderListActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -296,7 +287,7 @@ the specific language governing permissions and limitations under the License.
 
         <activity-alias
             android:name=".activities.InstanceUploaderActivity"
-            android:targetActivity=".activities.InstanceUploaderActivity"
+            android:targetActivity=".instancemanagement.send.InstanceUploaderActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="org.odk.collect.android.INSTANCE_UPLOAD" />
@@ -335,7 +326,7 @@ the specific language governing permissions and limitations under the License.
                 <data android:mimeType="vnd.android.cursor.item/vnd.odk.instance" />
             </intent-filter>
         </activity>
-
+        <activity android:name="org.odk.collect.android.formhierarchy.FormHierarchyFragmentHostActivity" />
     </application>
 
     <queries>

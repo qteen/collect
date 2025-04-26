@@ -10,13 +10,12 @@ import android.view.View.VISIBLE
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import org.odk.collect.android.R
 import org.odk.collect.android.activities.AboutActivity
 import org.odk.collect.android.activities.ActivityUtils
-import org.odk.collect.android.activities.MainMenuActivity
-import org.odk.collect.android.activities.viewmodels.CurrentProjectViewModel
 import org.odk.collect.android.databinding.ProjectSettingsDialogLayoutBinding
 import org.odk.collect.android.injection.DaggerUtils
+import org.odk.collect.android.mainmenu.CurrentProjectViewModel
+import org.odk.collect.android.mainmenu.MainMenuActivity
 import org.odk.collect.android.preferences.screens.ProjectPreferencesActivity
 import org.odk.collect.androidshared.ui.DialogFragmentUtils
 import org.odk.collect.androidshared.ui.ToastUtils
@@ -25,13 +24,11 @@ import org.odk.collect.projects.ProjectsRepository
 import org.odk.collect.settings.SettingsProvider
 import javax.inject.Inject
 
-class ProjectSettingsDialog : DialogFragment() {
+class ProjectSettingsDialog(private val viewModelFactory: ViewModelProvider.Factory) :
+    DialogFragment() {
 
     @Inject
     lateinit var projectsRepository: ProjectsRepository
-
-    @Inject
-    lateinit var currentProjectViewModelFactory: CurrentProjectViewModel.Factory
 
     @Inject
     lateinit var settingsProvider: SettingsProvider
@@ -46,18 +43,21 @@ class ProjectSettingsDialog : DialogFragment() {
 
         currentProjectViewModel = ViewModelProvider(
             requireActivity(),
-            currentProjectViewModelFactory
+            viewModelFactory
         )[CurrentProjectViewModel::class.java]
     }
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         binding = ProjectSettingsDialogLayoutBinding.inflate(LayoutInflater.from(context))
 
-        currentProjectViewModel.currentProject.observe(this) { project ->
-            binding.currentProject.setupView(project, settingsProvider.getUnprotectedSettings())
-            binding.currentProject.contentDescription =
-                getString(R.string.using_project, project.name)
-            inflateListOfInActiveProjects(requireContext(), project)
+        currentProjectViewModel.currentProject.observe(this) {
+            if (it != null) {
+                binding.currentProject.setupView(it, settingsProvider.getUnprotectedSettings())
+                binding.currentProject.contentDescription =
+                    getString(org.odk.collect.strings.R.string.using_project, it.name)
+
+                inflateListOfInActiveProjects(requireContext(), it)
+            }
         }
 
         binding.closeIcon.setOnClickListener {
@@ -104,7 +104,8 @@ class ProjectSettingsDialog : DialogFragment() {
             }
 
             projectView.setupView(project, settingsProvider.getUnprotectedSettings(project.uuid))
-            projectView.contentDescription = getString(R.string.switch_to_project, project.name)
+            projectView.contentDescription =
+                getString(org.odk.collect.strings.R.string.switch_to_project, project.name)
             binding.projectList.addView(projectView)
         }
     }
@@ -112,10 +113,12 @@ class ProjectSettingsDialog : DialogFragment() {
     private fun switchProject(project: Project.Saved) {
         currentProjectViewModel.setCurrentProject(project)
 
-        ActivityUtils.startActivityAndCloseAllOthers(requireActivity(), MainMenuActivity::class.java)
+        ActivityUtils.startActivityAndCloseAllOthers(
+            requireActivity(),
+            MainMenuActivity::class.java
+        )
         ToastUtils.showLongToast(
-            requireContext(),
-            getString(R.string.switched_project, project.name)
+            getString(org.odk.collect.strings.R.string.switched_project, project.name)
         )
         dismiss()
     }

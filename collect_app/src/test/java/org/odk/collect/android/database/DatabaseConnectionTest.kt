@@ -7,14 +7,15 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.odk.collect.android.database.forms.FormDatabaseMigrator
+import org.odk.collect.db.sqlite.DatabaseConnection
 import org.odk.collect.shared.TempFiles.createTempDir
 import java.io.File
 
 @RunWith(AndroidJUnit4::class)
 class DatabaseConnectionTest {
 
-    @Test
     // https://github.com/getodk/collect/issues/5042
+    @Test
     fun `database file should be recreated if removed between operations`() {
         val dbDir = createTempDir()
         val formsDbPath = dbDir.absolutePath + File.separator + "forms.db"

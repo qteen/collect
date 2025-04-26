@@ -3,8 +3,12 @@ package org.odk.collect.android.support
 import android.os.Handler
 import android.os.Looper
 import androidx.fragment.app.Fragment
+import org.mockito.Mockito.mock
+import org.odk.collect.maps.LineDescription
 import org.odk.collect.maps.MapFragment
+import org.odk.collect.maps.MapFragmentDelegate
 import org.odk.collect.maps.MapPoint
+import org.odk.collect.maps.PolygonDescription
 import org.odk.collect.maps.markers.MarkerDescription
 import org.odk.collect.maps.markers.MarkerIconDescription
 
@@ -15,10 +19,13 @@ class FakeClickableMapFragment : Fragment(), MapFragment {
 
     override fun init(
         readyListener: MapFragment.ReadyListener?,
-        errorListener: MapFragment.ErrorListener?,
+        errorListener: MapFragment.ErrorListener?
     ) {
         readyListener?.onReady(this)
     }
+
+    override val mapFragmentDelegate: MapFragmentDelegate
+        get() = mock()
 
     override fun getCenter(): MapPoint {
         return MapPoint(0.0, 0.0)
@@ -35,7 +42,7 @@ class FakeClickableMapFragment : Fragment(), MapFragment {
     override fun zoomToPoint(center: MapPoint?, zoom: Double, animate: Boolean) {}
 
     override fun zoomToBoundingBox(
-        points: MutableIterable<MapPoint>?,
+        points: Iterable<MapPoint>?,
         scaleFactor: Double,
         animate: Boolean
     ) {}
@@ -57,16 +64,12 @@ class FakeClickableMapFragment : Fragment(), MapFragment {
         return MapPoint(0.0, 0.0)
     }
 
-    override fun addPolyLine(
-        points: MutableIterable<MapPoint>,
-        closed: Boolean,
-        draggable: Boolean
-    ): Int {
+    override fun addPolyLine(lineDescription: LineDescription): Int {
         return -1
     }
 
-    override fun addPolygon(points: MutableIterable<MapPoint>): Int {
-        return addPolyLine(points, closed = true, draggable = false)
+    override fun addPolygon(polygonDescription: PolygonDescription): Int {
+        return -1
     }
 
     override fun appendPointToPolyLine(featureId: Int, point: MapPoint) {}

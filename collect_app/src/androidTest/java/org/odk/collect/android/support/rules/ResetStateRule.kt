@@ -2,26 +2,23 @@ package org.odk.collect.android.support.rules
 
 import android.app.Application
 import androidx.test.core.app.ApplicationProvider
-import org.apache.commons.io.FileUtils
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
-import org.odk.collect.android.database.DatabaseConnection.Companion.closeAll
 import org.odk.collect.android.injection.DaggerUtils
 import org.odk.collect.android.injection.config.AppDependencyComponent
 import org.odk.collect.android.injection.config.AppDependencyModule
 import org.odk.collect.android.support.CollectHelpers
 import org.odk.collect.android.views.DecoratedBarcodeView
-import org.odk.collect.androidshared.data.getState
 import org.odk.collect.androidshared.ui.ToastUtils
 import org.odk.collect.androidshared.ui.multiclicksafe.MultiClickGuard
+import org.odk.collect.db.sqlite.DatabaseConnection
 import org.odk.collect.material.BottomSheetBehavior
-import java.io.File
 import java.io.IOException
 
 private class ResetStateStatement(
     private val base: Statement,
-    private val appDependencyModule: AppDependencyModule? = null,
+    private val appDependencyModule: AppDependencyModule? = null
 ) : Statement() {
 
     override fun evaluate() {
@@ -29,20 +26,10 @@ private class ResetStateStatement(
         val oldComponent = DaggerUtils.getComponent(application)
 
         clearPrefs(oldComponent)
-        clearDisk(oldComponent)
-        clearAppState(application)
+        clearDisk()
         setTestState()
-
-        val newComponent =
-            CollectHelpers.overrideAppDependencyModule(appDependencyModule ?: AppDependencyModule())
-
-        // Reinitialize any application state with new deps/state
-        newComponent.applicationInitializer().initialize()
+        CollectHelpers.simulateProcessRestart(appDependencyModule)
         base.evaluate()
-    }
-
-    private fun clearAppState(application: Application) {
-        application.getState().clear()
     }
 
     private fun setTestState() {
@@ -52,13 +39,19 @@ private class ResetStateStatement(
         BottomSheetBehavior.DRAGGING_ENABLED = false
     }
 
-    private fun clearDisk(component: AppDependencyComponent) {
+    private fun clearDisk() {
         try {
-            FileUtils.deleteDirectory(File(component.storagePathProvider().odkRootDirPath))
+            val internalFilesDir = ApplicationProvider.getApplicationContext<Application>().filesDir
+            internalFilesDir.deleteRecursively()
+
+            val externalFilesDir =
+                ApplicationProvider.getApplicationContext<Application>().getExternalFilesDir(null)!!
+            externalFilesDir.deleteRecursively()
         } catch (e: IOException) {
             throw RuntimeException(e)
         }
-        closeAll()
+
+        DatabaseConnection.closeAll()
     }
 
     private fun clearPrefs(component: AppDependencyComponent) {
@@ -68,7 +61,7 @@ private class ResetStateStatement(
 }
 
 class ResetStateRule @JvmOverloads constructor(
-    private val appDependencyModule: AppDependencyModule? = null,
+    private val appDependencyModule: AppDependencyModule? = null
 ) : TestRule {
 
     override fun apply(base: Statement, description: Description): Statement =

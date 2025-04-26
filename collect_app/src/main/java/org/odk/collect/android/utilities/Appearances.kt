@@ -16,10 +16,10 @@
 package org.odk.collect.android.utilities
 
 import android.content.res.Configuration
+import org.javarosa.core.model.Constants
 import org.javarosa.form.api.FormEntryPrompt
-import org.odk.collect.android.externaldata.ExternalDataUtil
+import org.odk.collect.android.dynamicpreload.ExternalDataUtil
 import org.odk.collect.androidshared.utils.ScreenUtils
-import java.lang.Exception
 
 object Appearances {
     // Date appearances
@@ -29,22 +29,27 @@ object Appearances {
     const val BIKRAM_SAMBAT = "bikram-sambat"
     const val MYANMAR = "myanmar"
     const val PERSIAN = "persian"
+    const val BUDDHIST = "buddhist"
     const val NO_CALENDAR = "no-calendar"
     const val MONTH_YEAR = "month-year"
     const val YEAR = "year"
 
     // Select one/multiple appearances
-    @Deprecated("") const val COMPACT = "compact"
+    @Deprecated("")
+    const val COMPACT = "compact"
 
-    @Deprecated("") const val COMPACT_N = "compact-"
+    @Deprecated("")
+    const val COMPACT_N = "compact-"
     const val MINIMAL = "minimal"
     const val COLUMNS = "columns"
     const val COLUMNS_N = "columns-"
     const val COLUMNS_PACK = "columns-pack"
 
-    @Deprecated("") const val QUICKCOMPACT = "quickcompact"
+    @Deprecated("")
+    const val QUICKCOMPACT = "quickcompact"
 
-    @Deprecated("") const val SEARCH = "search"
+    @Deprecated("")
+    const val SEARCH = "search"
     const val AUTOCOMPLETE = "autocomplete"
     const val LIST_NO_LABEL = "list-nolabel"
     const val LIST = "list"
@@ -60,10 +65,12 @@ object Appearances {
     const val ANNOTATE = "annotate"
     const val DRAW = "draw"
 
-    @Deprecated("") const val SELFIE = "selfie"
+    @Deprecated("")
+    const val SELFIE = "selfie"
     const val NEW_FRONT = "new-front"
     const val NEW = "new"
     const val FRONT = "front"
+    const val HIDDEN_ANSWER = "hidden-answer"
 
     // Maps appearances
     const val PLACEMENT_MAP = "placement-map"
@@ -81,6 +88,9 @@ object Appearances {
     const val NUMBERS = "numbers"
     const val URL = "url"
     const val RATING = "rating"
+    const val MASKED = "masked"
+    const val COUNTER = "counter"
+    const val MULTILINE = "multiline"
 
     // Get appearance hint and clean it up so it is lower case, without the search function and never null.
     @JvmStatic
@@ -124,9 +134,13 @@ object Appearances {
                     val substringFromNumColumns = appearance.substring(idx + columnsAppearance.length)
                     numColumns = substringFromNumColumns.substring(
                         0,
-                        if (substringFromNumColumns.contains(" ")) substringFromNumColumns.indexOf(
-                            ' '
-                        ) else substringFromNumColumns.length
+                        if (substringFromNumColumns.contains(" ")) {
+                            substringFromNumColumns.indexOf(
+                                ' '
+                            )
+                        } else {
+                            substringFromNumColumns.length
+                        }
                     ).toInt()
                     if (numColumns < 1) {
                         numColumns = 1
@@ -159,7 +173,7 @@ object Appearances {
 
     @JvmStatic
     fun useThousandSeparator(prompt: FormEntryPrompt): Boolean {
-        return getSanitizedAppearanceHint(prompt).contains(THOUSANDS_SEP)
+        return getSanitizedAppearanceHint(prompt).contains(THOUSANDS_SEP) && !isMasked(prompt)
     }
 
     @JvmStatic
@@ -179,5 +193,19 @@ object Appearances {
     fun isAutocomplete(prompt: FormEntryPrompt): Boolean {
         val appearance = getSanitizedAppearanceHint(prompt)
         return appearance.contains(SEARCH) || appearance.contains(AUTOCOMPLETE)
+    }
+
+    @JvmStatic
+    fun isMasked(prompt: FormEntryPrompt): Boolean {
+        val appearance = getSanitizedAppearanceHint(prompt)
+        return appearance.contains(MASKED) &&
+            !appearance.contains(NUMBERS) &&
+            prompt.dataType == Constants.DATATYPE_TEXT
+    }
+
+    @JvmStatic
+    fun isMultiline(prompt: FormEntryPrompt): Boolean {
+        val appearance = getSanitizedAppearanceHint(prompt)
+        return appearance.contains(MULTILINE)
     }
 }

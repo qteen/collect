@@ -18,7 +18,6 @@ package org.odk.collect.android.feature.formentry
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
-import org.odk.collect.android.R
 import org.odk.collect.android.support.pages.AccessControlPage
 import org.odk.collect.android.support.pages.FormEntryPage
 import org.odk.collect.android.support.pages.MainMenuPage
@@ -33,13 +32,13 @@ class FormNavigationTest {
     var copyFormChain: RuleChain = TestRuleChain.chain()
         .around(rule)
 
-    @Test // TestCase14
+    @Test
     fun showsAndHidesButtonsCorrectlyOnEachScreen() {
         rule.startAtMainMenu()
             .copyForm("two-question.xml")
             .startBlankForm("Two Question")
             .assertQuestion("What is your name?")
-            .assertTextDoesNotExist(R.string.form_backward)
+            .assertTextDoesNotExist(org.odk.collect.strings.R.string.form_backward)
             .clickForwardButton()
             .assertQuestion("What is your age?")
             .clickBackwardButton()
@@ -47,8 +46,8 @@ class FormNavigationTest {
             .clickForwardButton()
             .assertQuestion("What is your age?")
             .clickForwardButtonToEndScreen()
-            .assertText(R.string.form_backward)
-            .assertTextDoesNotExist(R.string.form_forward)
+            .assertText(org.odk.collect.strings.R.string.form_backward)
+            .assertTextDoesNotExist(org.odk.collect.strings.R.string.form_forward)
     }
 
     @Test
@@ -59,20 +58,20 @@ class FormNavigationTest {
             .clickAccessControl()
             .clickFormEntrySettings()
             .clickMovingBackwards()
-            .clickOnString(R.string.yes)
+            .clickOnString(org.odk.collect.strings.R.string.yes)
             .pressBack(AccessControlPage())
             .pressBack(ProjectSettingsPage())
             .pressBack(MainMenuPage())
             .copyForm("two-question.xml")
             .startBlankForm("Two Question")
             .assertQuestion("What is your name?")
-            .assertTextDoesNotExist(R.string.form_backward)
+            .assertTextDoesNotExist(org.odk.collect.strings.R.string.form_backward)
             .clickForwardButton()
             .assertQuestion("What is your age?")
-            .assertTextDoesNotExist(R.string.form_backward)
+            .assertTextDoesNotExist(org.odk.collect.strings.R.string.form_backward)
             .clickForwardButtonToEndScreen()
-            .assertTextDoesNotExist(R.string.form_backward)
-            .assertTextDoesNotExist(R.string.form_forward)
+            .assertTextDoesNotExist(org.odk.collect.strings.R.string.form_backward)
+            .assertTextDoesNotExist(org.odk.collect.strings.R.string.form_forward)
     }
 
     @Test
@@ -87,14 +86,14 @@ class FormNavigationTest {
             .pressBack(MainMenuPage())
             .copyForm("two-question.xml")
             .startBlankForm("Two Question")
-            .assertTextDoesNotExist(R.string.form_backward)
-            .assertTextDoesNotExist(R.string.form_forward)
+            .assertTextDoesNotExist(org.odk.collect.strings.R.string.form_backward)
+            .assertTextDoesNotExist(org.odk.collect.strings.R.string.form_forward)
             .swipeToNextQuestion("What is your age?")
-            .assertTextDoesNotExist(R.string.form_backward)
-            .assertTextDoesNotExist(R.string.form_forward)
+            .assertTextDoesNotExist(org.odk.collect.strings.R.string.form_backward)
+            .assertTextDoesNotExist(org.odk.collect.strings.R.string.form_forward)
             .swipeToEndScreen()
-            .assertTextDoesNotExist(R.string.form_backward)
-            .assertTextDoesNotExist(R.string.form_forward)
+            .assertTextDoesNotExist(org.odk.collect.strings.R.string.form_backward)
+            .assertTextDoesNotExist(org.odk.collect.strings.R.string.form_forward)
     }
 
     @Test
@@ -111,7 +110,7 @@ class FormNavigationTest {
 
             // change settings to 'Horizontal swipes' mode'
             .clickOptionsIcon()
-            .clickGeneralSettings()
+            .clickProjectSettings()
             .clickOnUserInterface()
             .clickNavigation()
             .clickSwipes()
@@ -124,7 +123,7 @@ class FormNavigationTest {
 
             // change settings to 'Forward/backward buttons' mode'
             .clickOptionsIcon()
-            .clickGeneralSettings()
+            .clickProjectSettings()
             .clickOnUserInterface()
             .clickNavigation()
             .clickUseNavigationButtons()
@@ -138,7 +137,7 @@ class FormNavigationTest {
 
             // change settings to 'Swipes and buttons' mode'
             .clickOptionsIcon()
-            .clickGeneralSettings()
+            .clickProjectSettings()
             .clickOnUserInterface()
             .clickNavigation()
             .clickUseSwipesAndButtons()

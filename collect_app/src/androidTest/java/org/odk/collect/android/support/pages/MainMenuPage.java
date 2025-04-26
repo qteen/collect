@@ -4,31 +4,29 @@ import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.action.ViewActions.scrollTo;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
-import static androidx.test.espresso.intent.Intents.intending;
-import static androidx.test.espresso.intent.matcher.IntentMatchers.hasAction;
 import static androidx.test.espresso.matcher.ViewMatchers.hasDescendant;
-import static androidx.test.espresso.matcher.ViewMatchers.isClickable;
+import static androidx.test.espresso.matcher.ViewMatchers.isDescendantOfA;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
 import static org.hamcrest.core.AllOf.allOf;
 import static org.hamcrest.core.StringContains.containsString;
 
-import android.accounts.AccountManager;
-import android.app.Activity;
-import android.app.Instrumentation;
-import android.content.Intent;
-
 import org.odk.collect.android.R;
-import org.odk.collect.android.support.WaitFor;
+import org.odk.collect.android.support.StorageUtils;
+import org.odk.collect.android.support.TestScheduler;
+import org.odk.collect.testshared.WaitFor;
+
+import java.io.IOException;
+import java.util.List;
 
 public class MainMenuPage extends Page<MainMenuPage> {
 
     @Override
     public MainMenuPage assertOnPage() {
         return WaitFor.waitFor(() -> {
-            onView(withText(R.string.enter_data_button)).check(matches(isDisplayed()));
-            onView(withText(containsString(getTranslatedString(R.string.collect_app_name)))).perform(scrollTo()).check(matches(isDisplayed()));
+            onView(withText(org.odk.collect.strings.R.string.enter_data)).check(matches(isDisplayed()));
+            onView(withText(containsString(getTranslatedString(org.odk.collect.strings.R.string.collect_app_name)))).perform(scrollTo()).check(matches(isDisplayed()));
             return this;
         });
     }
@@ -36,7 +34,7 @@ public class MainMenuPage extends Page<MainMenuPage> {
     public ProjectSettingsDialogPage openProjectSettingsDialog() {
         assertOnPage(); // Make sure we've waited for the application load correctly
 
-        clickOnContentDescription(R.string.projects);
+        clickOnContentDescription(org.odk.collect.strings.R.string.projects);
         return new ProjectSettingsDialogPage().assertOnPage();
     }
 
@@ -45,14 +43,19 @@ public class MainMenuPage extends Page<MainMenuPage> {
         return new FormEntryPage(formName).assertOnPage();
     }
 
+    public SavepointRecoveryDialogPage startBlankFormWithSavepoint(String formName) {
+        goToBlankForm(formName);
+        return new SavepointRecoveryDialogPage().assertOnPage();
+    }
+
     public AddNewRepeatDialog startBlankFormWithRepeatGroup(String formName, String repeatName) {
         goToBlankForm(formName);
         return new AddNewRepeatDialog(repeatName).assertOnPage();
     }
 
-    public ErrorDialog startBlankFormWithError(String formName) {
+    public ErrorDialog startBlankFormWithError(String formName, boolean isFatal) {
         goToBlankForm(formName);
-        return new ErrorDialog().assertOnPage();
+        return new ErrorDialog().assertOnPage(isFatal);
     }
 
     public OkDialog startBlankFormWithDialog(String formName) {
@@ -61,7 +64,10 @@ public class MainMenuPage extends Page<MainMenuPage> {
     }
 
     public FillBlankFormPage clickFillBlankForm() {
-        onView(withId(R.id.enter_data)).perform(click());
+        tryFlakyAction(() -> {
+            onView(withId(R.id.enter_data)).perform(click());
+        });
+
         return new FillBlankFormPage().assertOnPage();
     }
 
@@ -69,42 +75,57 @@ public class MainMenuPage extends Page<MainMenuPage> {
         clickFillBlankForm().clickOnForm(formName);
     }
 
-    public EditSavedFormPage clickEditSavedForm() {
+    public EditSavedFormPage clickDrafts() {
         onView(withId(R.id.review_data)).perform(click());
         return new EditSavedFormPage().assertOnPage();
     }
 
-    public EditSavedFormPage clickEditSavedForm(int formCount) {
+    public EditSavedFormPage clickDrafts(int formCount) {
         assertNumberOfEditableForms(formCount);
-        return clickEditSavedForm();
+        return clickDrafts();
     }
 
     public MainMenuPage assertNumberOfFinalizedForms(int number) {
         if (number == 0) {
-            onView(withText(getTranslatedString(R.string.send_data))).check(matches(isDisplayed()));
+            onView(allOf(withId(R.id.number), isDescendantOfA(withId(R.id.send_data)))).check(matches(withText("")));
         } else {
-            onView(withText(getTranslatedString(R.string.send_data_button, String.valueOf(number)))).check(matches(isDisplayed()));
+            onView(allOf(withId(R.id.number), isDescendantOfA(withId(R.id.send_data)))).check(matches(withText(String.valueOf(number))));
         }
         return this;
     }
 
     public MainMenuPage assertNumberOfEditableForms(int number) {
         if (number == 0) {
-            onView(withText(getTranslatedString(R.string.review_data))).check(matches(isDisplayed()));
+            onView(allOf(withId(R.id.number), isDescendantOfA(withId(R.id.review_data)))).check(matches(withText("")));
         } else {
-            onView(withText(getTranslatedString(R.string.review_data_button, String.valueOf(number)))).check(matches(isDisplayed()));
+            onView(allOf(withId(R.id.number), isDescendantOfA(withId(R.id.review_data)))).check(matches(withText(String.valueOf(number))));
+        }
+
+        return this;
+    }
+
+    private MainMenuPage assertNumberOfSentForms(int number) {
+        if (number == 0) {
+            onView(allOf(withId(R.id.number), isDescendantOfA(withId(R.id.view_sent_forms)))).check(matches(withText("")));
+        } else {
+            onView(allOf(withId(R.id.number), isDescendantOfA(withId(R.id.view_sent_forms)))).check(matches(withText(String.valueOf(number))));
         }
 
         return this;
     }
 
     public GetBlankFormPage clickGetBlankForm() {
-        onView(withText(getTranslatedString(R.string.get_forms))).perform(scrollTo(), click());
-        return new GetBlankFormPage().assertOnPage();
+        return clickGetBlankForm(new GetBlankFormPage());
     }
 
-    public SendFinalizedFormPage clickSendFinalizedForm(int formCount) {
-        onView(withText(getTranslatedString(R.string.send_data_button, formCount))).perform(click());
+    public <D extends Page<D>> D clickGetBlankForm(D destination) {
+        onView(withText(getTranslatedString(org.odk.collect.strings.R.string.get_forms))).perform(scrollTo(), click());
+        return destination.assertOnPage();
+    }
+
+    public SendFinalizedFormPage clickSendFinalizedForm(int number) {
+        assertNumberOfFinalizedForms(number);
+        onView(withId(R.id.send_data)).perform(click());
         return new SendFinalizedFormPage();
     }
 
@@ -124,7 +145,7 @@ public class MainMenuPage extends Page<MainMenuPage> {
                 .clickSettings()
                 .clickFormManagement()
                 .clickUpdateForms()
-                .clickOption(R.string.manual)
+                .clickOption(org.odk.collect.strings.R.string.manual)
                 .pressBack(new ProjectSettingsPage())
                 .pressBack(new MainMenuPage());
     }
@@ -134,7 +155,7 @@ public class MainMenuPage extends Page<MainMenuPage> {
                 .clickSettings()
                 .clickFormManagement()
                 .clickUpdateForms()
-                .clickOption(R.string.previously_downloaded_only)
+                .clickOption(org.odk.collect.strings.R.string.previously_downloaded_only)
                 .pressBack(new ProjectSettingsPage())
                 .pressBack(new MainMenuPage());
     }
@@ -144,8 +165,8 @@ public class MainMenuPage extends Page<MainMenuPage> {
                 .clickSettings()
                 .clickFormManagement()
                 .clickUpdateForms()
-                .clickOption(R.string.previously_downloaded_only)
-                .clickOnString(R.string.automatic_download)
+                .clickOption(org.odk.collect.strings.R.string.previously_downloaded_only)
+                .clickOnString(org.odk.collect.strings.R.string.automatic_download)
                 .pressBack(new ProjectSettingsPage())
                 .pressBack(new MainMenuPage());
     }
@@ -155,35 +176,22 @@ public class MainMenuPage extends Page<MainMenuPage> {
                 .clickSettings()
                 .clickFormManagement()
                 .clickUpdateForms()
-                .clickOption(R.string.match_exactly)
+                .clickOption(org.odk.collect.strings.R.string.match_exactly)
                 .pressBack(new ProjectSettingsPage())
                 .pressBack(new MainMenuPage());
     }
 
-    public MainMenuPage enableAutoSend() {
-        return openProjectSettingsDialog()
+    public MainMenuPage enableAutoSend(TestScheduler scheduler, int setting) {
+        MainMenuPage mainMenuPage = openProjectSettingsDialog()
                 .clickSettings()
                 .clickFormManagement()
-                .clickOnString(R.string.autosend)
-                .clickOnString(R.string.wifi_cellular_autosend)
+                .clickOnString(org.odk.collect.strings.R.string.autosend)
+                .clickOnString(setting)
                 .pressBack(new ProjectSettingsPage())
                 .pressBack(new MainMenuPage());
-    }
 
-    public MainMenuPage setGoogleAccount(String account) {
-        Intent data = new Intent();
-        data.putExtra(AccountManager.KEY_ACCOUNT_NAME, account);
-        Instrumentation.ActivityResult activityResult = new Instrumentation.ActivityResult(Activity.RESULT_OK, data);
-        intending(hasAction("com.google.android.gms.common.account.CHOOSE_ACCOUNT")).respondWith(activityResult);
-
-        return openProjectSettingsDialog()
-                .clickSettings()
-                .clickServerSettings()
-                .clickOnServerType()
-                .clickOnString(R.string.server_platform_google_sheets)
-                .clickOnString(R.string.selected_google_account_text)
-                .pressBack(new ProjectSettingsPage())
-                .pressBack(new MainMenuPage());
+        scheduler.runDeferredTasks(); // Run autosend scheduled after enabling
+        return mainMenuPage;
     }
 
     public MainMenuPage addAndSwitchToProject(String serverUrl) {
@@ -195,26 +203,23 @@ public class MainMenuPage extends Page<MainMenuPage> {
     }
 
     public ServerAuthDialog clickGetBlankFormWithAuthenticationError() {
-        onView(withText(getTranslatedString(R.string.get_forms))).perform(scrollTo(), click());
+        onView(withText(getTranslatedString(org.odk.collect.strings.R.string.get_forms))).perform(scrollTo(), click());
         return new ServerAuthDialog().assertOnPage();
     }
 
     public OkDialog clickGetBlankFormWithError() {
-        onView(withText(getTranslatedString(R.string.get_forms))).perform(scrollTo(), click());
+        onView(withText(getTranslatedString(org.odk.collect.strings.R.string.get_forms))).perform(scrollTo(), click());
         return new OkDialog().assertOnPage();
     }
 
-    public ViewSentFormPage clickViewSentForm(int formCount) {
-        String text = formCount < 1
-                ? getTranslatedString(R.string.view_sent_forms)
-                : getTranslatedString(R.string.view_sent_forms_button, formCount);
-        onView(withText(text)).perform(click());
+    public ViewSentFormPage clickViewSentForm(int number) {
+        assertNumberOfSentForms(number);
+        onView(withText(getTranslatedString(org.odk.collect.strings.R.string.view_sent_forms))).perform(click());
         return new ViewSentFormPage().assertOnPage();
     }
 
     public DeleteSavedFormPage clickDeleteSavedForm() {
-        onView(withText(getTranslatedString(R.string.manage_files))).check(matches(isClickable()));
-        onView(withText(getTranslatedString(R.string.manage_files))).perform(scrollTo(), click());
+        onView(withText(getTranslatedString(org.odk.collect.strings.R.string.manage_files))).perform(scrollTo(), click());
         return new DeleteSavedFormPage().assertOnPage();
     }
 
@@ -223,19 +228,60 @@ public class MainMenuPage extends Page<MainMenuPage> {
         return this;
     }
 
-    public MainMenuPage copyAndSyncForm(String formFilename) {
-        return copyForm(formFilename)
-                .clickFillBlankForm()
-                .pressBack(new MainMenuPage());
+    public MainMenuPage copyForm(String formFilename) {
+        return copyForm(formFilename, null, "Demo project");
+    }
+
+    public MainMenuPage copyForm(String formFilename, String projectName) {
+        return copyForm(formFilename, null, projectName);
+    }
+
+    public MainMenuPage copyForm(String formFilename, List<String> mediaFilePaths) {
+        return copyForm(formFilename, mediaFilePaths, "Demo project");
+    }
+
+    public MainMenuPage copyForm(String formFilename, List<String> mediaFilePaths, String projectName) {
+        return copyForm(formFilename, mediaFilePaths, false, projectName);
+    }
+
+    public MainMenuPage copyForm(String formFilename, List<String> mediaFilePaths, boolean copyToDatabase, String projectName) {
+        try {
+            StorageUtils.copyFormToStorage(formFilename, mediaFilePaths, copyToDatabase, formFilename, projectName);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        return this;
+    }
+
+    public MainMenuPage copyInstance(String instanceFileName) {
+        copyInstance(instanceFileName, "Demo project");
+        return this;
+    }
+
+    public MainMenuPage copyInstance(String instanceFileName, String projectName) {
+        try {
+            StorageUtils.copyInstance(instanceFileName, projectName);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        return this;
     }
 
     public EntitiesPage openEntityBrowser() {
         openProjectSettingsDialog()
                 .clickSettings()
                 .clickExperimental()
-                .clickOnString(R.string.entities_title);
+                .clickOnString(org.odk.collect.strings.R.string.entity_browser_button);
 
         return new EntitiesPage().assertOnPage();
+    }
+
+    public MainMenuPage refreshForms() {
+        return clickFillBlankForm()
+                .clickRefresh()
+                .pressBack(new MainMenuPage());
     }
 }
 

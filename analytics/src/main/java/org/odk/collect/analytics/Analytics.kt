@@ -41,5 +41,13 @@ interface Analytics {
         fun setParam(key: String, value: String) {
             params[key] = value
         }
+
+        fun setUserProperty(name: String, value: String) {
+            instance.setUserProperty(name, value)
+        }
+
+        fun logNonFatal(throwable: Throwable) {
+            instance.logNonFatal(throwable)
+        }
     }
 }

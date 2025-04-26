@@ -14,7 +14,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.support.WidgetTestActivity;
-import org.odk.collect.android.utilities.ExternalWebPageHelper;
+import org.odk.collect.webpage.ExternalWebPageHelper;
 import org.robolectric.shadows.ShadowToast;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -26,6 +26,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.promptWithAnswer;
+import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.widgetDependencies;
 import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.widgetTestActivity;
 
 /**
@@ -126,6 +127,6 @@ public class UrlWidgetTest {
     }
 
     private UrlWidget createWidget(FormEntryPrompt prompt) {
-        return new UrlWidget(spyActivity, new QuestionDetails(prompt), externalWebPageHelper);
+        return new UrlWidget(spyActivity, new QuestionDetails(prompt), externalWebPageHelper, widgetDependencies());
     }
 }

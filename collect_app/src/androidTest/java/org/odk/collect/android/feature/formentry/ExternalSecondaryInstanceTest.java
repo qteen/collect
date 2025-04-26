@@ -8,7 +8,6 @@ import org.junit.rules.RuleChain;
 import org.junit.runner.RunWith;
 import org.odk.collect.android.support.rules.CollectTestRule;
 import org.odk.collect.android.support.rules.TestRuleChain;
-import org.odk.collect.android.support.pages.MainMenuPage;
 
 import java.util.Collections;
 
@@ -21,7 +20,6 @@ import java.util.Collections;
  * @see <a href="https://getodk.github.io/xforms-spec/#secondary-instances---external">External secondary  instances</a>
  */
 
-// Issue number NODK-377
 @RunWith(AndroidJUnit4.class)
 public class ExternalSecondaryInstanceTest {
 
@@ -32,15 +30,24 @@ public class ExternalSecondaryInstanceTest {
             .around(rule);
 
     @Test
-    public void displaysAllOptionsFromSecondaryInstance() {
-        //TestCase1
-        new MainMenuPage()
-                .copyForm("external_select_10.xml", Collections.singletonList("external_data_10.xml"))
-                .startBlankForm("external select 10")
-                .clickOnText("a")
-                .swipeToNextQuestion("Second")
-                .assertText("aa")
-                .assertText("ab")
-                .assertText("ac");
+    public void displaysAllOptionsFromXMLSecondaryInstance() {
+        rule.startAtMainMenu()
+                .copyForm("external_select.xml", Collections.singletonList("external_data.xml"))
+                .startBlankForm("external select")
+                .assertQuestion("First")
+                .assertText("One")
+                .assertText("Two")
+                .assertText("Three");
+    }
+
+    @Test
+    public void displaysAllOptionsFromCSVSecondaryInstance() {
+        rule.startAtMainMenu()
+                .copyForm("external_select_csv.xml", Collections.singletonList("external_data.csv"))
+                .startBlankForm("external select")
+                .assertQuestion("First")
+                .assertText("One")
+                .assertText("Two")
+                .assertText("Three");
     }
 }

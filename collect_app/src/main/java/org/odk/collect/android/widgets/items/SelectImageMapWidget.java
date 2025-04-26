@@ -30,7 +30,6 @@ import org.javarosa.core.model.SelectChoice;
 import org.javarosa.core.model.data.helper.Selection;
 import org.javarosa.core.reference.InvalidReferenceException;
 import org.javarosa.form.api.FormEntryPrompt;
-import org.odk.collect.android.R;
 import org.odk.collect.android.databinding.SelectImageMapWidgetAnswerBinding;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.utilities.HtmlUtils;
@@ -76,8 +75,8 @@ public abstract class SelectImageMapWidget extends QuestionWidget {
 
     final List<SelectChoice> items;
 
-    public SelectImageMapWidget(Context context, QuestionDetails prompt, SelectChoiceLoader selectChoiceLoader) {
-        super(context, prompt);
+    public SelectImageMapWidget(Context context, QuestionDetails prompt, SelectChoiceLoader selectChoiceLoader, Dependencies dependencies) {
+        super(context, dependencies, prompt);
         render();
 
         items = ItemsWidgetUtils.loadItemsAndHandleErrors(this, questionDetails.getPrompt(), selectChoiceLoader);
@@ -112,6 +111,7 @@ public abstract class SelectImageMapWidget extends QuestionWidget {
     public void clearAnswer() {
         selections.clear();
         binding.imageMap.loadUrl("javascript:clearAreas()");
+        binding.selectedElements.setVisibility(GONE);
         widgetValueChanged();
     }
 
@@ -124,6 +124,7 @@ public abstract class SelectImageMapWidget extends QuestionWidget {
     protected View onCreateAnswerView(Context context, FormEntryPrompt prompt, int answerFontSize) {
         binding = SelectImageMapWidgetAnswerBinding.inflate(((Activity) context).getLayoutInflater());
         binding.selectedElements.setTextSize(TypedValue.COMPLEX_UNIT_DIP, answerFontSize);
+        binding.selectedElements.setVisibility(binding.selectedElements.getText().toString().isBlank() ? GONE : VISIBLE);
         return binding.getRoot();
     }
 
@@ -167,7 +168,7 @@ public abstract class SelectImageMapWidget extends QuestionWidget {
         if (selectChoice != null) {
             selections.add(new Selection(selectChoice));
         }
-        widgetValueChanged();
+        ((Activity) getContext()).runOnUiThread(this::widgetValueChanged);
     }
 
     private void unselectArea(String areaId) {
@@ -180,7 +181,7 @@ public abstract class SelectImageMapWidget extends QuestionWidget {
         }
 
         selections.remove(selectionToRemove);
-        widgetValueChanged();
+        ((Activity) getContext()).runOnUiThread(this::widgetValueChanged);
     }
 
     private void notifyChanges() {
@@ -218,7 +219,7 @@ public abstract class SelectImageMapWidget extends QuestionWidget {
             return convertDocumentToString(document);
         } catch (Exception e) {
             Timber.w(e);
-            return getContext().getString(R.string.svg_file_does_not_exist);
+            return getContext().getString(org.odk.collect.strings.R.string.svg_file_does_not_exist);
         }
     }
 
@@ -256,7 +257,7 @@ public abstract class SelectImageMapWidget extends QuestionWidget {
         if (!selections.isEmpty()) {
             stringBuilder
                     .append("<b>")
-                    .append(getContext().getString(R.string.selected))
+                    .append(getContext().getString(org.odk.collect.strings.R.string.selected))
                     .append("</b> ");
             for (Selection selection : selections) {
                 String answer = getFormEntryPrompt().getSelectChoiceText(selection.choice);
@@ -267,8 +268,10 @@ public abstract class SelectImageMapWidget extends QuestionWidget {
             }
         }
 
-        ((Activity) getContext()).runOnUiThread(() ->
-                binding.selectedElements.setText(HtmlUtils.textToHtml(stringBuilder.toString())));
+        ((Activity) getContext()).runOnUiThread(() -> {
+            binding.selectedElements.setText(HtmlUtils.textToHtml(stringBuilder.toString()));
+            binding.selectedElements.setVisibility(binding.selectedElements.getText().toString().isBlank() ? GONE : VISIBLE);
+        });
     }
 
     protected abstract void highlightSelections(WebView view);

@@ -13,6 +13,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoMoreInteractions
 import org.mockito.kotlin.whenever
 import org.odk.collect.projects.Project
+import org.odk.collect.projects.ProjectConfigurationResult
 import org.odk.collect.projects.ProjectsRepository
 import org.odk.collect.settings.InMemSettingsProvider
 import org.odk.collect.settings.keys.AppConfigurationKeys
@@ -66,9 +67,9 @@ class SettingsImporterTest {
     }
 
     @Test
-    fun whenJSONSettingsAreInvalid_returnsFalse() {
+    fun `when JSON settings are invalid returns 'INVALID_SETTINGS'`() {
         whenever(settingsValidator.isValid(emptySettings())).thenReturn(false)
-        assertThat(importer.fromJSON(emptySettings(), currentProject, JSONObject()), `is`(false))
+        assertThat(importer.fromJSON(emptySettings(), currentProject, JSONObject()), `is`(ProjectConfigurationResult.INVALID_SETTINGS))
     }
 
     @Test
@@ -86,7 +87,7 @@ class SettingsImporterTest {
                 JSONObject().put("key3", 5)
             )
 
-        assertThat(importer.fromJSON(json.toString(), currentProject, JSONObject()), `is`(true))
+        assertThat(importer.fromJSON(json.toString(), currentProject, JSONObject()), `is`(ProjectConfigurationResult.SUCCESS))
 
         assertThat(generalSettings.contains("key3"), `is`(false))
         assertThat(adminSettings.contains("key3"), `is`(false))
@@ -120,9 +121,11 @@ class SettingsImporterTest {
 
         assertThat(
             importer.fromJSON(
-                json.toString(), currentProject, deviceUnsupportedSettings
+                json.toString(),
+                currentProject,
+                deviceUnsupportedSettings
             ),
-            `is`(true)
+            `is`(ProjectConfigurationResult.SUCCESS)
         )
 
         assertThat(generalSettings.contains("key3"), `is`(true))
@@ -133,15 +136,18 @@ class SettingsImporterTest {
 
     @Test
     fun `for supported settings that do not exist in json save defaults`() {
-        assertThat(importer.fromJSON(emptySettings(), currentProject, JSONObject()), `is`(true))
+        assertThat(importer.fromJSON(emptySettings(), currentProject, JSONObject()), `is`(ProjectConfigurationResult.SUCCESS))
         assertSettings(
             generalSettings,
-            "key1", "default",
-            "key2", true
+            "key1",
+            "default",
+            "key2",
+            true
         )
         assertSettings(
             adminSettings,
-            "key1", 5
+            "key1",
+            5
         )
     }
 
@@ -160,15 +166,18 @@ class SettingsImporterTest {
                 JSONObject().put("key1", 6)
             )
 
-        assertThat(importer.fromJSON(json.toString(), currentProject, JSONObject()), `is`(true))
+        assertThat(importer.fromJSON(json.toString(), currentProject, JSONObject()), `is`(ProjectConfigurationResult.SUCCESS))
         assertSettings(
             generalSettings,
-            "key1", "default",
-            "key2", true
+            "key1",
+            "default",
+            "key2",
+            true
         )
         assertSettings(
             adminSettings,
-            "key1", 5
+            "key1",
+            5
         )
     }
 
@@ -176,22 +185,28 @@ class SettingsImporterTest {
     fun whenKeysAlreadyExistInPrefs_overridesWithDefaults() {
         initSettings(
             generalSettings,
-            "key1", "existing",
-            "key2", false
+            "key1",
+            "existing",
+            "key2",
+            false
         )
         initSettings(
             adminSettings,
-            "key1", 0
+            "key1",
+            0
         )
-        assertThat(importer.fromJSON(emptySettings(), currentProject, JSONObject()), `is`(true))
+        assertThat(importer.fromJSON(emptySettings(), currentProject, JSONObject()), `is`(ProjectConfigurationResult.SUCCESS))
         assertSettings(
             generalSettings,
-            "key1", "default",
-            "key2", true
+            "key1",
+            "default",
+            "key2",
+            true
         )
         assertSettings(
             adminSettings,
-            "key1", 5
+            "key1",
+            5
         )
     }
 
@@ -213,7 +228,7 @@ class SettingsImporterTest {
             projectsRepository,
             projectDetailsCreator
         )
-        assertThat(importer.fromJSON(emptySettings(), currentProject, JSONObject()), `is`(true))
+        assertThat(importer.fromJSON(emptySettings(), currentProject, JSONObject()), `is`(ProjectConfigurationResult.SUCCESS))
     }
 
     @Test // Migrations might use old keys that are "unknown" to the app
@@ -239,7 +254,7 @@ class SettingsImporterTest {
             projectsRepository,
             projectDetailsCreator
         )
-        assertThat(importer.fromJSON(json.toString(), currentProject, JSONObject()), `is`(true))
+        assertThat(importer.fromJSON(json.toString(), currentProject, JSONObject()), `is`(ProjectConfigurationResult.SUCCESS))
     }
 
     @Test
@@ -254,7 +269,7 @@ class SettingsImporterTest {
             projectsRepository,
             projectDetailsCreator
         )
-        assertThat(importer.fromJSON(emptySettings(), currentProject, JSONObject()), `is`(true))
+        assertThat(importer.fromJSON(emptySettings(), currentProject, JSONObject()), `is`(ProjectConfigurationResult.SUCCESS))
         verify(settingsChangeHandler).onSettingsChanged("1")
         verifyNoMoreInteractions(settingsChangeHandler)
     }
@@ -315,25 +330,14 @@ class SettingsImporterTest {
     }
 
     @Test
-    fun `when protocol is Google Drive and project name not set, project name falls back to Google account`() {
-        val generalJson = JSONObject()
-            .put(ProjectKeys.KEY_PROTOCOL, ProjectKeys.PROTOCOL_GOOGLE_SHEETS)
-            .put(ProjectKeys.KEY_SELECTED_GOOGLE_ACCOUNT, "foo@bar.baz")
+    fun `when protocol is Google Drive returns GD_PROJECT`() {
+        val generalJson = JSONObject().put(ProjectKeys.KEY_PROTOCOL, ProjectKeys.PROTOCOL_GOOGLE_SHEETS)
+
         val settings = JSONObject()
             .put(AppConfigurationKeys.GENERAL, generalJson)
             .put(AppConfigurationKeys.ADMIN, JSONObject())
 
-        whenever(
-            projectDetailsCreator.createProjectFromDetails(
-                any(),
-                any(),
-                any(),
-                any()
-            )
-        ).thenReturn(Project.New("A", "B", "C"))
-
-        importer.fromJSON(settings.toString(), currentProject, JSONObject())
-        verify(projectDetailsCreator).createProjectFromDetails("", "", "", "foo@bar.baz")
+        assertThat(importer.fromJSON(settings.toString(), currentProject, JSONObject()), `is`(ProjectConfigurationResult.GD_PROJECT))
     }
 
     private fun emptySettings(): String {

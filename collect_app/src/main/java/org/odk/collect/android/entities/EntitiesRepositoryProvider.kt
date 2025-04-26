@@ -1,21 +1,18 @@
 package org.odk.collect.android.entities
 
-import android.app.Application
-import org.odk.collect.androidshared.data.getState
-import org.odk.collect.entities.EntitiesRepository
+import android.content.Context
+import org.odk.collect.android.database.entities.DatabaseEntitiesRepository
+import org.odk.collect.android.storage.StoragePaths
+import org.odk.collect.entities.storage.EntitiesRepository
+import org.odk.collect.projects.ProjectDependencyFactory
 
-class EntitiesRepositoryProvider(application: Application) {
+class EntitiesRepositoryProvider(
+    private val context: Context,
+    private val storagePathFactory: ProjectDependencyFactory<StoragePaths>
+) :
+    ProjectDependencyFactory<EntitiesRepository> {
 
-    private val repositories =
-        application.getState().get(MAP_KEY, mutableMapOf<String, EntitiesRepository>())
-
-    fun get(projectId: String): EntitiesRepository {
-        return repositories.getOrPut(projectId) {
-            InMemEntitiesRepository()
-        }
-    }
-
-    companion object {
-        private const val MAP_KEY = "entities_repository_map"
+    override fun create(projectId: String): EntitiesRepository {
+        return DatabaseEntitiesRepository(context, storagePathFactory.create(projectId).metaDir)
     }
 }

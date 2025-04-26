@@ -3,11 +3,13 @@ package org.odk.collect.android.application;
 import static android.os.Environment.MEDIA_MOUNTED;
 import static org.robolectric.Shadows.shadowOf;
 
+import android.os.StrictMode;
+
 import androidx.test.core.app.ApplicationProvider;
 import androidx.work.Configuration;
 import androidx.work.WorkManager;
 
-import org.odk.collect.android.database.DatabaseConnection;
+import org.odk.collect.db.sqlite.DatabaseConnection;
 import org.odk.collect.androidshared.ui.multiclicksafe.MultiClickGuard;
 import org.odk.collect.crashhandler.CrashHandler;
 import org.robolectric.shadows.ShadowApplication;
@@ -40,7 +42,6 @@ public class RobolectricApplication extends Collect {
         shadowApplication.grantPermissions("android.permission.ACCESS_COARSE_LOCATION");
         shadowApplication.grantPermissions("android.permission.READ_EXTERNAL_STORAGE");
         shadowApplication.grantPermissions("android.permission.CAMERA");
-        shadowApplication.grantPermissions("android.permission.READ_PHONE_STATE");
         shadowApplication.grantPermissions("android.permission.RECORD_AUDIO");
         shadowApplication.grantPermissions("android.permission.GET_ACCOUNTS");
 
@@ -53,5 +54,12 @@ public class RobolectricApplication extends Collect {
         CrashHandler.uninstall(this);
 
         super.onCreate();
+
+        // Don't enforce strict mode as we always use the "main" thread in Robolectric
+        StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder()
+                .permitAll()
+                .permitCustomSlowCalls()
+                .build()
+        );
     }
 }

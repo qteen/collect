@@ -8,8 +8,7 @@ import android.content.Context;
 import org.javarosa.core.model.data.IAnswerData;
 import org.javarosa.core.model.data.SelectOneData;
 import org.javarosa.core.model.data.helper.Selection;
-import org.odk.collect.android.R;
-import org.odk.collect.android.activities.FormEntryActivity;
+import org.odk.collect.android.activities.FormFillingActivity;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.fragments.dialogs.SelectMinimalDialog;
 import org.odk.collect.android.fragments.dialogs.SelectOneMinimalDialog;
@@ -29,8 +28,8 @@ public class SelectOneMinimalWidget extends SelectMinimalWidget {
     private final boolean autoAdvance;
     private AdvanceToNextListener autoAdvanceListener;
 
-    public SelectOneMinimalWidget(Context context, QuestionDetails prompt, boolean autoAdvance, WaitingForDataRegistry waitingForDataRegistry, SelectChoiceLoader selectChoiceLoader) {
-        super(context, prompt, waitingForDataRegistry, selectChoiceLoader);
+    public SelectOneMinimalWidget(Context context, QuestionDetails prompt, boolean autoAdvance, WaitingForDataRegistry waitingForDataRegistry, SelectChoiceLoader selectChoiceLoader, Dependencies dependencies) {
+        super(context, prompt, waitingForDataRegistry, selectChoiceLoader, dependencies);
         render();
 
         selectedItem = SelectOneWidgetUtils.getSelectedItem(prompt.getPrompt(), items);
@@ -52,7 +51,7 @@ public class SelectOneMinimalWidget extends SelectMinimalWidget {
                 getFormEntryPrompt(), getReferenceManager(),
                 getPlayColor(getFormEntryPrompt(), themeUtils), numColumns, noButtonsMode, mediaUtils);
 
-        DialogFragmentUtils.showIfNotShowing(dialog, SelectMinimalDialog.class, ((FormEntryActivity) getContext()).getSupportFragmentManager());
+        DialogFragmentUtils.showIfNotShowing(dialog, SelectMinimalDialog.class, ((FormFillingActivity) getContext()).getSupportFragmentManager());
     }
 
     @Override
@@ -89,7 +88,7 @@ public class SelectOneMinimalWidget extends SelectMinimalWidget {
 
     private void updateAnswer() {
         if (selectedItem == null) {
-            binding.answer.setText(R.string.select_answer);
+            binding.answer.setText(org.odk.collect.strings.R.string.select_answer);
         } else {
             binding.answer.setText(HtmlUtils.textToHtml(getFormEntryPrompt().getSelectItemText(selectedItem)));
         }

@@ -1,8 +1,8 @@
 package org.odk.collect.android.formmanagement
 
 import org.hamcrest.MatcherAssert.assertThat
-import org.hamcrest.Matchers.`is`
 import org.hamcrest.Matchers.contains
+import org.hamcrest.Matchers.`is`
 import org.hamcrest.Matchers.nullValue
 import org.junit.Test
 import org.mockito.kotlin.doReturn
@@ -26,7 +26,6 @@ import java.io.FileWriter
 class ServerFormsDetailsFetcherTest {
 
     private val formsRepository: FormsRepository = InMemFormsRepository()
-    private val diskFormsSynchronizer = mock<DiskFormsSynchronizer>()
     private val formSource = mock<FormSource> {
         on { fetchManifest(MANIFEST_URL) } doReturn ManifestFile(
             "manifest-hash",
@@ -37,7 +36,7 @@ class ServerFormsDetailsFetcherTest {
     }
 
     private val fetcher =
-        ServerFormsDetailsFetcher(formsRepository, formSource, diskFormsSynchronizer)
+        ServerFormsDetailsFetcher(formsRepository, formSource)
 
     @Test
     fun whenFormHasManifestUrl_returnsMediaFilesInDetails() {

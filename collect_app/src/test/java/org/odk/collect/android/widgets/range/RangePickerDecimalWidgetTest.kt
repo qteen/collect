@@ -14,9 +14,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
-import org.odk.collect.android.R
 import org.odk.collect.android.formentry.questions.QuestionDetails
 import org.odk.collect.android.widgets.support.QuestionWidgetHelpers
+import org.odk.collect.android.widgets.support.QuestionWidgetHelpers.widgetDependencies
 import java.math.BigDecimal
 
 @RunWith(AndroidJUnit4::class)
@@ -65,7 +65,7 @@ class RangePickerDecimalWidgetTest {
         assertThat(widget.answer, Matchers.nullValue())
         assertThat(
             widget.binding.widgetAnswerText.text,
-            equalTo(widget.context.getString(R.string.no_value_selected))
+            equalTo(widget.context.getString(org.odk.collect.strings.R.string.no_value_selected))
         )
     }
 
@@ -99,7 +99,21 @@ class RangePickerDecimalWidgetTest {
         verify(listener).onLongClick(widget.binding.widgetAnswerText)
     }
 
+    @Test
+    fun setData_callsValueChangeListener() {
+        val widget = createWidget(QuestionWidgetHelpers.promptWithQuestionDefAndAnswer(rangeQuestion, null))
+        val valueChangedListener = QuestionWidgetHelpers.mockValueChangedListener(widget)
+        widget.setValueChangedListener(valueChangedListener)
+        widget.setNumberPickerValue(3)
+
+        verify(valueChangedListener).widgetValueChanged(widget)
+    }
+
     private fun createWidget(prompt: FormEntryPrompt): RangePickerDecimalWidget {
-        return RangePickerDecimalWidget(QuestionWidgetHelpers.widgetTestActivity(), QuestionDetails(prompt))
+        return RangePickerDecimalWidget(
+            QuestionWidgetHelpers.widgetTestActivity(),
+            QuestionDetails(prompt),
+            widgetDependencies()
+        )
     }
 }

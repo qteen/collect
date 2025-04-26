@@ -10,12 +10,14 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.odk.collect.android.R;
+import org.odk.collect.android.support.pages.AddNewRepeatDialog;
+import org.odk.collect.android.support.pages.FormEndPage;
+import org.odk.collect.android.support.pages.FormEntryPage;
+import org.odk.collect.android.support.pages.FormHierarchyPage;
+import org.odk.collect.android.support.pages.ViewFormPage;
 import org.odk.collect.android.support.rules.CollectTestRule;
 import org.odk.collect.android.support.rules.TestRuleChain;
 import org.odk.collect.testshared.RecyclerViewMatcher;
-import org.odk.collect.android.support.pages.AddNewRepeatDialog;
-import org.odk.collect.android.support.pages.FormEntryPage;
-import org.odk.collect.android.support.pages.FormHierarchyPage;
 
 public class FormHierarchyTest {
 
@@ -65,7 +67,7 @@ public class FormHierarchyTest {
                 .atPositionOnView(2, R.id.primary_text))
                 .check(matches(withText("Guest details")));
         onView(withRecyclerView(R.id.list)
-                .atPositionOnView(2, R.id.secondary_text))
+                .atPositionOnView(2, R.id.group_label))
                 .check(matches(withText("Repeatable Group")));
 
         page.clickOnText("Guest details");
@@ -186,5 +188,98 @@ public class FormHierarchyTest {
                 .clickGoUpIcon()
                 .clickGoUpIcon()
                 .assertTexts("Repeat", "Repeatable Group");
+    }
+
+    @Test
+    //https://github.com/getodk/collect/issues/6015
+    public void regularGroupThatWrapsARepeatableGroupShouldBeTreatedAsARegularOne() {
+        rule.startAtMainMenu()
+                .copyForm("repeat_group_wrapped_with_a_regular_group.xml")
+                .startBlankForm("Repeat group wrapped with a regular group")
+                .clickGoToArrow()
+                .clickGoUpIcon()
+                .clickGoUpIcon()
+                .assertPath("Outer")
+                .assertNotRemovableGroup();
+    }
+
+    @Test
+    public void when_openHierarchyViewFromLastPage_should_mainGroupViewBeVisible() {
+        rule.startAtMainMenu()
+                .copyForm("repeat_group_form.xml")
+                .startBlankFormWithRepeatGroup("Repeat Group", "Grp1")
+                .clickOnDoNotAdd(new FormEntryPage("Repeat Group"))
+                .clickGoToArrow()
+                .clickJumpEndButton()
+                .clickGoToArrow()
+                .checkIfElementInHierarchyMatchesToText("Group Name", 0);
+    }
+
+    @Test
+    public void hierachyView_shouldNotChangeAfterScreenRotation() {
+        rule.startAtMainMenu()
+                .copyForm("repeat_group_form.xml")
+                .startBlankFormWithRepeatGroup("Repeat Group", "Grp1")
+                .clickOnDoNotAdd(new FormEntryPage("Repeat Group"))
+                .clickGoToArrow()
+                .clickGoUpIcon()
+                .checkIfElementInHierarchyMatchesToText("Group Name", 0)
+                .rotateToLandscape(new FormHierarchyPage("Repeat Group"))
+                .checkIfElementInHierarchyMatchesToText("Group Name", 0);
+    }
+
+    @Test
+    public void theListOfQuestionsShouldBeScrolledToTheLastDisplayedQuestionAfterOpeningTheHierarchy() {
+        rule.startAtMainMenu()
+                .copyForm("manyQ.xml")
+                .startBlankForm("manyQ")
+                .swipeToNextQuestion("t2")
+                .swipeToNextQuestion("n1")
+                .clickGoToArrow()
+                .assertText("n1")
+                .assertTextDoesNotExist("t1")
+                .assertTextDoesNotExist("t2");
+    }
+
+    @Test
+    public void whenViewFormInHierarchyForRepeatGroup_noDeleteButtonAppears() {
+        rule.startAtMainMenu()
+                .copyForm("one-question-repeat.xml")
+                .startBlankForm("One Question Repeat")
+                .swipeToNextQuestionWithRepeatGroup("Person")
+                .clickOnDoNotAdd(new FormEndPage("One Question Repeat"))
+                .clickFinalize()
+
+                .clickSendFinalizedForm(1)
+                .clickOnForm("One Question Repeat")
+                .clickOnGroup("Person")
+                .clickOnGroup("Person > 1")
+                .assertNoId(R.id.menu_delete_child);
+    }
+
+    @Test
+    public void whenViewFormInHierarchy_clickingOnQuestion_doesNothing() {
+        rule.startAtMainMenu()
+                .copyForm("one-question.xml")
+                .startBlankForm("One Question")
+                .fillOutAndFinalize()
+
+                .clickSendFinalizedForm(1)
+                .clickOnForm("One Question")
+                .clickOnText("what is your age")
+                .assertOnPage(new ViewFormPage("One Question"));
+    }
+
+    @Test
+    public void clickingBackButtonAfterNavigatingInTheHierarchyOfGroups_movesToTheQuestionDisplayedBeforeOpeningTheHierarchy() {
+        rule.startAtMainMenu()
+                .copyForm("two-questions-in-group.xml")
+                .startBlankForm("two-questions-in-group")
+                .clickGoToArrow()
+                .clickGoUpIcon()
+                .clickOnGroup("Name")
+                .pressBack(new FormEntryPage("two-questions-in-group"))
+                .assertQuestion("First name")
+                .assertNoQuestion("Last name");
     }
 }

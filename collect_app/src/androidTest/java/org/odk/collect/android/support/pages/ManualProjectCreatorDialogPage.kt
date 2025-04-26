@@ -1,71 +1,53 @@
 package org.odk.collect.android.support.pages
 
-import android.accounts.AccountManager
-import android.app.Activity
-import android.app.Instrumentation
-import android.content.Intent
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
-import androidx.test.espresso.action.ViewActions.scrollTo
-import androidx.test.espresso.intent.Intents.intending
-import androidx.test.espresso.intent.matcher.IntentMatchers.hasAction
 import androidx.test.espresso.matcher.ViewMatchers.withText
-import org.odk.collect.android.R
+import org.odk.collect.testshared.WaitFor.tryAgainOnFail
 
 class ManualProjectCreatorDialogPage : Page<ManualProjectCreatorDialogPage>() {
     override fun assertOnPage(): ManualProjectCreatorDialogPage {
-        assertText(R.string.add_project)
+        assertText(org.odk.collect.strings.R.string.add_project)
         return this
     }
 
     fun inputUrl(url: String): ManualProjectCreatorDialogPage {
-        inputText(R.string.server_url, url)
+        inputText(org.odk.collect.strings.R.string.server_url, url)
         return this
     }
 
     fun inputUsername(username: String): ManualProjectCreatorDialogPage {
-        inputText(R.string.username, username)
+        inputText(org.odk.collect.strings.R.string.username, username)
         return this
     }
 
     fun inputPassword(password: String): ManualProjectCreatorDialogPage {
-        inputText(R.string.password, password)
+        inputText(org.odk.collect.strings.R.string.password, password)
         return this
     }
 
-    fun openGooglePickerAndSelect(googleAccount: String, duplicate: Boolean = false): MainMenuPage {
-        val data = Intent()
-        data.putExtra(AccountManager.KEY_ACCOUNT_NAME, googleAccount)
-        val activityResult = Instrumentation.ActivityResult(Activity.RESULT_OK, data)
-        intending(hasAction("com.google.android.gms.common.account.CHOOSE_ACCOUNT")).respondWith(activityResult)
-
-        onView(withText(R.string.gdrive_configure)).perform(scrollTo(), click())
-
-        if (duplicate) {
-            addDuplicateProject()
+    fun addProject(): MainMenuPage {
+        tryAgainOnFail {
+            clickOnString(org.odk.collect.strings.R.string.add)
+            MainMenuPage().assertOnPage()
         }
 
-        return MainMenuPage().assertOnPage()
-    }
-
-    fun addProject(): MainMenuPage {
-        onView(withText(R.string.add)).perform(click())
-        return MainMenuPage().assertOnPage()
+        return MainMenuPage()
     }
 
     fun addProjectAndAssertDuplicateDialogShown(): ManualProjectCreatorDialogPage {
-        onView(withText(R.string.add)).perform(click())
-        assertText(R.string.duplicate_project_details)
+        onView(withText(org.odk.collect.strings.R.string.add)).perform(click())
+        assertText(org.odk.collect.strings.R.string.duplicate_project_details)
         return this
     }
 
     fun switchToExistingProject(): MainMenuPage {
-        clickOnString(R.string.switch_to_existing)
+        clickOnString(org.odk.collect.strings.R.string.switch_to_existing)
         return MainMenuPage().assertOnPage()
     }
 
     fun addDuplicateProject(): MainMenuPage {
-        clickOnString(R.string.add_duplicate_project)
+        clickOnString(org.odk.collect.strings.R.string.add_duplicate_project)
         return MainMenuPage().assertOnPage()
     }
 }

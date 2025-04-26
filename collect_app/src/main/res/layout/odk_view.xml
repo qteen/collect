@@ -14,6 +14,7 @@ limitations under the License.
 -->
 <androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/odk_view_container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
@@ -27,27 +28,28 @@ limitations under the License.
             android:id="@+id/group_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginLeft="@dimen/margin_standard"
-            android:layout_marginTop="@dimen/margin_standard"
-            android:layout_marginRight="@dimen/margin_standard"
+            android:layout_marginTop="@dimen/margin_extra_small"
+            android:layout_marginBottom="@dimen/margin_extra_small"
+            android:layout_marginHorizontal="@dimen/margin_standard"
             android:visibility="gone"
             style="@style/TextAppearance.Collect.Subtitle1.MediumEmphasis"
             tools:text="Group text"
             tools:visibility="visible" />
 
-        <com.google.android.material.button.MaterialButton
+        <org.odk.collect.androidshared.ui.multiclicksafe.MultiClickSafeMaterialButton
             android:id="@+id/launchIntentButton"
+            style="?widgetButtonIconQuestionWidgetStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:visibility="gone"
-            android:gravity="center"
             android:layout_margin="@dimen/margin_standard"
-            android:padding="@dimen/margin_small"/>
+            app:icon="@drawable/ic_baseline_open_in_new_white_24" />
 
         <LinearLayout
             android:id="@+id/widgets"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:paddingVertical="@dimen/margin_extra_extra_small"
             android:gravity="top"
             android:orientation="vertical">
 

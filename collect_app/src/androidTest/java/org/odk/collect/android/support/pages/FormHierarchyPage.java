@@ -13,7 +13,7 @@ import androidx.annotation.NonNull;
 import androidx.test.espresso.contrib.RecyclerViewActions;
 
 import org.odk.collect.android.R;
-import org.odk.collect.android.support.WaitFor;
+import org.odk.collect.testshared.WaitFor;
 
 import java.util.concurrent.Callable;
 
@@ -35,8 +35,13 @@ public class FormHierarchyPage extends Page<FormHierarchyPage> {
         });
 
         assertToolbarTitle(formName);
-        assertText(R.string.jump_to_beginning);
-        assertText(R.string.jump_to_end);
+        assertText(org.odk.collect.strings.R.string.jump_to_beginning);
+        assertText(org.odk.collect.strings.R.string.jump_to_end);
+        return this;
+    }
+
+    public FormHierarchyPage assertNotRemovableGroup() {
+        onView(withId(R.id.menu_delete_child)).check(doesNotExist());
         return this;
     }
 
@@ -51,7 +56,7 @@ public class FormHierarchyPage extends Page<FormHierarchyPage> {
     }
 
     public FormEndPage clickGoToEnd() {
-        return clickOnString(R.string.jump_to_end)
+        return clickOnString(org.odk.collect.strings.R.string.jump_to_end)
                 .assertOnPage(new FormEndPage(formName));
     }
 
@@ -62,7 +67,7 @@ public class FormHierarchyPage extends Page<FormHierarchyPage> {
 
     public FormHierarchyPage deleteGroup() {
         onView(withId(R.id.menu_delete_child)).perform(click());
-        return clickOnButtonInDialog(R.string.delete_repeat, this);
+        return clickOnTextInDialog(org.odk.collect.strings.R.string.delete_repeat, this);
     }
 
     public FormEndPage clickJumpEndButton() {
@@ -80,6 +85,11 @@ public class FormHierarchyPage extends Page<FormHierarchyPage> {
                     .atPositionOnView(position, R.id.secondary_text))
                     .check(matches(withText(secondaryText)));
         }
+        return this;
+    }
+
+    public FormHierarchyPage assertPath(String text) {
+        onView(withId(R.id.pathtext)).check(matches(withText(text)));
         return this;
     }
 

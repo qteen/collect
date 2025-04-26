@@ -3,7 +3,7 @@ package org.odk.collect.android.application.initialization
 import android.content.Context
 import androidx.preference.PreferenceManager
 import org.apache.commons.io.FileUtils
-import org.odk.collect.android.projects.CurrentProjectProvider
+import org.odk.collect.android.projects.ProjectsDataService
 import org.odk.collect.android.storage.StoragePathProvider
 import org.odk.collect.projects.ProjectsRepository
 import org.odk.collect.settings.SettingsProvider
@@ -25,7 +25,7 @@ class ExistingProjectMigrator(
     private val storagePathProvider: StoragePathProvider,
     private val projectsRepository: ProjectsRepository,
     private val settingsProvider: SettingsProvider,
-    private val currentProjectProvider: CurrentProjectProvider,
+    private val projectsDataService: ProjectsDataService,
     private val projectDetailsCreator: ProjectDetailsCreator
 ) : Upgrade {
 
@@ -66,7 +66,7 @@ class ExistingProjectMigrator(
         }
 
         try {
-            FileUtils.deleteDirectory(File(rootDir, ".cache"))
+            File(rootDir, ".cache").deleteRecursively()
         } catch (e: Exception) {
             // ignore
         }
@@ -75,6 +75,6 @@ class ExistingProjectMigrator(
         settingsProvider.getUnprotectedSettings(project.uuid).saveAll(generalSharedPrefs.all)
         settingsProvider.getProtectedSettings(project.uuid).saveAll(adminSharedPrefs.all)
 
-        currentProjectProvider.setCurrentProject(project.uuid)
+        projectsDataService.setCurrentProject(project.uuid)
     }
 }

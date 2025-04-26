@@ -69,7 +69,7 @@ class ExistingProjectMigratorTest {
         }
 
         existingProjectMigrator.run()
-        val existingProject = currentProjectProvider.getCurrentProject()
+        val existingProject = currentProjectProvider.requireCurrentProject()
 
         legacyRootDirs.forEach {
             assertThat(it.exists(), `is`(false))
@@ -92,27 +92,9 @@ class ExistingProjectMigratorTest {
         TempFiles.createTempFile(cacheDir, "file", ".temp")
 
         existingProjectMigrator.run()
-        val existingProject = currentProjectProvider.getCurrentProject()
+        val existingProject = currentProjectProvider.requireCurrentProject()
 
         assertThat(cacheDir.exists(), `is`(false))
-
-        getProjectDirPaths(existingProject.uuid).forEach {
-            val dir = File(it)
-            assertThat(dir.exists(), `is`(true))
-            assertThat(dir.isDirectory, `is`(true))
-            assertThat(dir.listFiles()!!.isEmpty(), `is`(true))
-        }
-    }
-
-    @Test
-    fun `if cache dir can not be deleted the app does not crash`() {
-        val cacheDir = File(rootDir, ".cache")
-        cacheDir.createNewFile()
-
-        existingProjectMigrator.run()
-        val existingProject = currentProjectProvider.getCurrentProject()
-
-        assertThat(cacheDir.exists(), `is`(true))
 
         getProjectDirPaths(existingProject.uuid).forEach {
             val dir = File(it)
@@ -137,7 +119,7 @@ class ExistingProjectMigratorTest {
         }
 
         existingProjectMigrator.run()
-        val existingProject = currentProjectProvider.getCurrentProject()
+        val existingProject = currentProjectProvider.requireCurrentProject()
         getProjectDirPaths(existingProject.uuid).forEach {
             val dir = File(it)
             assertThat(dir.exists(), `is`(true))
@@ -159,7 +141,7 @@ class ExistingProjectMigratorTest {
         oldAdminSettings.edit().putString("adminKey", "adminValue").apply()
 
         existingProjectMigrator.run()
-        val existingProject = currentProjectProvider.getCurrentProject()
+        val existingProject = currentProjectProvider.requireCurrentProject()
 
         val generalSettings = settingsProvider.getUnprotectedSettings(existingProject.uuid)
         assertThat(

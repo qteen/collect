@@ -5,15 +5,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <org.odk.collect.androidshared.ui.multiclicksafe.MultiClickSafeButton
+    <org.odk.collect.androidshared.ui.multiclicksafe.MultiClickSafeMaterialButton
         android:id="@+id/button"
-        style="@style/Widget.Collect.Button.WidgetAnswer"
-        android:layout_marginHorizontal="@dimen/margin_standard"
-        android:layout_marginTop="@dimen/margin_small"
+        style="?widgetButtonIconQuestionWidgetStyle"
         android:text="@string/select_place"
+        app:icon="@drawable/ic_baseline_location_on_white_24"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 
     <com.google.android.material.textview.MaterialTextView
         android:id="@+id/answer"

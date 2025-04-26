@@ -1,6 +1,5 @@
 package org.odk.collect.android.feature.formentry;
 
-import static org.odk.collect.android.support.pages.FormEntryPage.QuestionAndAnswer;
 
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
@@ -8,10 +7,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.runner.RunWith;
-import org.odk.collect.android.R;
-import org.odk.collect.android.support.pages.FormEntryPage;
+import org.odk.collect.android.support.pages.FormEntryPage.QuestionAndAnswer;
 import org.odk.collect.android.support.pages.MainMenuPage;
-import org.odk.collect.android.support.pages.SaveOrIgnoreDialog;
+import org.odk.collect.android.support.pages.SaveOrDiscardFormDialog;
 import org.odk.collect.android.support.rules.CollectTestRule;
 import org.odk.collect.android.support.rules.TestRuleChain;
 
@@ -33,10 +31,11 @@ public class QuittingFormTest {
                         new QuestionAndAnswer("What is your name?", "Reuben"),
                         new QuestionAndAnswer("What is your age?", "10")
                 )
-                .pressBack(new SaveOrIgnoreDialog<>("Two Question", new MainMenuPage()))
+                .pressBack(new SaveOrDiscardFormDialog<>(new MainMenuPage()))
                 .clickSaveChanges()
 
-                .clickEditSavedForm(1)
+                .assertNumberOfFinalizedForms(0)
+                .clickDrafts(1)
                 .clickOnForm("Two Question")
                 .assertText("Reuben")
                 .assertText("10");
@@ -48,7 +47,7 @@ public class QuittingFormTest {
                 .copyForm("two-question.xml")
                 .startBlankForm("Two Question")
                 .answerQuestion("What is your name?", "Reuben")
-                .pressBack(new SaveOrIgnoreDialog<>("Two Question", new MainMenuPage()))
+                .pressBack(new SaveOrDiscardFormDialog<>(new MainMenuPage()))
                 .clickDiscardForm()
 
                 .assertNumberOfEditableForms(0);
@@ -65,7 +64,7 @@ public class QuittingFormTest {
                 .answerQuestion("What is your age?", "10")
                 .pressBackAndDiscardChanges()
 
-                .clickEditSavedForm(1)
+                .clickDrafts(1)
                 .clickOnForm("Two Question")
                 .assertText("Reuben")
                 .assertTextDoesNotExist("10");
@@ -79,10 +78,10 @@ public class QuittingFormTest {
                 .answerQuestion("What is your name?", "Reuben")
                 .swipeToNextQuestion("What is your age?", true)
                 .closeSoftKeyboard()
-                .pressBack(new SaveOrIgnoreDialog<>("Two Question Required", new MainMenuPage()))
+                .pressBack(new SaveOrDiscardFormDialog<>(new MainMenuPage()))
                 .clickSaveChanges()
 
-                .clickEditSavedForm(1)
+                .clickDrafts(1)
                 .clickOnForm("Two Question Required")
                 .assertText("Reuben");
     }
@@ -93,78 +92,20 @@ public class QuittingFormTest {
                 .copyForm("two-question-required.xml")
                 .startBlankForm("Two Question Required")
                 .answerQuestion("What is your name?", "Reuben")
-                .pressBack(new SaveOrIgnoreDialog<>("Two Question Required", new MainMenuPage()))
+                .pressBack(new SaveOrDiscardFormDialog<>(new MainMenuPage()))
                 .clickSaveChanges()
 
-                .clickEditSavedForm(1)
+                .clickDrafts(1)
                 .clickOnForm("Two Question Required")
                 .clickGoToStart()
                 .answerQuestion("What is your name?", "Another Reuben")
                 .swipeToNextQuestion("What is your age?", true)
                 .closeSoftKeyboard()
-                .pressBack(new SaveOrIgnoreDialog<>("Two Question Required", new MainMenuPage()))
+                .pressBack(new SaveOrDiscardFormDialog<>(new MainMenuPage()))
                 .clickSaveChanges()
 
-                .clickEditSavedForm(1)
+                .clickDrafts(1)
                 .clickOnForm("Two Question Required")
                 .assertText("Another Reuben");
-    }
-
-    @Test
-    public void whenEditingAFinalizedForm_withViolatedConstraintsOnCurrentScreen_pressingBack_andClickingSaveChanges_showsError() {
-        rule.startAtMainMenu()
-                .copyForm("two-question-required.xml")
-                .startBlankForm("Two Question Required")
-                .fillOutAndSave(
-                        new QuestionAndAnswer("What is your name?", "Reuben"),
-                        new QuestionAndAnswer("What is your age?", "32", true)
-                )
-
-                .clickEditSavedForm(1)
-                .clickOnForm("Two Question Required")
-                .clickGoToStart()
-                .answerQuestion("What is your name?", "Another Reuben")
-                .swipeToNextQuestion("What is your age?", true)
-                .longPressOnQuestion("What is your age?", true)
-                .removeResponse()
-                .closeSoftKeyboard()
-                .pressBack(new SaveOrIgnoreDialog<>("Two Question Required", new FormEntryPage("Two Question Required")))
-                .clickSaveChangesWithError(R.string.required_answer_error)
-                .pressBackAndDiscardChanges()
-
-                .clickEditSavedForm(1)
-                .clickOnForm("Two Question Required")
-                .assertText("Reuben")
-                .assertText("32");
-    }
-
-    @Test
-    public void whenEditingAFinalizedForm_withViolatedConstraintsOnAnotherScreen_pressingBack_andClickingSaveChanges_showsViolatedConstraint() {
-        rule.startAtMainMenu()
-                .copyForm("two-question-required.xml")
-                .startBlankForm("Two Question Required")
-                .fillOutAndSave(
-                        new QuestionAndAnswer("What is your name?", "Reuben"),
-                        new QuestionAndAnswer("What is your age?", "32", true)
-                )
-
-                .clickEditSavedForm(1)
-                .clickOnForm("Two Question Required")
-                .clickGoToStart()
-                .answerQuestion("What is your name?", "Another Reuben")
-                .swipeToNextQuestion("What is your age?", true)
-                .longPressOnQuestion("What is your age?", true)
-                .removeResponse()
-                .swipeToPreviousQuestion("What is your name?")
-                .closeSoftKeyboard()
-                .pressBack(new SaveOrIgnoreDialog<>("Two Question Required", new FormEntryPage("Two Question Required")))
-                .clickSaveChangesWithError(R.string.required_answer_error)
-                .assertQuestion("What is your age?", true)
-                .pressBackAndDiscardChanges()
-
-                .clickEditSavedForm(1)
-                .clickOnForm("Two Question Required")
-                .assertText("Reuben")
-                .assertText("32");
     }
 }

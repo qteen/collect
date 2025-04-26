@@ -1,12 +1,13 @@
 package org.odk.collect.android.preferences.screens;
 
-import static org.odk.collect.android.logic.PropertyManager.PROPMGR_DEVICE_ID;
-import static org.odk.collect.android.logic.PropertyManager.PROPMGR_PHONE_NUMBER;
+import static org.odk.collect.metadata.PropertyManager.PROPMGR_DEVICE_ID;
 import static org.odk.collect.settings.keys.ProjectKeys.KEY_METADATA_EMAIL;
 import static org.odk.collect.settings.keys.ProjectKeys.KEY_METADATA_PHONENUMBER;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.Selection;
 import android.text.TextUtils;
 import android.view.inputmethod.EditorInfo;
 
@@ -17,18 +18,13 @@ import androidx.preference.Preference;
 import org.jetbrains.annotations.NotNull;
 import org.odk.collect.android.R;
 import org.odk.collect.android.injection.DaggerUtils;
-import org.odk.collect.android.logic.PropertyManager;
 import org.odk.collect.androidshared.ui.ToastUtils;
 import org.odk.collect.androidshared.utils.Validator;
-import org.odk.collect.permissions.PermissionsProvider;
+import org.odk.collect.metadata.PropertyManager;
 
 import javax.inject.Inject;
 
 public class FormMetadataPreferencesFragment extends BaseProjectPreferencesFragment {
-
-    @Inject
-    PermissionsProvider permissionsProvider;
-
     @Inject
     PropertyManager propertyManager;
 
@@ -57,26 +53,25 @@ public class FormMetadataPreferencesFragment extends BaseProjectPreferencesFragm
         super.onActivityCreated(savedInstanceState);
 
         setupPrefs();
-
-        if (permissionsProvider.isReadPhoneStatePermissionGranted()) {
-            phonePreference.setSummaryProvider(new PropertyManagerPropertySummaryProvider(propertyManager, PROPMGR_PHONE_NUMBER));
-        } else if (savedInstanceState == null) {
-            permissionsProvider.requestReadPhoneStatePermission(getActivity(), () -> phonePreference.setSummaryProvider(new PropertyManagerPropertySummaryProvider(propertyManager, PROPMGR_PHONE_NUMBER)));
-        }
     }
 
     private void setupPrefs() {
         emailPreference.setOnPreferenceChangeListener((preference, newValue) -> {
             String newValueString = newValue.toString();
             if (!newValueString.isEmpty() && !Validator.isEmailAddressValid(newValueString)) {
-                ToastUtils.showLongToast(requireContext(), R.string.invalid_email_address);
+                ToastUtils.showLongToast(org.odk.collect.strings.R.string.invalid_email_address);
                 return false;
             }
 
             return true;
         });
 
-        phonePreference.setOnBindEditTextListener(editText -> editText.setInputType(EditorInfo.TYPE_CLASS_PHONE));
+        phonePreference.setOnBindEditTextListener(editText -> {
+            editText.setInputType(EditorInfo.TYPE_CLASS_PHONE);
+            Editable text = editText.getText();
+            Selection.setSelection(text, text.length());
+        });
+
         deviceIDPreference.setSummaryProvider(new PropertyManagerPropertySummaryProvider(propertyManager, PROPMGR_DEVICE_ID));
     }
 
@@ -96,7 +91,7 @@ public class FormMetadataPreferencesFragment extends BaseProjectPreferencesFragm
             if (!TextUtils.isEmpty(value)) {
                 return value;
             } else {
-                return getString(R.string.preference_not_available);
+                return getString(org.odk.collect.strings.R.string.preference_not_available);
             }
         }
     }

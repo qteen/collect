@@ -39,9 +39,10 @@ import org.javarosa.core.reference.InvalidReferenceException;
 import org.javarosa.core.reference.ReferenceManager;
 import org.javarosa.form.api.FormEntryCaption;
 import org.odk.collect.android.R;
-import org.odk.collect.android.externaldata.ExternalSelectChoice;
+import org.odk.collect.android.dynamicpreload.ExternalSelectChoice;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.utilities.HtmlUtils;
+import org.odk.collect.android.widgets.utilities.QuestionFontSizeUtils;
 import org.odk.collect.androidshared.bitmap.ImageFileUtils;
 import org.odk.collect.android.widgets.QuestionWidget;
 import org.odk.collect.android.widgets.interfaces.MultiChoiceWidget;
@@ -73,8 +74,8 @@ public class ListMultiWidget extends QuestionWidget implements MultiChoiceWidget
     private final List<SelectChoice> items;
 
     @SuppressWarnings("unchecked")
-    public ListMultiWidget(Context context, QuestionDetails questionDetails, boolean displayLabel, SelectChoiceLoader selectChoiceLoader) {
-        super(context, questionDetails);
+    public ListMultiWidget(Context context, QuestionDetails questionDetails, boolean displayLabel, SelectChoiceLoader selectChoiceLoader, Dependencies dependencies) {
+        super(context, dependencies, questionDetails);
         render();
 
         items = ItemsWidgetUtils.loadItemsAndHandleErrors(this, questionDetails.getPrompt(), selectChoiceLoader);
@@ -167,14 +168,14 @@ public class ListMultiWidget extends QuestionWidget implements MultiChoiceWidget
                                 // An error hasn't been logged and loading the image failed, so it's
                                 // likely
                                 // a bad file.
-                                errorMsg = getContext().getString(R.string.file_invalid, imageFile);
+                                errorMsg = getContext().getString(org.odk.collect.strings.R.string.file_invalid, imageFile);
 
                             }
                         } else {
                             // An error hasn't been logged. We should have an image, but the file
                             // doesn't
                             // exist.
-                            errorMsg = getContext().getString(R.string.file_missing, imageFile);
+                            errorMsg = getContext().getString(org.odk.collect.strings.R.string.file_missing, imageFile);
                         }
 
                         if (errorMsg != null) {
@@ -196,7 +197,7 @@ public class ListMultiWidget extends QuestionWidget implements MultiChoiceWidget
                 // button because it aligns horizontally, and we want the label on top
                 TextView label = new TextView(getContext());
                 label.setText(HtmlUtils.textToHtml(questionDetails.getPrompt().getSelectChoiceText(items.get(i))));
-                label.setTextSize(TypedValue.COMPLEX_UNIT_DIP, getAnswerFontSize());
+                label.setTextSize(TypedValue.COMPLEX_UNIT_DIP, QuestionFontSizeUtils.getFontSize(settings, QuestionFontSizeUtils.FontSize.HEADLINE_6));
                 label.setGravity(Gravity.CENTER_HORIZONTAL);
                 if (!displayLabel) {
                     label.setVisibility(View.GONE);

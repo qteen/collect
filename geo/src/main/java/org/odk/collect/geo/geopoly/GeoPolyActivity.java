@@ -14,7 +14,6 @@
 
 package org.odk.collect.geo.geopoly;
 
-import static org.odk.collect.androidshared.system.ContextUtils.getThemeAttributeValue;
 import static org.odk.collect.geo.Constants.EXTRA_READ_ONLY;
 import static org.odk.collect.geo.GeoActivityUtils.requireLocationPermissions;
 
@@ -26,6 +25,7 @@ import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentContainerView;
 
@@ -34,18 +34,26 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import org.odk.collect.androidshared.ui.DialogFragmentUtils;
 import org.odk.collect.androidshared.ui.FragmentFactoryBuilder;
 import org.odk.collect.androidshared.ui.ToastUtils;
+import org.odk.collect.async.Scheduler;
 import org.odk.collect.externalapp.ExternalAppUtils;
 import org.odk.collect.geo.Constants;
 import org.odk.collect.geo.GeoDependencyComponentProvider;
 import org.odk.collect.geo.GeoUtils;
 import org.odk.collect.geo.R;
-import org.odk.collect.geo.ReferenceLayerSettingsNavigator;
+import org.odk.collect.geo.geopoint.AccuracyStatusView;
+import org.odk.collect.geo.geopoint.LocationAccuracy;
 import org.odk.collect.location.Location;
 import org.odk.collect.location.tracker.LocationTracker;
+import org.odk.collect.maps.LineDescription;
+import org.odk.collect.maps.MapConsts;
 import org.odk.collect.maps.MapFragment;
 import org.odk.collect.maps.MapFragmentFactory;
 import org.odk.collect.maps.MapPoint;
+import org.odk.collect.maps.layers.OfflineMapLayersPickerBottomSheetDialogFragment;
+import org.odk.collect.maps.layers.ReferenceLayerRepository;
+import org.odk.collect.settings.SettingsProvider;
 import org.odk.collect.strings.localization.LocalizedActivity;
+import org.odk.collect.webpage.ExternalWebPageHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -69,7 +77,7 @@ public class GeoPolyActivity extends LocalizedActivity implements GeoPolySetting
 
     public enum OutputMode { GEOTRACE, GEOSHAPE }
 
-    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService executorServiceScheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledFuture schedulerHandler;
 
     private OutputMode outputMode;
@@ -81,20 +89,30 @@ public class GeoPolyActivity extends LocalizedActivity implements GeoPolySetting
     LocationTracker locationTracker;
 
     @Inject
-    ReferenceLayerSettingsNavigator referenceLayerSettingsNavigator;
+    ReferenceLayerRepository referenceLayerRepository;
+
+    @Inject
+    Scheduler scheduler;
+
+    @Inject
+    SettingsProvider settingsProvider;
+
+    @Inject
+    ExternalWebPageHelper externalWebPageHelper;
 
     private MapFragment map;
     private int featureId = -1;  // will be a positive featureId once map is ready
     private List<MapPoint> originalPoly;
 
     private ImageButton zoomButton;
-    private ImageButton playButton;
-    private ImageButton clearButton;
+    ImageButton playButton;
+    ImageButton clearButton;
     private Button recordButton;
     private ImageButton pauseButton;
-    private ImageButton backspaceButton;
+    ImageButton backspaceButton;
+    ImageButton saveButton;
 
-    private TextView locationStatus;
+    private AccuracyStatusView locationStatus;
     private TextView collectionStatus;
 
     private View settingsView;
@@ -121,19 +139,31 @@ public class GeoPolyActivity extends LocalizedActivity implements GeoPolySetting
     // restored from savedInstanceState
     private List<MapPoint> restoredPoints;
 
+    private final OnBackPressedCallback onBackPressedCallback = new OnBackPressedCallback(true) {
+        @Override
+        public void handleOnBackPressed() {
+            if (!intentReadOnly && map != null && !originalPoly.equals(map.getPolyLinePoints(featureId))) {
+                showBackDialog();
+            } else {
+                finish();
+            }
+        }
+    };
+
     @Override public void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+        ((GeoDependencyComponentProvider) getApplication()).getGeoDependencyComponent().inject(this);
 
         getSupportFragmentManager().setFragmentFactory(new FragmentFactoryBuilder()
                 .forClass(MapFragment.class, () -> (Fragment) mapFragmentFactory.createMapFragment())
+                .forClass(OfflineMapLayersPickerBottomSheetDialogFragment.class, () -> new OfflineMapLayersPickerBottomSheetDialogFragment(getActivityResultRegistry(), referenceLayerRepository, scheduler, settingsProvider, externalWebPageHelper))
                 .build()
         );
+
+        super.onCreate(savedInstanceState);
 
         requireLocationPermissions(this);
 
         previousState = savedInstanceState;
-
-        ((GeoDependencyComponentProvider) getApplication()).getGeoDependencyComponent().inject(this);
 
         if (savedInstanceState != null) {
             restoredPoints = savedInstanceState.getParcelableArrayList(POINTS_KEY);
@@ -150,11 +180,13 @@ public class GeoPolyActivity extends LocalizedActivity implements GeoPolySetting
 
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setTitle(getString(outputMode == OutputMode.GEOTRACE ?
-            R.string.geotrace_title : R.string.geoshape_title));
+            org.odk.collect.strings.R.string.geotrace_title : org.odk.collect.strings.R.string.geoshape_title));
         setContentView(R.layout.geopoly_layout);
 
         MapFragment mapFragment = ((FragmentContainerView) findViewById(R.id.map_container)).getFragment();
         mapFragment.init(this::initMap, this::finish);
+
+        getOnBackPressedDispatcher().addCallback(onBackPressedCallback);
     }
 
     @Override protected void onSaveInstanceState(Bundle state) {
@@ -209,7 +241,7 @@ public class GeoPolyActivity extends LocalizedActivity implements GeoPolySetting
         backspaceButton = findViewById(R.id.backspace);
         backspaceButton.setOnClickListener(v -> removeLastPoint());
 
-        ImageButton saveButton = findViewById(R.id.save);
+        saveButton = findViewById(R.id.save);
         saveButton.setOnClickListener(v -> {
             if (!map.getPolyLinePoints(featureId).isEmpty()) {
                 if (outputMode == OutputMode.GEOTRACE) {
@@ -235,11 +267,11 @@ public class GeoPolyActivity extends LocalizedActivity implements GeoPolySetting
         recordButton.setOnClickListener(v -> recordPoint(map.getGpsLocation()));
 
         findViewById(R.id.layers).setOnClickListener(v -> {
-            referenceLayerSettingsNavigator.navigateToReferenceLayerSettings(this);
+            DialogFragmentUtils.showIfNotShowing(OfflineMapLayersPickerBottomSheetDialogFragment.class, getSupportFragmentManager());
         });
 
         zoomButton = findViewById(R.id.zoom);
-        zoomButton.setOnClickListener(v -> map.zoomToPoint(map.getGpsLocation(), true));
+        zoomButton.setOnClickListener(v -> map.zoomToCurrentLocation(map.getGpsLocation()));
 
         List<MapPoint> points = new ArrayList<>();
         Intent intent = getIntent();
@@ -260,7 +292,7 @@ public class GeoPolyActivity extends LocalizedActivity implements GeoPolySetting
         if (restoredPoints != null) {
             points = restoredPoints;
         }
-        featureId = map.addPolyLine(points, outputMode == OutputMode.GEOSHAPE, true);
+        featureId = map.addPolyLine(new LineDescription(points, String.valueOf(MapConsts.DEFAULT_STROKE_WIDTH), null, !intentReadOnly, outputMode == OutputMode.GEOSHAPE));
 
         if (inputActive && !intentReadOnly) {
             startInput();
@@ -271,7 +303,7 @@ public class GeoPolyActivity extends LocalizedActivity implements GeoPolySetting
         map.setLongPressListener(this::onClick);
         map.setGpsLocationEnabled(true);
         map.setGpsLocationListener(this::onGpsLocation);
-        
+
         if (!map.hasCenter()) {
             if (!points.isEmpty()) {
                 map.zoomToBoundingBox(points, 0.6, false);
@@ -287,7 +319,7 @@ public class GeoPolyActivity extends LocalizedActivity implements GeoPolySetting
         if (map.getPolyLinePoints(featureId).size() > 1) {
             finishWithResult();
         } else {
-            ToastUtils.showShortToastInMiddle(this, getString(R.string.polyline_validator));
+            ToastUtils.showShortToastInMiddle(this, getString(org.odk.collect.strings.R.string.polyline_validator));
         }
     }
 
@@ -301,7 +333,7 @@ public class GeoPolyActivity extends LocalizedActivity implements GeoPolySetting
             }
             finishWithResult();
         } else {
-            ToastUtils.showShortToastInMiddle(this, getString(R.string.polygon_validator));
+            ToastUtils.showShortToastInMiddle(this, getString(org.odk.collect.strings.R.string.polygon_validator));
         }
     }
 
@@ -309,14 +341,6 @@ public class GeoPolyActivity extends LocalizedActivity implements GeoPolySetting
         List<MapPoint> points = map.getPolyLinePoints(featureId);
         String result = GeoUtils.formatPointsResultString(points, outputMode.equals(OutputMode.GEOSHAPE));
         ExternalAppUtils.returnSingleValue(this, result);
-    }
-
-    @Override public void onBackPressed() {
-        if (map != null && !originalPoly.equals(map.getPolyLinePoints(featureId))) {
-            showBackDialog();
-        } else {
-            finish();
-        }
     }
 
     @Override
@@ -327,7 +351,7 @@ public class GeoPolyActivity extends LocalizedActivity implements GeoPolySetting
             locationTracker.start(retainMockAccuracy);
 
             recordPoint(map.getGpsLocation());
-            schedulerHandler = scheduler.scheduleAtFixedRate(() -> runOnUiThread(() -> {
+            schedulerHandler = executorServiceScheduler.scheduleAtFixedRate(() -> runOnUiThread(() -> {
                 Location currentLocation = locationTracker.getCurrentLocation();
 
                 if (currentLocation != null) {
@@ -389,7 +413,7 @@ public class GeoPolyActivity extends LocalizedActivity implements GeoPolySetting
     private void onGpsLocationReady(MapFragment map) {
         // Don't zoom to current location if a user is manually entering points
         if (getWindow().isActive() && (!inputActive || recordingEnabled)) {
-            map.zoomToPoint(map.getGpsLocation(), true);
+            map.zoomToCurrentLocation(map.getGpsLocation());
         }
         updateUi();
     }
@@ -436,7 +460,7 @@ public class GeoPolyActivity extends LocalizedActivity implements GeoPolySetting
 
     private void clear() {
         map.clearFeatures();
-        featureId = map.addPolyLine(new ArrayList<>(), outputMode == OutputMode.GEOSHAPE, true);
+        featureId = map.addPolyLine(new LineDescription(new ArrayList<>(), String.valueOf(MapConsts.DEFAULT_STROKE_WIDTH), null, !intentReadOnly, outputMode == OutputMode.GEOSHAPE));
         inputActive = false;
         updateUi();
     }
@@ -462,6 +486,7 @@ public class GeoPolyActivity extends LocalizedActivity implements GeoPolySetting
             playButton.setEnabled(false);
             backspaceButton.setEnabled(false);
             clearButton.setEnabled(false);
+            saveButton.setEnabled(false);
         }
         // Settings dialog
 
@@ -471,30 +496,28 @@ public class GeoPolyActivity extends LocalizedActivity implements GeoPolySetting
         int seconds = INTERVAL_OPTIONS[intervalIndex];
         int minutes = seconds / 60;
         int meters = ACCURACY_THRESHOLD_OPTIONS[accuracyThresholdIndex];
-        locationStatus.setText(
-            location == null ? getString(R.string.location_status_searching)
-                : !usingThreshold ? getString(R.string.location_status_accuracy, location.accuracy)
-                : acceptable ? getString(R.string.location_status_acceptable, location.accuracy)
-                : getString(R.string.location_status_unacceptable, location.accuracy)
-        );
-        locationStatus.setBackgroundColor(
-                location == null ? getThemeAttributeValue(this, R.attr.colorPrimary)
-                        : acceptable ? getThemeAttributeValue(this, R.attr.colorPrimary)
-                        : getThemeAttributeValue(this, R.attr.colorError)
-        );
+
+        if (location != null) {
+            if (usingThreshold & !acceptable) {
+                locationStatus.setAccuracy(new LocationAccuracy.Unacceptable((float) location.accuracy));
+            } else {
+                locationStatus.setAccuracy(new LocationAccuracy.Improving((float) location.accuracy));
+            }
+        }
+
         collectionStatus.setText(
-            !inputActive ? getString(R.string.collection_status_paused, numPoints)
-                : !recordingEnabled ? getString(R.string.collection_status_placement, numPoints)
-                : !recordingAutomatic ? getString(R.string.collection_status_manual, numPoints)
+            !inputActive ? getString(org.odk.collect.strings.R.string.collection_status_paused, numPoints)
+                : !recordingEnabled ? getString(org.odk.collect.strings.R.string.collection_status_placement, numPoints)
+                : !recordingAutomatic ? getString(org.odk.collect.strings.R.string.collection_status_manual, numPoints)
                 : !usingThreshold ? (
                     minutes > 0 ?
-                        getString(R.string.collection_status_auto_minutes, numPoints, minutes) :
-                        getString(R.string.collection_status_auto_seconds, numPoints, seconds)
+                        getString(org.odk.collect.strings.R.string.collection_status_auto_minutes, numPoints, minutes) :
+                        getString(org.odk.collect.strings.R.string.collection_status_auto_seconds, numPoints, seconds)
                 )
                 : (
                     minutes > 0 ?
-                        getString(R.string.collection_status_auto_minutes_accuracy, numPoints, minutes, meters) :
-                        getString(R.string.collection_status_auto_seconds_accuracy, numPoints, seconds, meters)
+                        getString(org.odk.collect.strings.R.string.collection_status_auto_minutes_accuracy, numPoints, minutes, meters) :
+                        getString(org.odk.collect.strings.R.string.collection_status_auto_seconds_accuracy, numPoints, seconds, meters)
                 )
         );
     }
@@ -502,18 +525,18 @@ public class GeoPolyActivity extends LocalizedActivity implements GeoPolySetting
     private void showClearDialog() {
         if (!map.getPolyLinePoints(featureId).isEmpty()) {
             new MaterialAlertDialogBuilder(this)
-                .setMessage(R.string.geo_clear_warning)
-                .setPositiveButton(R.string.clear, (dialog, id) -> clear())
-                .setNegativeButton(R.string.cancel, null)
+                .setMessage(org.odk.collect.strings.R.string.geo_clear_warning)
+                .setPositiveButton(org.odk.collect.strings.R.string.clear, (dialog, id) -> clear())
+                .setNegativeButton(org.odk.collect.strings.R.string.cancel, null)
                 .show();
         }
     }
 
     private void showBackDialog() {
         new MaterialAlertDialogBuilder(this)
-            .setMessage(getString(R.string.geo_exit_warning))
-            .setPositiveButton(R.string.discard, (dialog, id) -> finish())
-            .setNegativeButton(R.string.cancel, null)
+            .setMessage(getString(org.odk.collect.strings.R.string.geo_exit_warning))
+            .setPositiveButton(org.odk.collect.strings.R.string.discard, (dialog, id) -> finish())
+            .setNegativeButton(org.odk.collect.strings.R.string.cancel, null)
             .show();
 
     }

@@ -5,7 +5,7 @@ import androidx.test.rule.GrantPermissionRule
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
-import org.odk.collect.android.R
+import org.odk.collect.android.support.StubOpenRosaServer.EntityListItem
 import org.odk.collect.android.support.TestDependencies
 import org.odk.collect.android.support.pages.EntitiesPage
 import org.odk.collect.android.support.pages.ExperimentalPage
@@ -42,13 +42,22 @@ class SwitchProjectTest {
             .assertCurrentProject("my-server.com", "John / my-server.com")
             .assertInactiveProject("Demo project", "demo.getodk.org")
             .selectProject("Demo project")
-            .checkIsToastWithMessageDisplayed(R.string.switched_project, "Demo project")
+            .checkIsToastWithMessageDisplayed(org.odk.collect.strings.R.string.switched_project, "Demo project")
             .assertProjectIcon("D")
     }
 
     @Test
     fun switchingProject_switchesSettingsFormsInstancesAndEntities() {
-        testDependencies.server.addForm("One Question Entity", "one-question-entity", "1", "one-question-entity.xml")
+        testDependencies.server.addForm(
+            "One Question Entity Registration",
+            "one-question-entity",
+            "1",
+            "one-question-entity-registration.xml"
+        )
+        testDependencies.server.addForm(
+            "one-question-entity-update.xml",
+            listOf(EntityListItem("people.csv"))
+        )
 
         rule.startAtMainMenu()
             // Copy and fill form
@@ -56,8 +65,8 @@ class SwitchProjectTest {
             .startBlankForm("Two Question")
             .swipeToNextQuestion("What is your age?")
             .swipeToEndScreen()
-            .clickSaveAndExit()
-            .clickEditSavedForm(1)
+            .clickSaveAsDraft()
+            .clickDrafts(1)
             .assertText("Two Question")
             .pressBack(MainMenuPage())
 
@@ -77,15 +86,15 @@ class SwitchProjectTest {
             .clickOKOnDialog(MainMenuPage())
 
             // Fill form
-            .startBlankForm("One Question Entity")
-            .fillOutAndSave(FormEntryPage.QuestionAndAnswer("Name", "Alice"))
-            .clickEditSavedForm(1)
-            .assertText("One Question Entity")
+            .startBlankForm("One Question Entity Registration")
+            .fillOutAndFinalize(FormEntryPage.QuestionAndAnswer("Name", "Alice"))
+            .clickSendFinalizedForm(1)
+            .assertText("One Question Entity Registration")
             .pressBack(MainMenuPage())
 
             .openEntityBrowser()
-            .clickOnDataset("people")
-            .assertEntity("full_name: Alice")
+            .clickOnList("people")
+            .assertEntity("Alice", "full_name: Alice")
             .pressBack(EntitiesPage())
             .pressBack(ExperimentalPage())
             .pressBack(ProjectSettingsPage())
@@ -111,7 +120,7 @@ class SwitchProjectTest {
             .pressBack(MainMenuPage())
 
             // Check instances
-            .clickSendFinalizedForm(1)
+            .clickDrafts(1)
             .assertText("Two Question")
             .pressBack(MainMenuPage())
 

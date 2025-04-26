@@ -8,7 +8,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 
 import org.odk.collect.android.databinding.NoButtonsItemLayoutBinding;
-import org.odk.collect.android.utilities.QuestionFontSizeUtils;
+import org.odk.collect.android.widgets.utilities.QuestionFontSizeUtils;
 import org.odk.collect.imageloader.ImageLoader;
 
 import java.io.File;
@@ -28,6 +28,7 @@ public class NoButtonsItem extends FrameLayout {
 
     public void setUpNoButtonsItem(File imageFile, String choiceText, String errorMsg, boolean isInGridView) {
         if (imageFile != null && imageFile.exists()) {
+            binding.imageView.layout(0, 0, 0, 0);
             binding.imageView.setVisibility(View.VISIBLE);
             if (isInGridView) {
                 imageLoader.loadImage(binding.imageView, imageFile, ImageView.ScaleType.FIT_CENTER, null);

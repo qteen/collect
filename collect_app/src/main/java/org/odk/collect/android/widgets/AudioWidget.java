@@ -17,14 +17,12 @@ package org.odk.collect.android.widgets;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.media.MediaMetadataRetriever;
-import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 
 import org.javarosa.core.model.data.IAnswerData;
 import org.javarosa.core.model.data.StringData;
 import org.javarosa.form.api.FormEntryPrompt;
-import org.odk.collect.android.R;
 import org.odk.collect.android.audio.AudioControllerView;
 import org.odk.collect.android.databinding.AudioWidgetAnswerBinding;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
@@ -68,8 +66,8 @@ public class AudioWidget extends QuestionWidget implements FileWidget, WidgetDat
     private boolean recordingInProgress;
     private String binaryName;
 
-    public AudioWidget(Context context, QuestionDetails questionDetails, QuestionMediaManager questionMediaManager, AudioPlayer audioPlayer, RecordingRequester recordingRequester, AudioFileRequester audioFileRequester, RecordingStatusHandler recordingStatusHandler) {
-        super(context, questionDetails);
+    public AudioWidget(Context context, QuestionDetails questionDetails, QuestionMediaManager questionMediaManager, AudioPlayer audioPlayer, RecordingRequester recordingRequester, AudioFileRequester audioFileRequester, RecordingStatusHandler recordingStatusHandler, Dependencies dependencies) {
+        super(context, dependencies, questionDetails);
         render();
 
         this.audioPlayer = audioPlayer;
@@ -83,8 +81,8 @@ public class AudioWidget extends QuestionWidget implements FileWidget, WidgetDat
         updatePlayerMedia();
 
         recordingStatusHandler.onBlockedStatusChange(isRecordingBlocked -> {
-            binding.captureButton.setEnabled(!isRecordingBlocked);
-            binding.chooseButton.setEnabled(!isRecordingBlocked);
+            binding.recordAudioButton.setEnabled(!isRecordingBlocked);
+            binding.chooseAudioButton.setEnabled(!isRecordingBlocked);
         });
 
         recordingStatusHandler.onRecordingStatusChange(getFormEntryPrompt(), session -> {
@@ -97,6 +95,7 @@ public class AudioWidget extends QuestionWidget implements FileWidget, WidgetDat
             } else {
                 recordingInProgress = false;
                 updateVisibilities();
+                updatePlayerMedia();
             }
         });
     }
@@ -105,14 +104,12 @@ public class AudioWidget extends QuestionWidget implements FileWidget, WidgetDat
     protected View onCreateAnswerView(Context context, FormEntryPrompt prompt, int answerFontSize) {
         binding = AudioWidgetAnswerBinding.inflate(LayoutInflater.from(context));
 
-        binding.captureButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, answerFontSize);
-        binding.chooseButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, answerFontSize);
-
-        binding.captureButton.setOnClickListener(v -> {
+        binding.recordAudioButton.setOnClickListener(v -> {
+            hideError();
             binding.audioPlayer.waveform.clear();
             recordingRequester.requestRecording(getFormEntryPrompt());
         });
-        binding.chooseButton.setOnClickListener(v -> audioFileRequester.requestFile(getFormEntryPrompt()));
+        binding.chooseAudioButton.setOnClickListener(v -> audioFileRequester.requestFile(getFormEntryPrompt()));
 
         return binding.getRoot();
     }
@@ -164,32 +161,32 @@ public class AudioWidget extends QuestionWidget implements FileWidget, WidgetDat
 
     private void updateVisibilities() {
         if (recordingInProgress) {
-            binding.captureButton.setVisibility(GONE);
-            binding.chooseButton.setVisibility(GONE);
+            binding.recordAudioButton.setVisibility(GONE);
+            binding.chooseAudioButton.setVisibility(GONE);
             binding.audioPlayer.recordingDuration.setVisibility(VISIBLE);
             binding.audioPlayer.waveform.setVisibility(VISIBLE);
             binding.audioPlayer.audioController.setVisibility(GONE);
         } else if (getAnswer() == null) {
-            binding.captureButton.setVisibility(VISIBLE);
-            binding.chooseButton.setVisibility(VISIBLE);
+            binding.recordAudioButton.setVisibility(VISIBLE);
+            binding.chooseAudioButton.setVisibility(VISIBLE);
             binding.audioPlayer.recordingDuration.setVisibility(GONE);
             binding.audioPlayer.waveform.setVisibility(GONE);
             binding.audioPlayer.audioController.setVisibility(GONE);
         } else {
-            binding.captureButton.setVisibility(GONE);
-            binding.chooseButton.setVisibility(GONE);
+            binding.recordAudioButton.setVisibility(GONE);
+            binding.chooseAudioButton.setVisibility(GONE);
             binding.audioPlayer.recordingDuration.setVisibility(GONE);
             binding.audioPlayer.waveform.setVisibility(GONE);
             binding.audioPlayer.audioController.setVisibility(VISIBLE);
         }
 
         if (questionDetails.isReadOnly()) {
-            binding.captureButton.setVisibility(GONE);
-            binding.chooseButton.setVisibility(GONE);
+            binding.recordAudioButton.setVisibility(GONE);
+            binding.chooseAudioButton.setVisibility(GONE);
         }
 
         if (getFormEntryPrompt().getAppearanceHint() != null && getFormEntryPrompt().getAppearanceHint().toLowerCase(Locale.ENGLISH).contains(Appearances.NEW)) {
-            binding.chooseButton.setVisibility(GONE);
+            binding.chooseAudioButton.setVisibility(GONE);
         }
     }
 
@@ -219,10 +216,10 @@ public class AudioWidget extends QuestionWidget implements FileWidget, WidgetDat
                 @Override
                 public void onRemoveClicked() {
                     new MaterialAlertDialogBuilder(getContext())
-                            .setTitle(R.string.delete_answer_file_question)
-                            .setMessage(R.string.answer_file_delete_warning)
-                            .setPositiveButton(R.string.delete_answer_file, (dialog, which) -> clearAnswer())
-                            .setNegativeButton(R.string.cancel, null)
+                            .setTitle(org.odk.collect.strings.R.string.delete_answer_file_question)
+                            .setMessage(org.odk.collect.strings.R.string.answer_file_delete_warning)
+                            .setPositiveButton(org.odk.collect.strings.R.string.delete_answer_file, (dialog, which) -> clearAnswer())
+                            .setNegativeButton(org.odk.collect.strings.R.string.cancel, null)
                             .show();
                 }
             });
@@ -239,15 +236,15 @@ public class AudioWidget extends QuestionWidget implements FileWidget, WidgetDat
 
     @Override
     public void setOnLongClickListener(OnLongClickListener l) {
-        binding.captureButton.setOnLongClickListener(l);
-        binding.chooseButton.setOnLongClickListener(l);
+        binding.recordAudioButton.setOnLongClickListener(l);
+        binding.chooseAudioButton.setOnLongClickListener(l);
     }
 
     @Override
     public void cancelLongPress() {
         super.cancelLongPress();
-        binding.captureButton.cancelLongPress();
-        binding.chooseButton.cancelLongPress();
+        binding.recordAudioButton.cancelLongPress();
+        binding.chooseAudioButton.cancelLongPress();
     }
 
     /**

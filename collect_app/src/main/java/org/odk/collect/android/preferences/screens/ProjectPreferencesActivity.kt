@@ -18,12 +18,12 @@ package org.odk.collect.android.preferences.screens
 import android.os.Bundle
 import org.odk.collect.android.R
 import org.odk.collect.android.activities.ActivityUtils
-import org.odk.collect.android.activities.MainMenuActivity
 import org.odk.collect.android.fragments.dialogs.MovingBackwardsDialog.MovingBackwardsDialogListener
 import org.odk.collect.android.fragments.dialogs.ResetSettingsResultDialog.ResetSettingsResultDialogListener
 import org.odk.collect.android.injection.DaggerUtils
-import org.odk.collect.android.listeners.OnBackPressedListener
-import org.odk.collect.android.logic.PropertyManager
+import org.odk.collect.android.mainmenu.MainMenuActivity
+import org.odk.collect.androidshared.ui.FragmentFactoryBuilder
+import org.odk.collect.metadata.PropertyManager
 import org.odk.collect.strings.localization.LocalizedActivity
 import javax.inject.Inject
 
@@ -32,14 +32,18 @@ class ProjectPreferencesActivity :
     ResetSettingsResultDialogListener,
     MovingBackwardsDialogListener {
 
-    private var onBackPressedListener: OnBackPressedListener? = null
-
     private var isInstanceStateSaved = false
 
     @Inject
     lateinit var propertyManager: PropertyManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        supportFragmentManager.fragmentFactory = FragmentFactoryBuilder()
+            .forClass(ProjectPreferencesFragment::class.java) {
+                ProjectPreferencesFragment(intent.getBooleanExtra(EXTRA_IN_FORM_ENTRY, false))
+            }
+            .build()
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_preferences_layout)
         DaggerUtils.getComponent(this).inject(this)
@@ -60,15 +64,6 @@ class ProjectPreferencesActivity :
         super.onSaveInstanceState(outState)
     }
 
-    // If the onBackPressedListener is set then onBackPressed is delegated to it.
-    override fun onBackPressed() {
-        if (onBackPressedListener != null) {
-            onBackPressedListener!!.doBack()
-        } else {
-            super.onBackPressed()
-        }
-    }
-
     override fun onDialogClosed() {
         ActivityUtils.startActivityAndCloseAllOthers(this, MainMenuActivity::class.java)
     }
@@ -78,9 +73,9 @@ class ProjectPreferencesActivity :
         fragment.preventOtherWaysOfEditingForm()
     }
 
-    fun setOnBackPressedListener(onBackPressedListener: OnBackPressedListener?) {
-        this.onBackPressedListener = onBackPressedListener
-    }
-
     fun isInstanceStateSaved() = isInstanceStateSaved
+
+    companion object {
+        const val EXTRA_IN_FORM_ENTRY = "in_form_entry"
+    }
 }

@@ -7,8 +7,10 @@ object MetaKeys {
     const val LAST_UPDATED_NOTIFICATION = "last_updated_notification"
     const val CURRENT_PROJECT_ID = "current_project_id"
     const val KEY_PROJECTS = "projects"
-    const val FIRST_LAUNCH = "first_launch"
     const val EXISTING_PROJECT_IMPORTED = "existing_project_imported"
+    const val OLD_SAVEPOINTS_IMPORTED = "old_savepoints_imported"
     const val LAST_LAUNCHED = "last_launched"
     const val LAST_USED_PEN_COLOR = "last_used_pen_color"
+    const val PERMISSIONS_REQUESTED = "permissions_requested"
+    const val LAST_KNOWN_ZOOM_LEVEL = "last_known_zoom_level"
 }

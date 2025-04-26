@@ -8,47 +8,59 @@ import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
-import androidx.lifecycle.ViewModelProvider;
 
 import org.javarosa.core.model.FormDef;
 import org.javarosa.core.model.FormIndex;
 import org.javarosa.core.model.GroupDef;
 import org.javarosa.core.model.SelectChoice;
+import org.javarosa.core.model.SubmissionProfile;
 import org.javarosa.core.model.actions.recordaudio.RecordAudioActionHandler;
 import org.javarosa.core.model.data.IAnswerData;
+import org.javarosa.core.reference.ReferenceManager;
+import org.javarosa.form.api.FormEntryController;
 import org.javarosa.form.api.FormEntryPrompt;
 import org.javarosa.xpath.parser.XPathSyntaxException;
 import org.odk.collect.android.exception.ExternalDataException;
 import org.odk.collect.android.exception.JavaRosaException;
 import org.odk.collect.android.formentry.audit.AuditEvent;
+import org.odk.collect.android.formentry.audit.AuditUtils;
 import org.odk.collect.android.formentry.questions.SelectChoiceUtils;
-import org.odk.collect.android.javarosawrapper.FailedConstraint;
+import org.odk.collect.android.javarosawrapper.FailedValidationResult;
 import org.odk.collect.android.javarosawrapper.FormController;
+import org.odk.collect.android.javarosawrapper.RepeatsInFieldListException;
+import org.odk.collect.android.javarosawrapper.ValidationResult;
+import org.odk.collect.android.utilities.ChangeLocks;
 import org.odk.collect.android.widgets.interfaces.SelectChoiceLoader;
+import org.odk.collect.androidshared.async.TrackableWorker;
+import org.odk.collect.androidshared.data.Consumable;
 import org.odk.collect.androidshared.livedata.MutableNonNullLiveData;
 import org.odk.collect.androidshared.livedata.NonNullLiveData;
 import org.odk.collect.async.Cancellable;
 import org.odk.collect.async.Scheduler;
+import org.odk.collect.forms.Form;
+import org.odk.collect.forms.FormsRepository;
 
 import java.io.FileNotFoundException;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.function.Supplier;
+
+import kotlin.Pair;
 
 public class FormEntryViewModel extends ViewModel implements SelectChoiceLoader {
 
     private final Supplier<Long> clock;
-    private final Scheduler scheduler;
 
     private final MutableLiveData<FormError> error = new MutableLiveData<>(null);
     private final MutableNonNullLiveData<Boolean> hasBackgroundRecording = new MutableNonNullLiveData<>(false);
-    private final MutableLiveData<FormIndex> currentIndex = new MutableLiveData<>(null);
-    private final MutableNonNullLiveData<Boolean> isLoading = new MutableNonNullLiveData<>(false);
-    private final MutableLiveData<FailedConstraint> failedConstraint = new MutableLiveData<>(null);
+    private final MutableLiveData<Pair<FormIndex, FailedValidationResult>> currentIndex = new MutableLiveData<>(null);
+    private final MutableLiveData<Consumable<ValidationResult>>
+            validationResult = new MutableLiveData<>(new Consumable<>(null));
     @NonNull
     private final FormSessionRepository formSessionRepository;
     private final String sessionId;
+    private Form form;
 
     @Nullable
     private FormController formController;
@@ -60,20 +72,29 @@ public class FormEntryViewModel extends ViewModel implements SelectChoiceLoader 
     private AnswerListener answerListener;
 
     private final Cancellable formSessionObserver;
+    private final FormsRepository formsRepository;
+    private final ChangeLocks changeLocks;
+
+    private final Map<FormIndex, List<SelectChoice>> choices = new HashMap<>();
+
+    private final TrackableWorker worker;
 
     @SuppressWarnings("WeakerAccess")
-    public FormEntryViewModel(Supplier<Long> clock, Scheduler scheduler, FormSessionRepository formSessionRepository, String sessionId) {
+    public FormEntryViewModel(Supplier<Long> clock, Scheduler scheduler, FormSessionRepository formSessionRepository, String sessionId, FormsRepository formsRepository, ChangeLocks changeLocks) {
         this.clock = clock;
-        this.scheduler = scheduler;
         this.formSessionRepository = formSessionRepository;
+        worker = new TrackableWorker(scheduler);
 
         this.sessionId = sessionId;
-        formSessionObserver = observe(formSessionRepository.get(this.sessionId), formController -> {
-            this.formController = formController;
+        formSessionObserver = observe(formSessionRepository.get(this.sessionId), formSession -> {
+            this.formController = formSession.getFormController();
+            this.form = formSession.getForm();
 
             boolean hasBackgroundRecording = formController.getFormDef().hasAction(RecordAudioActionHandler.ELEMENT_NAME);
             this.hasBackgroundRecording.setValue(hasBackgroundRecording);
         });
+        this.formsRepository = formsRepository;
+        this.changeLocks = changeLocks;
     }
 
     public String getSessionId() {
@@ -88,7 +109,7 @@ public class FormEntryViewModel extends ViewModel implements SelectChoiceLoader 
         return formController;
     }
 
-    public LiveData<FormIndex> getCurrentIndex() {
+    public LiveData<Pair<FormIndex, FailedValidationResult>> getCurrentIndex() {
         return currentIndex;
     }
 
@@ -96,12 +117,12 @@ public class FormEntryViewModel extends ViewModel implements SelectChoiceLoader 
         return error;
     }
 
-    public LiveData<FailedConstraint> getFailedConstraint() {
-        return failedConstraint;
+    public LiveData<Consumable<ValidationResult>> getValidationResult() {
+        return validationResult;
     }
 
     public NonNullLiveData<Boolean> isLoading() {
-        return isLoading;
+        return worker.isWorking();
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -112,7 +133,7 @@ public class FormEntryViewModel extends ViewModel implements SelectChoiceLoader 
 
         jumpBackIndex = formController.getFormIndex();
         jumpToNewRepeat();
-        refresh();
+        updateIndex(false, null);
     }
 
     public void jumpToNewRepeat() {
@@ -129,18 +150,18 @@ public class FormEntryViewModel extends ViewModel implements SelectChoiceLoader 
         try {
             formController.newRepeat();
         } catch (RuntimeException e) {
-            error.setValue(new NonFatal(e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
+            error.setValue(new FormError.NonFatal(e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
         }
 
         if (!formController.indexIsInFieldList()) {
             try {
                 formController.stepToNextScreenEvent();
             } catch (JavaRosaException e) {
-                error.setValue(new NonFatal(e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
+                error.setValue(new FormError.NonFatal(e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
             }
         }
 
-        refresh();
+        updateIndex(false, null);
     }
 
     public void cancelRepeatPrompt() {
@@ -148,18 +169,21 @@ public class FormEntryViewModel extends ViewModel implements SelectChoiceLoader 
             return;
         }
 
-        if (jumpBackIndex != null) {
-            formController.jumpToIndex(jumpBackIndex);
-            jumpBackIndex = null;
-        } else {
-            try {
-                this.formController.stepToNextScreenEvent();
-            } catch (JavaRosaException exception) {
-                error.setValue(new NonFatal(exception.getCause().getMessage()));
+        worker.immediate((Supplier<Void>) () -> {
+            if (jumpBackIndex != null) {
+                formController.jumpToIndex(jumpBackIndex);
+                jumpBackIndex = null;
+            } else {
+                try {
+                    this.formController.stepToNextScreenEvent();
+                } catch (JavaRosaException exception) {
+                    error.postValue(new FormError.NonFatal(exception.getCause().getMessage()));
+                }
             }
-        }
 
-        refresh();
+            updateIndex(true, null);
+            return null;
+        }, ignored -> {});
     }
 
     public void errorDisplayed() {
@@ -181,49 +205,40 @@ public class FormEntryViewModel extends ViewModel implements SelectChoiceLoader 
     }
 
     public void moveForward(HashMap<FormIndex, IAnswerData> answers, Boolean evaluateConstraints) {
-        isLoading.setValue(true);
-
-        scheduler.immediate((Supplier<Boolean>) () -> {
-            return saveScreenAnswersToFormController(answers, evaluateConstraints);
-        }, updateSuccess -> {
-            isLoading.setValue(false);
-
-            formController.getAuditEventLogger().flush();
-
+        worker.immediate(() -> {
+            boolean updateSuccess = saveScreenAnswersToFormController(answers, evaluateConstraints);
             if (updateSuccess) {
                 try {
                     formController.stepToNextScreenEvent();
+                    formController.getAuditEventLogger().flush(); // Close events waiting for an end time
+                    updateIndex(true, null);
                 } catch (JavaRosaException e) {
-                    error.setValue(new NonFatal(e.getCause().getMessage()));
+                    error.postValue(new FormError.NonFatal(e.getCause().getMessage()));
                 }
-
-                formController.getAuditEventLogger().flush(); // Close events waiting for an end time
-                refresh();
             }
+
+            return null;
+        }, ignored -> {
+
         });
     }
 
     public void moveBackward(HashMap<FormIndex, IAnswerData> answers) {
-        isLoading.setValue(true);
-
-        scheduler.immediate((Supplier<Boolean>) () -> {
-            return saveScreenAnswersToFormController(answers, false);
-        }, updateSuccess -> {
-            isLoading.setValue(false);
-
-            formController.getAuditEventLogger().flush();
-
+        worker.immediate((Supplier<Boolean>) () -> {
+            boolean updateSuccess = saveScreenAnswersToFormController(answers, false);
             if (updateSuccess) {
                 try {
                     formController.stepToPreviousScreenEvent();
+                    formController.getAuditEventLogger().flush(); // Close events waiting for an end time
+                    updateIndex(true, null);
                 } catch (JavaRosaException e) {
-                    error.setValue(new NonFatal(e.getCause().getMessage()));
-                    return;
+                    error.postValue(new FormError.NonFatal(e.getCause().getMessage()));
                 }
-
-                formController.getAuditEventLogger().flush(); // Close events waiting for an end time
-                refresh();
             }
+
+            return updateSuccess;
+        }, ignored -> {
+
         });
     }
 
@@ -240,13 +255,13 @@ public class FormEntryViewModel extends ViewModel implements SelectChoiceLoader 
         }
 
         try {
-            FailedConstraint result = formController.saveAllScreenAnswers(answers, evaluateConstraints);
-            if (result != null) {
-                failedConstraint.postValue(result);
+            ValidationResult result = formController.saveAllScreenAnswers(answers, evaluateConstraints);
+            if (result instanceof FailedValidationResult) {
+                validationResult.postValue(new Consumable<>(result));
                 return false;
             }
         } catch (JavaRosaException e) {
-            error.postValue(new NonFatal(e.getMessage()));
+            error.postValue(new FormError.NonFatal(e.getMessage()));
             return false;
         }
 
@@ -278,7 +293,14 @@ public class FormEntryViewModel extends ViewModel implements SelectChoiceLoader 
     @NonNull
     @Override
     public List<SelectChoice> loadSelectChoices(@NonNull FormEntryPrompt prompt) throws FileNotFoundException, XPathSyntaxException, ExternalDataException {
-        return SelectChoiceUtils.loadSelectChoices(prompt, formController);
+        List<SelectChoice> selectChoices = choices.get(prompt.getIndex());
+
+        if (selectChoices != null) {
+            return selectChoices;
+        } else {
+            // Choice lists from some questions aren't preloaded yet
+            return SelectChoiceUtils.loadSelectChoices(prompt, formController);
+        }
     }
 
     @Override
@@ -287,73 +309,120 @@ public class FormEntryViewModel extends ViewModel implements SelectChoiceLoader 
         formSessionObserver.cancel();
     }
 
+    /**
+     * Use {@link #refresh()} instead.
+     */
+    @Deprecated
+    public void refreshSync() {
+        updateIndex(false, null);
+    }
+
     public void refresh() {
-        currentIndex.setValue(formController.getFormIndex());
+        worker.immediate((Supplier<Void>) () -> {
+            updateIndex(true, null);
+            return null;
+        }, ignored -> {});
+    }
+
+    private void updateIndex(boolean isAsync, @Nullable FailedValidationResult validationResult) {
+        choices.clear();
+
+        if (formController != null) {
+            if (formController.getEvent() == FormEntryController.EVENT_BEGINNING_OF_FORM) {
+                try {
+                    formController.stepToNextScreenEvent();
+                } catch (JavaRosaException e) {
+                    if (isAsync) {
+                        error.postValue(new FormError.NonFatal(e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
+                    } else {
+                        error.setValue(new FormError.NonFatal(e.getCause() != null ? e.getCause().getMessage() : e.getMessage()));
+                    }
+                }
+            }
+            try {
+                /*
+                 We can't load for field lists as their choices might change on screen (before
+                 updateIndex is called again).
+                */
+                if (!formController.indexIsInFieldList()) {
+                    preloadSelectChoices();
+                }
+            } catch (RepeatsInFieldListException | XPathSyntaxException |
+                     FileNotFoundException e) {
+                // Ignored
+            }
+
+            AuditUtils.logCurrentScreen(formController, formController.getAuditEventLogger(), clock.get());
+            if (isAsync) {
+                currentIndex.postValue(new Pair<>(formController.getFormIndex(), validationResult));
+            } else {
+                currentIndex.setValue(new Pair<>(formController.getFormIndex(), validationResult));
+            }
+        }
     }
 
     public void exit() {
         formSessionRepository.clear(sessionId);
+        ReferenceManager.instance().reset();
+        changeLocks.getFormsLock().unlock();
     }
 
-    public static class Factory implements ViewModelProvider.Factory {
+    public void validate() {
+        worker.immediate(
+                () -> {
+                    ValidationResult result = null;
+                    try {
+                        result = formController.validateAnswers(true);
+                    } catch (JavaRosaException e) {
+                        error.postValue(new FormError.NonFatal(e.getMessage()));
+                    }
 
-        private final Supplier<Long> clock;
-        private final Scheduler scheduler;
-        private final FormSessionRepository formSessionRepository;
-        private String sessionId;
+                    // JavaRosa moves to the index where the contraint failed
+                    if (result instanceof FailedValidationResult) {
+                        updateIndex(true, (FailedValidationResult) result);
+                    } else {
+                        validationResult.postValue(new Consumable<>(result));
+                    }
 
-        public Factory(Supplier<Long> clock, Scheduler scheduler, FormSessionRepository formSessionRepository) {
-            this.clock = clock;
-            this.scheduler = scheduler;
-            this.formSessionRepository = formSessionRepository;
-        }
-
-        public void setSessionId(String sessionId) {
-            this.sessionId = sessionId;
-        }
-
-        @SuppressWarnings("unchecked")
-        @NonNull
-        @Override
-        public <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
-            return (T) new FormEntryViewModel(clock, scheduler, formSessionRepository, sessionId);
-        }
+                    return null;
+                }, ignored -> {}
+        );
     }
 
-    public abstract static class FormError {
+    private void preloadSelectChoices() throws RepeatsInFieldListException, FileNotFoundException, XPathSyntaxException {
+        int event = formController.getEvent();
+        if (event == FormEntryController.EVENT_QUESTION) {
+            FormEntryPrompt prompt = formController.getQuestionPrompt();
 
-    }
-
-    public static class NonFatal extends FormError {
-
-        private final String message;
-
-        public NonFatal(String message) {
-            this.message = message;
-        }
-
-        public String getMessage() {
-            return message;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) {
-                return true;
+            if (prompt != null) {
+                try {
+                    List<SelectChoice> selectChoices = SelectChoiceUtils.loadSelectChoices(prompt, formController);
+                    choices.put(prompt.getIndex(), selectChoices);
+                } catch (Exception e) {
+                    // Let the widget load choices and handle the error
+                }
             }
-
-            if (o == null || getClass() != o.getClass()) {
-                return false;
-            }
-
-            NonFatal nonFatal = (NonFatal) o;
-            return Objects.equals(message, nonFatal.message);
         }
+    }
 
-        @Override
-        public int hashCode() {
-            return Objects.hash(message);
+    public void changeLanguage(String newLanguage) {
+        formController.setLanguage(newLanguage);
+
+        worker.immediate(() -> {
+            formsRepository.save(new Form.Builder(form)
+                    .language(newLanguage)
+                    .build()
+            );
+        });
+    }
+
+    public boolean isFormEditableAfterFinalization() {
+        SubmissionProfile submissionProfile = formController.getFormDef().getSubmissionProfile();
+        if (submissionProfile == null) {
+            return false;
         }
+        String clientEditableAttribute = submissionProfile.getAttribute("client-editable");
+        return Boolean.parseBoolean(clientEditableAttribute);
     }
 
     public interface AnswerListener {

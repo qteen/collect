@@ -15,50 +15,65 @@ package org.odk.collect.android.preferences.screens
 
 import android.content.Context
 import android.os.Bundle
-import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.FragmentActivity
 import androidx.preference.ListPreference
 import androidx.preference.Preference
 import androidx.preference.PreferenceCategory
 import org.odk.collect.android.R
 import org.odk.collect.android.geo.MapConfiguratorProvider
 import org.odk.collect.android.injection.DaggerUtils
-import org.odk.collect.android.preferences.CaptionedListPreference
-import org.odk.collect.android.preferences.dialogs.ReferenceLayerPreferenceDialog
-import org.odk.collect.android.preferences.screens.ReferenceLayerPreferenceUtils.populateReferenceLayerPref
+import org.odk.collect.androidshared.ui.DialogFragmentUtils
+import org.odk.collect.androidshared.ui.FragmentFactoryBuilder
 import org.odk.collect.androidshared.ui.PrefUtils
 import org.odk.collect.androidshared.ui.multiclicksafe.MultiClickGuard.allowClick
+import org.odk.collect.async.Scheduler
 import org.odk.collect.maps.MapConfigurator
+import org.odk.collect.maps.layers.OfflineMapLayersPickerBottomSheetDialogFragment
 import org.odk.collect.maps.layers.ReferenceLayerRepository
+import org.odk.collect.settings.keys.ProjectKeys
 import org.odk.collect.settings.keys.ProjectKeys.CATEGORY_BASEMAP
 import org.odk.collect.settings.keys.ProjectKeys.KEY_BASEMAP_SOURCE
-import java.io.File
+import org.odk.collect.strings.localization.getLocalizedString
+import org.odk.collect.webpage.ExternalWebPageHelper
 import javax.inject.Inject
 
-class MapsPreferencesFragment : BaseProjectPreferencesFragment() {
+class MapsPreferencesFragment : BaseProjectPreferencesFragment(), Preference.OnPreferenceClickListener {
 
     private lateinit var basemapSourcePref: ListPreference
-
-    private var referenceLayerPref: CaptionedListPreference? = null
-    private var autoShowReferenceLayerDialog = false
 
     @Inject
     lateinit var referenceLayerRepository: ReferenceLayerRepository
 
-    override fun onDisplayPreferenceDialog(preference: Preference) {
-        if (allowClick(javaClass.name)) {
-            var dialogFragment: DialogFragment? = null
-            if (preference is CaptionedListPreference) {
-                dialogFragment = ReferenceLayerPreferenceDialog.newInstance(preference.getKey())
-            } else {
-                super.onDisplayPreferenceDialog(preference)
+    @Inject
+    lateinit var scheduler: Scheduler
+
+    @Inject
+    lateinit var externalWebPageHelper: ExternalWebPageHelper
+
+    override fun onAttach(context: Context) {
+        super.onAttach(context)
+        DaggerUtils.getComponent(context).inject(this)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        childFragmentManager.fragmentFactory = FragmentFactoryBuilder()
+            .forClass(OfflineMapLayersPickerBottomSheetDialogFragment::class) {
+                OfflineMapLayersPickerBottomSheetDialogFragment(requireActivity().activityResultRegistry, referenceLayerRepository, scheduler, settingsProvider, externalWebPageHelper)
             }
-            if (dialogFragment != null) {
-                dialogFragment.setTargetFragment(this, 0)
-                dialogFragment.show(
-                    parentFragmentManager,
-                    ReferenceLayerPreferenceDialog::class.java.name
-                )
+            .build()
+
+        super.onCreate(savedInstanceState)
+    }
+
+    override fun onSettingChanged(key: String) {
+        super.onSettingChanged(key)
+        if (key == ProjectKeys.KEY_REFERENCE_LAYER) {
+            findPreference<Preference>(ProjectKeys.KEY_REFERENCE_LAYER)!!.summary = getLayerName()
+        } else if (key == KEY_BASEMAP_SOURCE) {
+            val cftor = MapConfiguratorProvider.getConfigurator(settingsProvider.getUnprotectedSettings().getString(key))
+            if (!cftor.isAvailable(requireContext())) {
+                cftor.showUnavailableMessage(requireContext())
+            } else {
+                onBasemapSourceChanged(cftor)
             }
         }
     }
@@ -67,31 +82,22 @@ class MapsPreferencesFragment : BaseProjectPreferencesFragment() {
         super.onCreatePreferences(savedInstanceState, rootKey)
         setPreferencesFromResource(R.xml.maps_preferences, rootKey)
         initBasemapSourcePref()
-        initReferenceLayerPref()
-        if (autoShowReferenceLayerDialog) {
-            populateReferenceLayerPref(requireContext(), referenceLayerRepository, referenceLayerPref!!)
-            /** Opens the dialog programmatically, rather than by a click from the user.  */
-            onDisplayPreferenceDialog(
-                preferenceManager.findPreference("reference_layer")!!
-            )
+        initLayersPref()
+    }
+
+    override fun onPreferenceClick(preference: Preference): Boolean {
+        if (allowClick(javaClass.name)) {
+            when (preference.key) {
+                ProjectKeys.KEY_REFERENCE_LAYER -> {
+                    DialogFragmentUtils.showIfNotShowing(
+                        OfflineMapLayersPickerBottomSheetDialogFragment::class.java,
+                        childFragmentManager
+                    )
+                }
+            }
+            return true
         }
-    }
-
-    override fun onAttach(context: Context) {
-        super.onAttach(context)
-        DaggerUtils.getComponent(context).inject(this)
-    }
-
-    override fun onViewStateRestored(savedInstanceState: Bundle?) {
-        super.onViewStateRestored(savedInstanceState)
-        if (referenceLayerPref != null) {
-            populateReferenceLayerPref(requireContext(), referenceLayerRepository, referenceLayerPref!!)
-        }
-    }
-
-    override fun onDestroyView() {
-        super.onDestroyView()
-        referenceLayerPref = null
+        return false
     }
 
     /**
@@ -100,21 +106,31 @@ class MapsPreferencesFragment : BaseProjectPreferencesFragment() {
      */
     private fun initBasemapSourcePref() {
         basemapSourcePref = PrefUtils.createListPref(
-            requireContext(), KEY_BASEMAP_SOURCE, getString(R.string.basemap_source),
-            MapConfiguratorProvider.getLabelIds(), MapConfiguratorProvider.getIds(),
+            requireContext(),
+            KEY_BASEMAP_SOURCE,
+            getString(org.odk.collect.strings.R.string.basemap_source),
+            MapConfiguratorProvider.getLabelIds(),
+            MapConfiguratorProvider.getIds(),
             settingsProvider.getUnprotectedSettings()
         )
+
         basemapSourcePref.setIconSpaceReserved(false)
         onBasemapSourceChanged(MapConfiguratorProvider.getConfigurator())
-        basemapSourcePref.setOnPreferenceChangeListener { _: Preference?, value: Any ->
-            val cftor = MapConfiguratorProvider.getConfigurator(value.toString())
-            if (!cftor.isAvailable(context)) {
-                cftor.showUnavailableMessage(context)
-                false
-            } else {
-                onBasemapSourceChanged(cftor)
-                true
-            }
+    }
+
+    private fun initLayersPref() {
+        findPreference<Preference>(ProjectKeys.KEY_REFERENCE_LAYER)?.apply {
+            onPreferenceClickListener = this@MapsPreferencesFragment
+            summary = getLayerName()
+        }
+    }
+
+    private fun getLayerName(): String {
+        val layerId = settingsProvider.getUnprotectedSettings().getString(ProjectKeys.KEY_REFERENCE_LAYER)
+        return if (layerId == null) {
+            requireContext().getLocalizedString(org.odk.collect.strings.R.string.none)
+        } else {
+            referenceLayerRepository.get(layerId)!!.name
         }
     }
 
@@ -124,86 +140,18 @@ class MapsPreferencesFragment : BaseProjectPreferencesFragment() {
         val baseCategory = findPreference<PreferenceCategory>(CATEGORY_BASEMAP)
         baseCategory!!.removeAll()
         baseCategory.addPreference(basemapSourcePref)
-        for (pref in cftor.createPrefs(context, settingsProvider.getUnprotectedSettings())) {
+        for (pref in cftor.createPrefs(requireContext(), settingsProvider.getUnprotectedSettings())) {
             pref.isIconSpaceReserved = false
             baseCategory.addPreference(pref)
         }
 
-        // Clear the reference layer if it isn't supported by the new basemap.
-        if (referenceLayerPref != null) {
-            val path = referenceLayerPref!!.value
-            if (path != null && !cftor.supportsLayer(File(path))) {
-                referenceLayerPref!!.value = null
-                updateReferenceLayerSummary(null)
+        // Clear the reference layer if it does not exist or it isn't supported by the new basemap.
+        val layerId = settingsProvider.getUnprotectedSettings().getString(ProjectKeys.KEY_REFERENCE_LAYER)
+        if (layerId != null) {
+            val layer = referenceLayerRepository.get(layerId)
+            if (layer == null) {
+                settingsProvider.getUnprotectedSettings().save(ProjectKeys.KEY_REFERENCE_LAYER, null)
             }
-        }
-    }
-
-    /** Sets up listeners for the Reference Layer preference widget.  */
-    private fun initReferenceLayerPref() {
-        referenceLayerPref = findPreference("reference_layer")
-        referenceLayerPref!!.onPreferenceClickListener =
-            Preference.OnPreferenceClickListener { preference: Preference? ->
-                populateReferenceLayerPref(requireContext(), referenceLayerRepository, referenceLayerPref!!)
-                false
-            }
-        if (referenceLayerPref!!.value == null || referenceLayerRepository.get(
-                referenceLayerPref!!.value
-            ) != null
-        ) {
-            updateReferenceLayerSummary(referenceLayerPref!!.value)
-        } else {
-            referenceLayerPref!!.value = null
-            updateReferenceLayerSummary(null)
-        }
-        referenceLayerPref!!.onPreferenceChangeListener =
-            Preference.OnPreferenceChangeListener { preference: Preference?, newValue: Any? ->
-                updateReferenceLayerSummary(newValue)
-                val dialogFragment = parentFragmentManager.findFragmentByTag(
-                    ReferenceLayerPreferenceDialog::class.java.name
-                ) as DialogFragment?
-                dialogFragment?.dismiss()
-                true
-            }
-    }
-
-    /** Sets the summary text for the reference layer to show the selected file.  */
-    private fun updateReferenceLayerSummary(value: Any?) {
-        if (referenceLayerPref != null) {
-            val summary: String = if (value == null) {
-                getString(R.string.none)
-            } else {
-                val referenceLayer = referenceLayerRepository.get(value.toString())
-
-                if (referenceLayer != null) {
-                    val path = referenceLayer.file.absolutePath
-                    val cftor = MapConfiguratorProvider.getConfigurator()
-                    cftor.getDisplayName(File(path))
-                } else {
-                    getString(R.string.none)
-                }
-            }
-
-            referenceLayerPref!!.summary = summary
-        }
-    }
-
-    companion object {
-
-        /** Pops up the preference dialog that lets the user choose a reference layer.  */
-        @JvmStatic
-        fun showReferenceLayerDialog(activity: FragmentActivity) {
-            // Unfortunately, the Preference class is designed so that it is impossible
-            // to just open a preference dialog without building a PreferenceFragment
-            // and attaching it to an activity.  So, we instantiate a MapsPreference
-            // fragment that is configured to immediately open the dialog when it's
-            // attached, then instantiate it and attach it.
-            val prefs = MapsPreferencesFragment()
-            prefs.autoShowReferenceLayerDialog = true // makes dialog open immediately
-            activity.supportFragmentManager
-                .beginTransaction()
-                .add(prefs, null)
-                .commit()
         }
     }
 }

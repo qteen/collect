@@ -20,6 +20,7 @@ import org.odk.collect.android.utilities.Appearances;
 import org.odk.collect.android.widgets.QuestionWidget;
 import org.odk.collect.android.widgets.interfaces.MultiChoiceWidget;
 import org.odk.collect.android.widgets.interfaces.SelectChoiceLoader;
+import org.odk.collect.android.widgets.utilities.QuestionFontSizeUtils;
 import org.odk.collect.android.widgets.utilities.SearchQueryViewModel;
 
 import static org.odk.collect.android.formentry.media.FormMediaUtils.getPlayableAudioURI;
@@ -33,8 +34,8 @@ public abstract class BaseSelectListWidget extends QuestionWidget implements Mul
 
     final List<SelectChoice> items;
 
-    public BaseSelectListWidget(Context context, QuestionDetails questionDetails, SelectChoiceLoader selectChoiceLoader) {
-        super(context, questionDetails);
+    public BaseSelectListWidget(Context context, QuestionDetails questionDetails, SelectChoiceLoader selectChoiceLoader, Dependencies dependencies) {
+        super(context, dependencies, questionDetails);
         render();
 
         items = ItemsWidgetUtils.loadItemsAndHandleErrors(this, questionDetails.getPrompt(), selectChoiceLoader);
@@ -75,7 +76,7 @@ public abstract class BaseSelectListWidget extends QuestionWidget implements Mul
         SearchQueryViewModel searchQueryViewModel = new ViewModelProvider(activity).get(SearchQueryViewModel.class);
 
         binding.choicesSearchBox.setVisibility(View.VISIBLE);
-        binding.choicesSearchBox.setTextSize(TypedValue.COMPLEX_UNIT_DIP, getAnswerFontSize());
+        binding.choicesSearchBox.setTextSize(TypedValue.COMPLEX_UNIT_DIP, QuestionFontSizeUtils.getFontSize(settings, QuestionFontSizeUtils.FontSize.HEADLINE_6));
         binding.choicesSearchBox.addTextChangedListener(new TextWatcher() {
             private String oldText = "";
 

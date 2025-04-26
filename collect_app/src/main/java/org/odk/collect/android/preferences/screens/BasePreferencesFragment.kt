@@ -9,7 +9,7 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceFragmentCompat
 import org.odk.collect.android.R
 import org.odk.collect.android.injection.DaggerUtils
-import org.odk.collect.android.projects.CurrentProjectProvider
+import org.odk.collect.android.projects.ProjectsDataService
 import org.odk.collect.androidshared.utils.AppBarUtils
 import org.odk.collect.settings.SettingsProvider
 import org.odk.collect.settings.importing.SettingsChangeHandler
@@ -24,7 +24,7 @@ abstract class BasePreferencesFragment : PreferenceFragmentCompat(), OnSettingCh
     lateinit var settingsProvider: SettingsProvider
 
     @Inject
-    lateinit var currentProjectProvider: CurrentProjectProvider
+    lateinit var projectsDataService: ProjectsDataService
 
     override fun onAttach(context: Context) {
         super.onAttach(context)
@@ -38,8 +38,8 @@ abstract class BasePreferencesFragment : PreferenceFragmentCompat(), OnSettingCh
         // the preference dialogs. This appears to have something to with the `updateLocale`
         // calls in `CollectAbstractActivity` and weirdly only happens for English.
         val dialogPreference = preference as DialogPreference
-        dialogPreference.setNegativeButtonText(R.string.cancel)
-        dialogPreference.setPositiveButtonText(R.string.ok)
+        dialogPreference.setNegativeButtonText(org.odk.collect.strings.R.string.cancel)
+        dialogPreference.setPositiveButtonText(org.odk.collect.strings.R.string.ok)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

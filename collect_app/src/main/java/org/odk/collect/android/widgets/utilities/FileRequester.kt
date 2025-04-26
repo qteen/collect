@@ -2,7 +2,6 @@ package org.odk.collect.android.widgets.utilities
 
 import android.app.Activity
 import org.javarosa.form.api.FormEntryPrompt
-import org.odk.collect.android.R
 import org.odk.collect.android.javarosawrapper.FormController
 import org.odk.collect.android.utilities.ExternalAppIntentProvider
 import org.odk.collect.androidshared.system.IntentLauncher
@@ -25,29 +24,34 @@ class FileRequesterImpl(
             val intent = externalAppIntentProvider.getIntentToRunExternalApp(formController, formEntryPrompt)
             val intentWithoutDefaultCategory =
                 externalAppIntentProvider.getIntentToRunExternalAppWithoutDefaultCategory(
-                    formController, formEntryPrompt,
+                    formController,
+                    formEntryPrompt,
                     activity.packageManager
                 )
 
             intentLauncher.launchForResult(
-                activity, intent, requestCode
+                activity,
+                intent,
+                requestCode
             ) {
                 intentLauncher.launchForResult(
-                    activity, intentWithoutDefaultCategory, requestCode
+                    activity,
+                    intentWithoutDefaultCategory,
+                    requestCode
                 ) {
-                    showLongToast(activity, getErrorMessage(formEntryPrompt, activity))
+                    showLongToast(getErrorMessage(formEntryPrompt, activity))
                 }
             }
         } catch (e: Exception) {
-            showLongToast(activity, e.message!!)
+            showLongToast(e.message!!)
         } catch (e: Error) {
-            showLongToast(activity, e.message!!)
+            showLongToast(e.message!!)
         }
     }
 
     private fun getErrorMessage(formEntryPrompt: FormEntryPrompt, activity: Activity): String {
         val customErrorMessage = formEntryPrompt.getSpecialFormQuestionText("noAppErrorString")
-        return customErrorMessage ?: activity.getString(R.string.no_app)
+        return customErrorMessage ?: activity.getString(org.odk.collect.strings.R.string.no_app)
     }
 }
 

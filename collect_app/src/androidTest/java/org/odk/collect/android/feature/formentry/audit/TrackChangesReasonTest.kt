@@ -7,12 +7,11 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
-import org.odk.collect.android.R
 import org.odk.collect.android.support.StorageUtils
 import org.odk.collect.android.support.pages.ChangesReasonPromptPage
 import org.odk.collect.android.support.pages.FormEntryPage
 import org.odk.collect.android.support.pages.MainMenuPage
-import org.odk.collect.android.support.pages.SaveOrIgnoreDialog
+import org.odk.collect.android.support.pages.SaveOrDiscardFormDialog
 import org.odk.collect.android.support.rules.CollectTestRule
 import org.odk.collect.android.support.rules.TestRuleChain
 
@@ -32,9 +31,9 @@ class TrackChangesReasonTest {
             .startBlankForm("Track Changes Reason")
             .inputText("Nothing much...")
             .swipeToEndScreen()
-            .clickSaveAndExit()
+            .clickSaveAsDraft()
 
-            .clickEditSavedForm()
+            .clickDrafts()
             .clickOnForm("Track Changes Reason")
             .clickGoToEnd()
             .clickSaveAndExitWithChangesReasonPrompt()
@@ -42,9 +41,9 @@ class TrackChangesReasonTest {
             .clickSave()
 
         val auditLogForFirstInstance = StorageUtils.getAuditLogForFirstInstance()
-        assertThat(auditLogForFirstInstance[9].get("event"), equalTo("change reason"))
+        assertThat(auditLogForFirstInstance[8].get("event"), equalTo("change reason"))
         assertThat(
-            auditLogForFirstInstance[9].get("change-reason"),
+            auditLogForFirstInstance[8].get("change-reason"),
             equalTo("Needed to be more exciting and less mysterious")
         )
     }
@@ -56,15 +55,14 @@ class TrackChangesReasonTest {
             .startBlankForm("Track Changes Reason")
             .inputText("Nothing much...")
             .swipeToEndScreen()
-            .clickSaveAndExit()
-            .clickEditSavedForm()
+            .clickSaveAsDraft()
+            .clickDrafts()
 
             .clickOnForm("Track Changes Reason")
             .clickGoToEnd()
             .clickSaveAndExitWithChangesReasonPrompt()
             .closeSoftKeyboard()
             .pressBack(FormEntryPage("Track Changes Reason"))
-            .assertText(R.string.save_form_as)
     }
 
     @Test
@@ -74,15 +72,14 @@ class TrackChangesReasonTest {
             .startBlankForm("Track Changes Reason")
             .inputText("Nothing much...")
             .swipeToEndScreen()
-            .clickSaveAndExit()
+            .clickSaveAsDraft()
 
-            .clickEditSavedForm()
+            .clickDrafts()
             .clickOnForm("Track Changes Reason")
             .clickGoToEnd()
             .clickSaveAndExitWithChangesReasonPrompt()
             .closeSoftKeyboard()
             .pressClose(FormEntryPage("Track Changes Reason"))
-            .assertText(R.string.save_form_as)
     }
 
     @Test
@@ -92,9 +89,9 @@ class TrackChangesReasonTest {
             .startBlankForm("Track Changes Reason")
             .inputText("Nothing much...")
             .swipeToEndScreen()
-            .clickSaveAndExit()
+            .clickSaveAsDraft()
 
-            .clickEditSavedForm()
+            .clickDrafts()
             .clickOnForm("Track Changes Reason")
             .clickGoToEnd()
             .clickSaveAndExitWithChangesReasonPrompt()
@@ -112,15 +109,14 @@ class TrackChangesReasonTest {
             .startBlankForm("Track Changes Reason")
             .inputText("Nothing much...")
             .swipeToEndScreen()
-            .clickSaveAndExit()
+            .clickSaveAsDraft()
 
-            .clickEditSavedForm()
+            .clickDrafts()
             .clickOnForm("Track Changes Reason")
             .clickGoToStart()
             .closeSoftKeyboard()
             .pressBack(
-                SaveOrIgnoreDialog(
-                    "Track Changes Reason",
+                SaveOrDiscardFormDialog(
                     ChangesReasonPromptPage("Track Changes Reason")
                 )
             )
@@ -134,13 +130,13 @@ class TrackChangesReasonTest {
             .startBlankForm("Track Changes Reason")
             .inputText("Nothing much...")
             .swipeToEndScreen()
-            .clickSaveAndExit()
+            .clickSaveAsDraft()
 
-            .clickEditSavedForm()
+            .clickDrafts()
             .clickOnForm("Track Changes Reason")
             .clickGoToStart()
             .closeSoftKeyboard()
-            .pressBack(SaveOrIgnoreDialog("Track Changes Reason", MainMenuPage()))
+            .pressBack(SaveOrDiscardFormDialog(MainMenuPage()))
             .clickDiscardChanges()
     }
 
@@ -151,9 +147,9 @@ class TrackChangesReasonTest {
             .startBlankForm("Track Changes Reason")
             .inputText("Nothing much...")
             .swipeToEndScreen()
-            .clickSaveAndExit()
+            .clickSaveAsDraft()
 
-            .clickEditSavedForm()
+            .clickDrafts()
             .clickOnForm("Track Changes Reason")
             .clickGoToStart()
             .clickSaveWithChangesReasonPrompt()
@@ -169,7 +165,7 @@ class TrackChangesReasonTest {
             .startBlankForm("Track Changes Reason")
             .clickSave()
             .closeSoftKeyboard()
-            .pressBack(SaveOrIgnoreDialog("Track Changes Reason", MainMenuPage()))
+            .pressBack(SaveOrDiscardFormDialog(MainMenuPage()))
             .clickSaveChanges()
     }
 }

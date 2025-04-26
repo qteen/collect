@@ -34,7 +34,7 @@ class CrashHandler(private val processKiller: Runnable = Runnable { exitProcess(
             val crashMessage = conditionFailure
 
             createCrashView(context).also {
-                it.setCrash(context.getString(R.string.cant_start_app), crashMessage) {
+                it.setCrash(context.getString(org.odk.collect.strings.R.string.cant_start_app), crashMessage) {
                     processKiller.run()
                 }
             }
@@ -42,7 +42,7 @@ class CrashHandler(private val processKiller: Runnable = Runnable { exitProcess(
             val crashMessage = preferences.getString(KEY_CRASH, null)
 
             createCrashView(context).also {
-                it.setCrash(context.getString(R.string.crash_last_run), crashMessage) {
+                it.setCrash(context.getString(org.odk.collect.strings.R.string.crash_last_run), crashMessage) {
                     preferences.edit().remove(KEY_CRASH).apply()
                     onErrorDismissed?.run()
                 }
@@ -95,8 +95,8 @@ class CrashHandler(private val processKiller: Runnable = Runnable { exitProcess(
 
         @JvmStatic
         fun uninstall(context: Context) {
-            Thread.setDefaultUncaughtExceptionHandler(originalHandler)
             context.getState().set("crash_handler", null)
+            unwrapUncaughtExceptionHandler()
         }
 
         @JvmStatic
@@ -106,7 +106,7 @@ class CrashHandler(private val processKiller: Runnable = Runnable { exitProcess(
 
         private fun wrapUncaughtExceptionHandler(
             crashHandler: CrashHandler,
-            context: Context,
+            context: Context
         ) {
             if (originalHandler != null) {
                 throw IllegalStateException("install() should not be called multiple times without uninstall()!")
@@ -120,6 +120,11 @@ class CrashHandler(private val processKiller: Runnable = Runnable { exitProcess(
                 crashHandler.registerCrash(context, e)
                 defaultUncaughtExceptionHandler?.uncaughtException(t, e)
             }
+        }
+
+        private fun unwrapUncaughtExceptionHandler() {
+            Thread.setDefaultUncaughtExceptionHandler(originalHandler)
+            originalHandler = null
         }
     }
 }

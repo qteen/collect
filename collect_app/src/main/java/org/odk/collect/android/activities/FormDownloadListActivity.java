@@ -39,17 +39,16 @@ import org.odk.collect.android.activities.viewmodels.FormDownloadListViewModel;
 import org.odk.collect.android.adapters.FormDownloadListAdapter;
 import org.odk.collect.android.formentry.RefreshFormListDialogFragment;
 import org.odk.collect.android.formlists.sorting.FormListSortingOption;
-import org.odk.collect.android.formmanagement.FormDownloadException;
-import org.odk.collect.android.formmanagement.FormDownloader;
 import org.odk.collect.android.formmanagement.FormSourceExceptionMapper;
+import org.odk.collect.android.formmanagement.FormsDataService;
 import org.odk.collect.android.formmanagement.ServerFormDetails;
 import org.odk.collect.android.formmanagement.ServerFormsDetailsFetcher;
+import org.odk.collect.android.formmanagement.download.FormDownloadException;
 import org.odk.collect.android.fragments.dialogs.FormsDownloadResultDialog;
 import org.odk.collect.android.injection.DaggerUtils;
 import org.odk.collect.android.listeners.DownloadFormsTaskListener;
 import org.odk.collect.android.listeners.FormListDownloaderListener;
-import org.odk.collect.androidshared.network.NetworkStateProvider;
-import org.odk.collect.android.openrosa.HttpCredentialsInterface;
+import org.odk.collect.android.projects.ProjectsDataService;
 import org.odk.collect.android.tasks.DownloadFormListTask;
 import org.odk.collect.android.tasks.DownloadFormsTask;
 import org.odk.collect.android.utilities.ApplicationConstants;
@@ -59,14 +58,15 @@ import org.odk.collect.android.utilities.WebCredentialsUtils;
 import org.odk.collect.android.views.DayNightProgressDialog;
 import org.odk.collect.androidshared.ui.DialogFragmentUtils;
 import org.odk.collect.androidshared.ui.ToastUtils;
+import org.odk.collect.async.network.NetworkStateProvider;
 import org.odk.collect.forms.FormSourceException;
+import org.odk.collect.openrosa.http.HttpCredentialsInterface;
 
 import java.io.Serializable;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -95,8 +95,6 @@ public class FormDownloadListActivity extends FormListActivity implements FormLi
         AdapterView.OnItemClickListener, RefreshFormListDialogFragment.RefreshFormListDialogFragmentListener,
         FormsDownloadResultDialog.FormDownloadResultDialogListener {
     private static final String FORM_DOWNLOAD_LIST_SORTING_ORDER = "formDownloadListSortingOrder";
-
-    public static final String DISPLAY_ONLY_UPDATED_FORMS = "displayOnlyUpdatedForms";
     private static final String BUNDLE_SELECTED_COUNT = "selectedcount";
 
     public static final String FORMNAME = "formname";
@@ -118,8 +116,6 @@ public class FormDownloadListActivity extends FormListActivity implements FormLi
 
     private static final boolean DO_NOT_EXIT = false;
 
-    private boolean displayOnlyUpdatedForms;
-
     private FormDownloadListViewModel viewModel;
 
     @Inject
@@ -132,7 +128,10 @@ public class FormDownloadListActivity extends FormListActivity implements FormLi
     NetworkStateProvider connectivityProvider;
 
     @Inject
-    FormDownloader formDownloader;
+    FormsDataService formsDataService;
+
+    @Inject
+    ProjectsDataService projectsDataService;
 
     @SuppressWarnings("unchecked")
     @Override
@@ -141,7 +140,7 @@ public class FormDownloadListActivity extends FormListActivity implements FormLi
         DaggerUtils.getComponent(this).inject(this);
 
         setContentView(R.layout.form_download_list);
-        setTitle(getString(R.string.get_forms));
+        setTitle(getString(org.odk.collect.strings.R.string.get_forms));
 
         viewModel = new ViewModelProvider(this, new FormDownloadListViewModel.Factory())
                 .get(FormDownloadListViewModel.class);
@@ -152,10 +151,6 @@ public class FormDownloadListActivity extends FormListActivity implements FormLi
     private void init(Bundle savedInstanceState) {
         Bundle bundle = getIntent().getExtras();
         if (bundle != null) {
-            if (bundle.containsKey(DISPLAY_ONLY_UPDATED_FORMS)) {
-                displayOnlyUpdatedForms = (boolean) bundle.get(DISPLAY_ONLY_UPDATED_FORMS);
-            }
-
             if (bundle.containsKey(ApplicationConstants.BundleKeys.FORM_IDS)) {
                 viewModel.setDownloadOnlyMode(true);
                 viewModel.setFormIdsToDownload(bundle.getStringArray(ApplicationConstants.BundleKeys.FORM_IDS));
@@ -247,11 +242,11 @@ public class FormDownloadListActivity extends FormListActivity implements FormLi
         sortingOptions = Arrays.asList(
                 new FormListSortingOption(
                         R.drawable.ic_sort_by_alpha,
-                        R.string.sort_by_name_asc
+                        org.odk.collect.strings.R.string.sort_by_name_asc
                 ),
                 new FormListSortingOption(
                         R.drawable.ic_sort_by_alpha,
-                        R.string.sort_by_name_desc
+                        org.odk.collect.strings.R.string.sort_by_name_desc
                 )
         );
     }
@@ -278,10 +273,10 @@ public class FormDownloadListActivity extends FormListActivity implements FormLi
      */
     private void downloadFormList() {
         if (!connectivityProvider.isDeviceOnline()) {
-            ToastUtils.showShortToast(this, R.string.no_connection);
+            ToastUtils.showShortToast(org.odk.collect.strings.R.string.no_connection);
 
             if (viewModel.isDownloadOnlyMode()) {
-                setReturnResult(false, getString(R.string.no_connection), viewModel.getFormResults());
+                setReturnResult(false, getString(org.odk.collect.strings.R.string.no_connection), viewModel.getFormResults());
                 finish();
             }
         } else {
@@ -367,14 +362,11 @@ public class FormDownloadListActivity extends FormListActivity implements FormLi
     }
 
     private void sortList() {
-        Collections.sort(filteredFormList, new Comparator<HashMap<String, String>>() {
-            @Override
-            public int compare(HashMap<String, String> lhs, HashMap<String, String> rhs) {
-                if (getSortingOrder().equals(SORT_BY_NAME_ASC)) {
-                    return lhs.get(FORMNAME).compareToIgnoreCase(rhs.get(FORMNAME));
-                } else {
-                    return rhs.get(FORMNAME).compareToIgnoreCase(lhs.get(FORMNAME));
-                }
+        Collections.sort(filteredFormList, (lhs, rhs) -> {
+            if (getSortingOrder().equals(SORT_BY_NAME_ASC)) {
+                return lhs.get(FORMNAME).compareToIgnoreCase(rhs.get(FORMNAME));
+            } else {
+                return rhs.get(FORMNAME).compareToIgnoreCase(lhs.get(FORMNAME));
             }
         });
     }
@@ -403,7 +395,7 @@ public class FormDownloadListActivity extends FormListActivity implements FormLi
             // show dialog box
             DialogFragmentUtils.showIfNotShowing(RefreshFormListDialogFragment.class, getSupportFragmentManager());
 
-            downloadFormsTask = new DownloadFormsTask(formDownloader);
+            downloadFormsTask = new DownloadFormsTask(projectsDataService.requireCurrentProject().getUuid(), formsDataService);
             downloadFormsTask.setDownloaderListener(this);
 
             if (viewModel.getUrl() != null) {
@@ -416,7 +408,7 @@ public class FormDownloadListActivity extends FormListActivity implements FormLi
 
             downloadFormsTask.execute(filesToDownload);
         } else {
-            ToastUtils.showShortToast(this, R.string.noselect_error);
+            ToastUtils.showShortToast(org.odk.collect.strings.R.string.noselect_error);
         }
     }
 
@@ -507,30 +499,28 @@ public class FormDownloadListActivity extends FormListActivity implements FormLi
                 String formDetailsKey = ids.get(i);
                 ServerFormDetails details = viewModel.getFormDetailsByFormId().get(formDetailsKey);
 
-                if (!displayOnlyUpdatedForms || details.isUpdated()) {
-                    HashMap<String, String> item = new HashMap<>();
-                    item.put(FORMNAME, details.getFormName());
-                    item.put(FORMID_DISPLAY,
-                            ((details.getFormVersion() == null) ? "" : (getString(R.string.version) + " "
-                                    + details.getFormVersion() + " ")) + "ID: " + details.getFormId());
-                    item.put(FORMDETAIL_KEY, formDetailsKey);
-                    item.put(FORM_ID_KEY, details.getFormId());
-                    item.put(FORM_VERSION_KEY, details.getFormVersion());
+                HashMap<String, String> item = new HashMap<>();
+                item.put(FORMNAME, details.getFormName());
+                item.put(FORMID_DISPLAY,
+                        ((details.getFormVersion() == null) ? "" : (getString(org.odk.collect.strings.R.string.version) + " "
+                                + details.getFormVersion() + " ")) + "ID: " + details.getFormId());
+                item.put(FORMDETAIL_KEY, formDetailsKey);
+                item.put(FORM_ID_KEY, details.getFormId());
+                item.put(FORM_VERSION_KEY, details.getFormVersion());
 
-                    // Insert the new form in alphabetical order.
-                    if (viewModel.getFormList().isEmpty()) {
-                        viewModel.addForm(item);
-                    } else {
-                        int j;
-                        for (j = 0; j < viewModel.getFormList().size(); j++) {
-                            HashMap<String, String> compareMe = viewModel.getFormList().get(j);
-                            String name = compareMe.get(FORMNAME);
-                            if (name.compareTo(viewModel.getFormDetailsByFormId().get(ids.get(i)).getFormName()) > 0) {
-                                break;
-                            }
+                // Insert the new form in alphabetical order.
+                if (viewModel.getFormList().isEmpty()) {
+                    viewModel.addForm(item);
+                } else {
+                    int j;
+                    for (j = 0; j < viewModel.getFormList().size(); j++) {
+                        HashMap<String, String> compareMe = viewModel.getFormList().get(j);
+                        String name = compareMe.get(FORMNAME);
+                        if (name.compareTo(viewModel.getFormDetailsByFormId().get(ids.get(i)).getFormName()) > 0) {
+                            break;
                         }
-                        viewModel.addForm(j, item);
                     }
+                    viewModel.addForm(j, item);
                 }
             }
 
@@ -549,7 +539,7 @@ public class FormDownloadListActivity extends FormListActivity implements FormLi
                 createAuthDialog();
             } else {
                 String dialogMessage = new FormSourceExceptionMapper(this).getMessage(exception);
-                String dialogTitle = getString(R.string.load_remote_form_error);
+                String dialogTitle = getString(org.odk.collect.strings.R.string.load_remote_form_error);
 
                 if (viewModel.isDownloadOnlyMode()) {
                     setReturnResult(false, dialogMessage, viewModel.getFormResults());
@@ -612,7 +602,7 @@ public class FormDownloadListActivity extends FormListActivity implements FormLi
             }
         };
         alertDialog.setCancelable(false);
-        alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, getString(R.string.ok), quitListener);
+        alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, getString(org.odk.collect.strings.R.string.ok), quitListener);
         viewModel.setAlertDialogMsg(message);
         viewModel.setAlertTitle(title);
         viewModel.setAlertShowing(true);
@@ -633,8 +623,8 @@ public class FormDownloadListActivity extends FormListActivity implements FormLi
 
     private void createCancelDialog() {
         cancelDialog = new DayNightProgressDialog(this);
-        cancelDialog.setTitle(getString(R.string.canceling));
-        cancelDialog.setMessage(getString(R.string.please_wait));
+        cancelDialog.setTitle(getString(org.odk.collect.strings.R.string.canceling));
+        cancelDialog.setMessage(getString(org.odk.collect.strings.R.string.please_wait));
         cancelDialog.setIndeterminate(true);
         cancelDialog.setCancelable(false);
         viewModel.setCancelDialogShowing(true);
@@ -646,7 +636,7 @@ public class FormDownloadListActivity extends FormListActivity implements FormLi
         RefreshFormListDialogFragment fragment = (RefreshFormListDialogFragment) getSupportFragmentManager().findFragmentByTag(RefreshFormListDialogFragment.class.getName());
 
         if (fragment != null) {
-            fragment.setMessage(getString(R.string.fetching_file, currentFile,
+            fragment.setMessage(getString(org.odk.collect.strings.R.string.fetching_file, currentFile,
                     String.valueOf(progress), String.valueOf(total)));
         }
     }

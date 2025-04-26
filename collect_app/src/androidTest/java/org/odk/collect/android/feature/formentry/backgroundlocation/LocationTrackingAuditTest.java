@@ -9,11 +9,11 @@ import org.apache.commons.csv.CSVRecord;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
-import org.odk.collect.android.R;
 import org.odk.collect.android.support.FakeLocationClient;
 import org.odk.collect.android.support.StorageUtils;
 import org.odk.collect.android.support.TestDependencies;
-import org.odk.collect.android.support.rules.FormActivityTestRule;
+import org.odk.collect.android.support.pages.FormEntryPage;
+import org.odk.collect.android.support.rules.CollectTestRule;
 import org.odk.collect.android.support.rules.TestRuleChain;
 import org.odk.collect.location.LocationClient;
 import org.odk.collect.testshared.FakeLocation;
@@ -25,7 +25,7 @@ public class LocationTrackingAuditTest {
 
     private final FakeLocationClient locationClient = new FakeLocationClient();
 
-    public FormActivityTestRule rule = new FormActivityTestRule("location-audit.xml", "Audit with Location");
+    public CollectTestRule rule = new CollectTestRule();
 
     @Rule
     public RuleChain copyFormChain = TestRuleChain.chain(new TestDependencies() {
@@ -38,13 +38,17 @@ public class LocationTrackingAuditTest {
 
     @Test
     public void locationTrackingIsLogged_andLocationIsLoggedForEachQuestion() throws IOException {
+        FormEntryPage formEntry = rule.startAtMainMenu()
+                .copyForm("location-audit.xml")
+                .startBlankForm("Audit with Location")
+                .assertBackgroundLocationSnackbarShown();
+
         FakeLocation location1 = new FakeLocation(null);
         location1.setLatitude(1.0);
         location1.setLongitude(1.0);
         locationClient.setLocation(location1);
 
-        rule.startInFormEntry()
-                .assertBackgroundLocationSnackbarShown()
+        formEntry
                 .assertQuestion("Text1")
                 .swipeToNextQuestion("Text2")
                 .clickSave();
@@ -67,8 +71,10 @@ public class LocationTrackingAuditTest {
 
     @Test
     public void locationCollectionToggle_ShouldBeAvailable() {
-        rule.startInFormEntry()
+        rule.startAtMainMenu()
+                .copyForm("location-audit.xml")
+                .startBlankForm("Audit with Location")
                 .clickOptionsIcon()
-                .assertText(R.string.track_location);
+                .assertText(org.odk.collect.strings.R.string.track_location_on);
     }
 }

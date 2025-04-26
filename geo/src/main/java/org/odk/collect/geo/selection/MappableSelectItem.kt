@@ -2,95 +2,58 @@ package org.odk.collect.geo.selection
 
 import org.odk.collect.maps.MapPoint
 
-sealed interface MappableSelectItem {
+sealed class MappableSelectItem {
+    abstract val id: Long
+    abstract val name: String
+    abstract val properties: List<IconifiedText>
+    abstract val selected: Boolean
+    abstract val info: String?
+    abstract val action: IconifiedText?
+    abstract val status: Status?
 
-    val id: Long
-    val points: List<MapPoint>
-    val smallIcon: Int
-    val largeIcon: Int
-    val name: String
-    val properties: List<IconifiedText>
-    val selected: Boolean
-    val color: String?
-    val symbol: String?
-
-    data class WithInfo(
+    data class MappableSelectPoint(
         override val id: Long,
-        override val points: List<MapPoint>,
-        override val smallIcon: Int,
-        override val largeIcon: Int,
         override val name: String,
-        override val properties: List<IconifiedText>,
-        val info: String,
+        override val properties: List<IconifiedText> = emptyList(),
         override val selected: Boolean = false,
-        override val color: String? = null,
-        override val symbol: String? = null,
-    ) : MappableSelectItem {
+        override val info: String? = null,
+        override val action: IconifiedText? = null,
+        override val status: Status? = null,
+        val point: MapPoint,
+        val smallIcon: Int,
+        val largeIcon: Int,
+        val color: String? = null,
+        val symbol: String? = null
+    ) : MappableSelectItem()
 
-        constructor(
-            id: Long,
-            latitude: Double,
-            longitude: Double,
-            smallIcon: Int,
-            largeIcon: Int,
-            name: String,
-            properties: List<IconifiedText>,
-            info: String,
-            selected: Boolean = false,
-            color: String? = null,
-            symbol: String? = null,
-        ) : this(
-            id,
-            listOf(MapPoint(latitude, longitude)),
-            smallIcon,
-            largeIcon,
-            name,
-            properties,
-            info,
-            selected,
-            color,
-            symbol
-        )
-    }
-
-    data class WithAction(
+    data class MappableSelectLine(
         override val id: Long,
-        override val points: List<MapPoint>,
-        override val smallIcon: Int,
-        override val largeIcon: Int,
         override val name: String,
-        override val properties: List<IconifiedText>,
-        val action: IconifiedText,
+        override val properties: List<IconifiedText> = emptyList(),
         override val selected: Boolean = false,
-        override val color: String? = null,
-        override val symbol: String? = null,
-    ) : MappableSelectItem {
+        override val info: String? = null,
+        override val action: IconifiedText? = null,
+        override val status: Status? = null,
+        val points: List<MapPoint>,
+        val strokeWidth: String? = null,
+        val strokeColor: String? = null
+    ) : MappableSelectItem()
 
-        constructor(
-            id: Long,
-            latitude: Double,
-            longitude: Double,
-            smallIcon: Int,
-            largeIcon: Int,
-            name: String,
-            properties: List<IconifiedText>,
-            action: IconifiedText,
-            selected: Boolean = false,
-            color: String? = null,
-            symbol: String? = null,
-        ) : this(
-            id,
-            listOf(MapPoint(latitude, longitude)),
-            smallIcon,
-            largeIcon,
-            name,
-            properties,
-            action,
-            selected,
-            color,
-            symbol
-        )
-    }
-
-    data class IconifiedText(val icon: Int?, val text: String)
+    data class MappableSelectPolygon(
+        override val id: Long,
+        override val name: String,
+        override val properties: List<IconifiedText> = emptyList(),
+        override val selected: Boolean = false,
+        override val info: String? = null,
+        override val action: IconifiedText? = null,
+        override val status: Status? = null,
+        val points: List<MapPoint>,
+        val strokeWidth: String? = null,
+        val strokeColor: String? = null,
+        val fillColor: String? = null
+    ) : MappableSelectItem()
 }
+
+data class IconifiedText(val icon: Int?, val text: String)
+
+enum class Status { ERRORS, NO_ERRORS }

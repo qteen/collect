@@ -6,7 +6,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
-import org.odk.collect.android.R
 import org.odk.collect.android.storage.StorageSubdirectory
 import org.odk.collect.android.support.TestDependencies
 import org.odk.collect.android.support.pages.MainMenuPage
@@ -27,10 +26,10 @@ class InstancesAdbTest {
     fun canAddInstanceOnDisk() {
         rule.startAtMainMenu()
             .copyForm("one-question.xml")
-            .clickFillBlankForm() // Add form via disk sync
             .copyInstance("One Question_2021-06-22_15-55-50.xml")
+            .clickFillBlankForm() // Add form via disk sync
             .pressBack(MainMenuPage()) // Return to main menu to trigger instance disk sync
-            .clickEditSavedForm(1)
+            .clickSendFinalizedForm(1)
             .assertText("One Question")
     }
 
@@ -40,7 +39,7 @@ class InstancesAdbTest {
             .copyForm("one-question.xml")
             .startBlankForm("One Question")
             .swipeToEndScreen()
-            .clickSaveAndExit()
+            .clickSaveAsDraft()
 
         val instancesDir =
             testDependencies.storagePathProvider.getOdkDirPath(StorageSubdirectory.INSTANCES)
@@ -48,9 +47,9 @@ class InstancesAdbTest {
         Assert.assertTrue(instanceDeleted)
 
         mainMenuPage
-            .clickEditSavedForm(1)
+            .clickDrafts(1)
             .clickOnFormWithDialog("One Question")
-            .assertText(R.string.instance_deleted_message)
+            .assertText(org.odk.collect.strings.R.string.instance_deleted_message)
             .clickOK(MainMenuPage())
             .assertNumberOfEditableForms(0)
     }

@@ -4,7 +4,6 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.media.MediaMetadataRetriever;
-import android.util.TypedValue;
 import android.view.View;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -12,7 +11,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import org.javarosa.core.model.data.IAnswerData;
 import org.javarosa.core.model.data.StringData;
 import org.javarosa.form.api.FormEntryPrompt;
-import org.odk.collect.android.R;
 import org.odk.collect.android.audio.AudioControllerView;
 import org.odk.collect.android.databinding.ExAudioWidgetAnswerBinding;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
@@ -43,8 +41,8 @@ public class ExAudioWidget extends QuestionWidget implements FileWidget, WidgetD
     File answerFile;
 
     public ExAudioWidget(Context context, QuestionDetails questionDetails, QuestionMediaManager questionMediaManager,
-                         AudioPlayer audioPlayer, WaitingForDataRegistry waitingForDataRegistry, FileRequester fileRequester) {
-        super(context, questionDetails);
+                         AudioPlayer audioPlayer, WaitingForDataRegistry waitingForDataRegistry, FileRequester fileRequester, Dependencies dependencies) {
+        super(context, dependencies, questionDetails);
 
         this.audioPlayer = audioPlayer;
         this.waitingForDataRegistry = waitingForDataRegistry;
@@ -62,8 +60,6 @@ public class ExAudioWidget extends QuestionWidget implements FileWidget, WidgetD
         setupAnswerFile(prompt.getAnswerText());
 
         binding = ExAudioWidgetAnswerBinding.inflate(((Activity) context).getLayoutInflater());
-
-        binding.launchExternalAppButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, answerFontSize);
         binding.launchExternalAppButton.setOnClickListener(view -> launchExternalApp());
 
         return binding.getRoot();
@@ -106,7 +102,7 @@ public class ExAudioWidget extends QuestionWidget implements FileWidget, WidgetD
             }
         } else if (object != null) {
             if (object instanceof File) {
-                ToastUtils.showLongToast(getContext(), R.string.invalid_file_type);
+                ToastUtils.showLongToast(org.odk.collect.strings.R.string.invalid_file_type);
                 mediaUtils.deleteMediaFile(((File) object).getAbsolutePath());
                 Timber.e(new Error("ExAudioWidget's setBinaryData must receive a audio file but received: " + FileUtils.getMimeType((File) object)));
             } else {
@@ -170,10 +166,10 @@ public class ExAudioWidget extends QuestionWidget implements FileWidget, WidgetD
                 @Override
                 public void onRemoveClicked() {
                     new MaterialAlertDialogBuilder(getContext())
-                            .setTitle(R.string.delete_answer_file_question)
-                            .setMessage(R.string.answer_file_delete_warning)
-                            .setPositiveButton(R.string.delete_answer_file, (dialog, which) -> clearAnswer())
-                            .setNegativeButton(R.string.cancel, null)
+                            .setTitle(org.odk.collect.strings.R.string.delete_answer_file_question)
+                            .setMessage(org.odk.collect.strings.R.string.answer_file_delete_warning)
+                            .setPositiveButton(org.odk.collect.strings.R.string.delete_answer_file, (dialog, which) -> clearAnswer())
+                            .setNegativeButton(org.odk.collect.strings.R.string.cancel, null)
                             .show();
                 }
             });

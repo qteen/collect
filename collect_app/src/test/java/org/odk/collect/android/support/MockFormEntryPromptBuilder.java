@@ -65,7 +65,7 @@ public class MockFormEntryPromptBuilder {
     }
 
     public MockFormEntryPromptBuilder withAdditionalAttribute(String name, String value) {
-        when(prompt.getFormElement().getAdditionalAttribute(null, name)).thenReturn(value);
+        when(prompt.getQuestion().getAdditionalAttribute(null, name)).thenReturn(value);
         return this;
     }
 
@@ -89,6 +89,11 @@ public class MockFormEntryPromptBuilder {
 
     public MockFormEntryPromptBuilder withControlType(int controlType) {
         when(prompt.getControlType()).thenReturn(controlType);
+        return this;
+    }
+
+    public MockFormEntryPromptBuilder withDataType(int dataType) {
+        when(prompt.getDataType()).thenReturn(dataType);
         return this;
     }
 

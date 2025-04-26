@@ -1,37 +1,29 @@
 package org.odk.collect.android.projects
 
-import android.accounts.AccountManager
-import android.app.Activity
 import android.content.Context
-import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.result.ActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.Toolbar
 import androidx.core.widget.doOnTextChanged
 import org.odk.collect.analytics.Analytics
-import org.odk.collect.android.R
 import org.odk.collect.android.activities.ActivityUtils
-import org.odk.collect.android.activities.MainMenuActivity
 import org.odk.collect.android.analytics.AnalyticsEvents
 import org.odk.collect.android.configure.qr.AppConfigurationGenerator
 import org.odk.collect.android.databinding.ManualProjectCreatorDialogLayoutBinding
-import org.odk.collect.android.gdrive.GoogleAccountsManager
 import org.odk.collect.android.injection.DaggerUtils
+import org.odk.collect.android.mainmenu.MainMenuActivity
 import org.odk.collect.android.projects.DuplicateProjectConfirmationKeys.MATCHING_PROJECT
 import org.odk.collect.android.projects.DuplicateProjectConfirmationKeys.SETTINGS_JSON
 import org.odk.collect.android.utilities.SoftKeyboardController
-import org.odk.collect.androidshared.system.IntentLauncher
 import org.odk.collect.androidshared.ui.DialogFragmentUtils
 import org.odk.collect.androidshared.ui.ToastUtils
 import org.odk.collect.androidshared.utils.Validator
 import org.odk.collect.material.MaterialFullScreenDialogFragment
-import org.odk.collect.permissions.PermissionListener
-import org.odk.collect.permissions.PermissionsProvider
+import org.odk.collect.projects.ProjectCreator
 import org.odk.collect.projects.ProjectsRepository
+import org.odk.collect.projects.SettingsConnectionMatcher
 import org.odk.collect.settings.SettingsProvider
 import javax.inject.Inject
 
@@ -49,13 +41,7 @@ class ManualProjectCreatorDialog :
     lateinit var softKeyboardController: SoftKeyboardController
 
     @Inject
-    lateinit var currentProjectProvider: CurrentProjectProvider
-
-    @Inject
-    lateinit var permissionsProvider: PermissionsProvider
-
-    @Inject
-    lateinit var googleAccountsManager: GoogleAccountsManager
+    lateinit var projectsDataService: ProjectsDataService
 
     @Inject
     lateinit var projectsRepository: ProjectsRepository
@@ -63,47 +49,14 @@ class ManualProjectCreatorDialog :
     @Inject
     lateinit var settingsProvider: SettingsProvider
 
-    @Inject
-    lateinit var intentLauncher: IntentLauncher
-
     lateinit var settingsConnectionMatcher: SettingsConnectionMatcher
 
     private lateinit var binding: ManualProjectCreatorDialogLayoutBinding
 
-    val googleAccountResultLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
-            val resultData = result.data
-
-            if (result.resultCode == Activity.RESULT_OK && resultData != null && resultData.extras != null) {
-                val accountName = resultData.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)
-                googleAccountsManager.selectAccount(accountName)
-
-                val settingsJson =
-                    appConfigurationGenerator.getAppConfigurationAsJsonWithGoogleDriveDetails(
-                        accountName
-                    )
-
-                settingsConnectionMatcher.getProjectWithMatchingConnection(settingsJson)
-                    ?.let { uuid ->
-                        val confirmationArgs = Bundle()
-                        confirmationArgs.putString(SETTINGS_JSON, settingsJson)
-                        confirmationArgs.putString(MATCHING_PROJECT, uuid)
-                        DialogFragmentUtils.showIfNotShowing(
-                            DuplicateProjectConfirmationDialog::class.java,
-                            confirmationArgs,
-                            childFragmentManager
-                        )
-                    } ?: run {
-                    Analytics.log(AnalyticsEvents.GOOGLE_ACCOUNT_PROJECT)
-                    createProject(settingsJson)
-                }
-            }
-        }
-
     override fun onAttach(context: Context) {
         super.onAttach(context)
         DaggerUtils.getComponent(context).inject(this)
-        settingsConnectionMatcher = SettingsConnectionMatcher(projectsRepository, settingsProvider)
+        settingsConnectionMatcher = SettingsConnectionMatcherImpl(projectsRepository, settingsProvider)
     }
 
     override fun onCreateView(
@@ -134,10 +87,6 @@ class ManualProjectCreatorDialog :
         binding.addButton.setOnClickListener {
             handleAddingNewProject()
         }
-
-        binding.gdrive.setOnClickListener {
-            configureGoogleAccount()
-        }
     }
 
     override fun onCloseClicked() {
@@ -148,17 +97,16 @@ class ManualProjectCreatorDialog :
     }
 
     override fun getToolbar(): Toolbar {
-        return binding.toolbar
+        return binding.toolbarLayout.toolbar
     }
 
     private fun setUpToolbar() {
-        toolbar.setTitle(R.string.add_project)
-        toolbar.navigationIcon = null
+        toolbar.setTitle(org.odk.collect.strings.R.string.add_project)
     }
 
     private fun handleAddingNewProject() {
         if (!Validator.isUrlValid(binding.urlInputText.text?.trim().toString())) {
-            ToastUtils.showShortToast(requireContext(), R.string.url_error)
+            ToastUtils.showShortToast(org.odk.collect.strings.R.string.url_error)
         } else {
             val settingsJson = appConfigurationGenerator.getAppConfigurationAsJsonWithServerDetails(
                 binding.urlInputText.text?.trim().toString(),
@@ -182,43 +130,21 @@ class ManualProjectCreatorDialog :
         }
     }
 
-    private fun configureGoogleAccount() {
-        permissionsProvider.requestGetAccountsPermission(
-            requireActivity(),
-            object : PermissionListener {
-                override fun granted() {
-                    val intent: Intent = googleAccountsManager.accountChooserIntent
-                    intentLauncher.launchForResult(googleAccountResultLauncher, intent) {
-                        ToastUtils.showShortToast(
-                            requireContext(),
-                            getString(
-                                R.string.activity_not_found,
-                                getString(R.string.choose_account)
-                            )
-                        )
-                    }
-                }
-            }
-        )
-    }
-
     override fun createProject(settingsJson: String) {
-        projectCreator.createNewProject(settingsJson)
+        projectCreator.createNewProject(settingsJson, true)
         ActivityUtils.startActivityAndCloseAllOthers(activity, MainMenuActivity::class.java)
         ToastUtils.showLongToast(
-            requireContext(),
-            getString(R.string.switched_project, currentProjectProvider.getCurrentProject().name)
+            getString(org.odk.collect.strings.R.string.switched_project, projectsDataService.requireCurrentProject().name)
         )
     }
 
     override fun switchToProject(uuid: String) {
-        currentProjectProvider.setCurrentProject(uuid)
+        projectsDataService.setCurrentProject(uuid)
         ActivityUtils.startActivityAndCloseAllOthers(activity, MainMenuActivity::class.java)
         ToastUtils.showLongToast(
-            requireContext(),
             getString(
-                org.odk.collect.projects.R.string.switched_project,
-                currentProjectProvider.getCurrentProject().name
+                org.odk.collect.strings.R.string.switched_project,
+                projectsDataService.requireCurrentProject().name
             )
         )
     }

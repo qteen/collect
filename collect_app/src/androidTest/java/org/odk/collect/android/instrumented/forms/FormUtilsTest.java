@@ -1,34 +1,53 @@
 package org.odk.collect.android.instrumented.forms;
 
+import static org.mockito.Mockito.mock;
+import static org.odk.collect.android.support.StorageUtils.copyFormToStorage;
+import static java.util.Collections.emptyList;
+
+import android.net.Uri;
+
+import androidx.test.core.app.ApplicationProvider;
+
+import org.javarosa.core.model.FormDef;
 import org.javarosa.core.reference.RootTranslator;
+import org.javarosa.form.api.FormEntryController;
+import org.javarosa.form.api.FormEntryModel;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.RuleChain;
-import org.odk.collect.android.support.rules.CollectTestRule;
-import org.odk.collect.android.support.rules.TestRuleChain;
-import org.odk.collect.android.utilities.FormUtils;
+import org.odk.collect.android.external.FormsContract;
 import org.odk.collect.android.storage.StoragePathProvider;
 import org.odk.collect.android.storage.StorageSubdirectory;
+import org.odk.collect.android.support.CollectHelpers;
+import org.odk.collect.android.support.rules.ResetStateRule;
 import org.odk.collect.android.tasks.FormLoaderTask;
 import org.odk.collect.android.utilities.FileUtils;
+import org.odk.collect.android.utilities.FormUtils;
+import org.odk.collect.android.utilities.FormsRepositoryProvider;
+import org.odk.collect.forms.Form;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 public class FormUtilsTest {
     private static final String BASIC_FORM = "basic.xml";
-    private final CollectTestRule rule = new CollectTestRule();
+
+    private final FormLoaderTask.FormEntryControllerFactory formEntryControllerFactory = new FormLoaderTask.FormEntryControllerFactory() {
+        @Override
+        public FormEntryController create(FormDef formDef, File formMediaDir) {
+            return new FormEntryController(new FormEntryModel(formDef));
+        }
+    };
 
     @Rule
-    public RuleChain copyFormChain = TestRuleChain.chain()
-            .around(rule);
+    public ResetStateRule resetStateRule = new ResetStateRule();
 
     @Before
-    public void setUp() {
-        rule.startAtFirstLaunch()
-                .copyForm(BASIC_FORM);
+    public void setUp() throws IOException {
+        CollectHelpers.addDemoProject();
+        copyFormToStorage(BASIC_FORM, emptyList(), true);
     }
 
     /* Verify that each host string matches only a single root translator, allowing for them to
@@ -37,9 +56,12 @@ public class FormUtilsTest {
     @Test
     public void sessionRootTranslatorOrderDoesNotMatter() throws Exception {
         final String formPath = new StoragePathProvider().getOdkDirPath(StorageSubdirectory.FORMS) + File.separator + BASIC_FORM;
+        final Form form = new FormsRepositoryProvider(ApplicationProvider.getApplicationContext()).create().getOneByPath(formPath);
+        final Uri formUri = FormsContract.getUri("DEMO", form.getDbId());
+
         // Load the form in order to populate the ReferenceManager
-        FormLoaderTask formLoaderTask = new FormLoaderTask(formPath, null, null);
-        formLoaderTask.execute(formPath).get();
+        FormLoaderTask formLoaderTask = new FormLoaderTask(formUri, FormsContract.CONTENT_ITEM_TYPE, null, null, formEntryControllerFactory, mock(), mock(), false);
+        formLoaderTask.executeSynchronously();
 
         final File formXml = new File(formPath);
         final File formMediaDir = FileUtils.getFormMediaDir(formXml);

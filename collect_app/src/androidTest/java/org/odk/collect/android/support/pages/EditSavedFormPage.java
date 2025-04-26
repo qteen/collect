@@ -16,13 +16,6 @@
 
 package org.odk.collect.android.support.pages;
 
-import android.widget.RelativeLayout;
-
-import androidx.appcompat.widget.Toolbar;
-
-import org.odk.collect.android.R;
-import org.odk.collect.android.adapters.InstanceListCursorAdapter;
-
 import static androidx.test.espresso.Espresso.onView;
 import static androidx.test.espresso.action.ViewActions.click;
 import static androidx.test.espresso.action.ViewActions.replaceText;
@@ -36,17 +29,24 @@ import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.Matchers.not;
+import static org.odk.collect.android.instancemanagement.InstanceExtKt.getInstanceIcon;
+
+import android.widget.RelativeLayout;
+
+import androidx.appcompat.widget.Toolbar;
+
+import org.odk.collect.android.R;
 
 public class EditSavedFormPage extends Page<EditSavedFormPage> {
 
     @Override
     public EditSavedFormPage assertOnPage() {
-        assertText(R.string.review_data);
+        assertText(org.odk.collect.strings.R.string.review_data);
         return this;
     }
 
     public EditSavedFormPage checkInstanceState(String instanceName, String desiredStatus) {
-        int desiredImageId = InstanceListCursorAdapter.getFormStateImageResourceIdForStatus(desiredStatus);
+        int desiredImageId = getInstanceIcon(desiredStatus);
 
         onView(allOf(instanceOf(RelativeLayout.class),
                 hasDescendant(withText(instanceName)),
@@ -75,6 +75,11 @@ public class EditSavedFormPage extends Page<EditSavedFormPage> {
         return new FormHierarchyPage(formName).assertOnPage();
     }
 
+    public SavepointRecoveryDialogPage clickOnFormWithSavepoint(String formName) {
+        scrollToAndClickOnForm(formName);
+        return new SavepointRecoveryDialogPage().assertOnPage();
+    }
+
     public AppClosedPage clickOnFormClosingApp(String formName) {
         scrollToAndClickOnForm(formName);
         return new AppClosedPage().assertOnPage();
@@ -90,7 +95,14 @@ public class EditSavedFormPage extends Page<EditSavedFormPage> {
     }
 
     public EditSavedFormPage searchInBar(String query) {
-        onView(withId(R.id.search_src_text)).perform(replaceText(query));
+        onView(withId(androidx.appcompat.R.id.search_src_text)).perform(replaceText(query));
         return this;
+    }
+
+    public BulkFinalizationConfirmationDialogPage clickFinalizeAll(int count) {
+        this.clickOptionsIcon(org.odk.collect.strings.R.string.finalize_all_drafts)
+                .clickOnString(org.odk.collect.strings.R.string.finalize_all_drafts);
+
+        return new BulkFinalizationConfirmationDialogPage(count).assertOnPage();
     }
 }

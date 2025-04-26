@@ -6,11 +6,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.junit.runner.RunWith;
-import org.odk.collect.android.R;
+import org.odk.collect.android.support.pages.MainMenuPage;
+import org.odk.collect.android.support.pages.SaveOrDiscardFormDialog;
 import org.odk.collect.android.support.rules.CollectTestRule;
 import org.odk.collect.android.support.rules.TestRuleChain;
-import org.odk.collect.android.support.pages.MainMenuPage;
-import org.odk.collect.android.support.pages.SaveOrIgnoreDialog;
 
 @RunWith(AndroidJUnit4.class)
 public class FormLanguageTest {
@@ -25,11 +24,12 @@ public class FormLanguageTest {
         rule.startAtMainMenu()
                 .copyForm("one-question-translation.xml")
                 .startBlankForm("One Question")
-                .assertQuestion("what is your age")
+                .answerQuestion("what is your age", "64")
                 .clickOptionsIcon()
-                .clickOnString(R.string.change_language)
+                .clickOnString(org.odk.collect.strings.R.string.change_language)
                 .clickOnText("French (fr)")
-                .assertQuestion("quel âge as-tu");
+                .assertQuestion("quel âge as-tu")
+                .assertText("64"); // Check answer hasn't been cleared/changed
     }
 
     @Test
@@ -38,9 +38,10 @@ public class FormLanguageTest {
                 .copyForm("one-question-translation.xml")
                 .startBlankForm("One Question")
                 .clickOptionsIcon()
-                .clickOnString(R.string.change_language)
+                .clickOnString(org.odk.collect.strings.R.string.change_language)
                 .clickOnText("French (fr)")
-                .pressBack(new SaveOrIgnoreDialog<>("One Question", new MainMenuPage()))
+                .closeSoftKeyboard()
+                .pressBack(new SaveOrDiscardFormDialog<>(new MainMenuPage()))
                 .clickDiscardForm()
 
                 .startBlankForm("One Question")

@@ -9,10 +9,6 @@ object ProjectKeys {
     const val KEY_USERNAME = "username"
     const val KEY_PASSWORD = "password"
 
-    // google_preferences.xml
-    const val KEY_SELECTED_GOOGLE_ACCOUNT = "selected_google_account"
-    const val KEY_GOOGLE_SHEETS_URL = "google_sheets_url"
-
     // user_interface_preferences.xml
     const val KEY_APP_THEME = "appTheme"
     const val KEY_APP_LANGUAGE = "app_language"
@@ -36,7 +32,6 @@ object ProjectKeys {
     const val KEY_HIDE_OLD_FORM_VERSIONS = "hide_old_form_versions"
     const val KEY_AUTOSEND = "autosend"
     const val KEY_DELETE_AFTER_SEND = "delete_send"
-    const val KEY_COMPLETED_DEFAULT = "default_completed"
     const val KEY_CONSTRAINT_BEHAVIOR = "constraint_behavior"
     const val KEY_HIGH_RESOLUTION = "high_resolution"
     const val KEY_IMAGE_SIZE = "image_size"
@@ -55,6 +50,9 @@ object ProjectKeys {
     const val KEY_BACKGROUND_LOCATION = "background_location"
     const val KEY_BACKGROUND_RECORDING = "background_recording"
 
+    // experimental_preferences.xml
+    const val KEY_DEBUG_FILTERS = "experimental_debug_filters"
+
     // values
     const val PROTOCOL_SERVER = "odk_default"
     const val PROTOCOL_GOOGLE_SHEETS = "google_sheets"
@@ -71,9 +69,9 @@ object ProjectKeys {
     const val BASEMAP_SOURCE_MAPBOX = "mapbox"
     const val BASEMAP_SOURCE_OSM = "osm"
     const val BASEMAP_SOURCE_USGS = "usgs"
-    const val BASEMAP_SOURCE_STAMEN = "stamen"
     const val BASEMAP_SOURCE_CARTO = "carto"
 
-    const val GOOGLE_DRIVE_DEPRECATION_LEARN_MORE_CLICKED = "gd_lear_more_clicked"
-    const val GOOGLE_DRIVE_DEPRECATION_BANNER_DISMISSED = "gd_banner_dismissed"
+    // remembered defaults
+    const val KEY_SAVED_FORM_SORT_ORDER = "instanceUploaderListSortingOrder"
+    const val KEY_BLANK_FORM_SORT_ORDER = "formChooserListSortingOrder"
 }

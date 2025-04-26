@@ -54,15 +54,8 @@ public final class GeoUtils {
                 location.getAltitude(), location.getAccuracy());
     }
 
-    /**
-     * Corrects location provider names so "gps" displays as "GPS" in user-facing messaging.
-     */
-    public static String capitalizeGps(String locationProvider) {
-        return "gps".equals(locationProvider) ? "GPS" : locationProvider;
-    }
-
     public static String formatAccuracy(Context context, float accuracy) {
         String formattedValue = new DecimalFormat("#.##").format(accuracy);
-        return context.getString(R.string.accuracy_m, formattedValue);
+        return context.getString(org.odk.collect.strings.R.string.accuracy_m, formattedValue);
     }
 }

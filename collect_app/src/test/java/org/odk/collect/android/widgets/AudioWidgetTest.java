@@ -1,9 +1,26 @@
 package org.odk.collect.android.widgets;
 
+import static android.view.View.GONE;
+import static android.view.View.VISIBLE;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.mockValueChangedListener;
+import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.promptWithAnswer;
+import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.promptWithReadOnly;
+import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.promptWithReadOnlyAndAnswer;
+import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.widgetDependencies;
+import static org.odk.collect.testshared.RobolectricHelpers.setupMediaPlayerDataSource;
+import static org.robolectric.shadows.ShadowDialog.getLatestDialog;
+
 import android.util.Pair;
 import android.view.View;
 
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
@@ -20,9 +37,9 @@ import org.odk.collect.android.listeners.WidgetValueChangedListener;
 import org.odk.collect.android.support.CollectHelpers;
 import org.odk.collect.android.support.WidgetTestActivity;
 import org.odk.collect.android.utilities.Appearances;
+import org.odk.collect.android.widgets.support.FakeAudioPlayer;
 import org.odk.collect.android.widgets.support.FakeQuestionMediaManager;
 import org.odk.collect.android.widgets.utilities.AudioFileRequester;
-import org.odk.collect.android.widgets.utilities.AudioPlayer;
 import org.odk.collect.android.widgets.utilities.RecordingRequester;
 import org.odk.collect.android.widgets.utilities.RecordingStatusHandler;
 import org.odk.collect.audioclips.Clip;
@@ -32,23 +49,6 @@ import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
-
-import static android.view.View.GONE;
-import static android.view.View.VISIBLE;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.notNullValue;
-import static org.hamcrest.Matchers.nullValue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.odk.collect.testshared.RobolectricHelpers.setupMediaPlayerDataSource;
-import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.mockValueChangedListener;
-import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.promptWithAnswer;
-import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.promptWithReadOnly;
-import static org.odk.collect.android.widgets.support.QuestionWidgetHelpers.promptWithReadOnlyAndAnswer;
-import static org.robolectric.shadows.ShadowDialog.getLatestDialog;
 
 @RunWith(AndroidJUnit4.class)
 public class AudioWidgetTest {
@@ -78,8 +78,8 @@ public class AudioWidgetTest {
         assertThat(widget.binding.audioPlayer.audioController.getVisibility(), is(GONE));
         assertThat(widget.binding.audioPlayer.recordingDuration.getVisibility(), is(GONE));
         assertThat(widget.binding.audioPlayer.waveform.getVisibility(), is(GONE));
-        assertThat(widget.binding.captureButton.getVisibility(), is(VISIBLE));
-        assertThat(widget.binding.chooseButton.getVisibility(), is(VISIBLE));
+        assertThat(widget.binding.recordAudioButton.getVisibility(), is(VISIBLE));
+        assertThat(widget.binding.chooseAudioButton.getVisibility(), is(VISIBLE));
     }
 
     @Test
@@ -87,8 +87,8 @@ public class AudioWidgetTest {
         File answerFile = questionMediaManager.addAnswerFile(File.createTempFile("blah", ".mp3"));
         AudioWidget widget = createWidget(promptWithAnswer(new StringData(answerFile.getName())));
 
-        assertThat(widget.binding.captureButton.getVisibility(), is(GONE));
-        assertThat(widget.binding.chooseButton.getVisibility(), is(GONE));
+        assertThat(widget.binding.recordAudioButton.getVisibility(), is(GONE));
+        assertThat(widget.binding.chooseAudioButton.getVisibility(), is(GONE));
         assertThat(widget.binding.audioPlayer.waveform.getVisibility(), is(GONE));
         assertThat(widget.binding.audioPlayer.recordingDuration.getVisibility(), is(GONE));
         assertThat(widget.binding.audioPlayer.audioController.getVisibility(), is(VISIBLE));
@@ -97,8 +97,8 @@ public class AudioWidgetTest {
     @Test
     public void usingReadOnlyOption_doesNotShowCaptureAndChooseButtons() {
         AudioWidget widget = createWidget(promptWithReadOnly());
-        assertThat(widget.binding.captureButton.getVisibility(), equalTo(GONE));
-        assertThat(widget.binding.chooseButton.getVisibility(), equalTo(GONE));
+        assertThat(widget.binding.recordAudioButton.getVisibility(), equalTo(GONE));
+        assertThat(widget.binding.chooseAudioButton.getVisibility(), equalTo(GONE));
     }
 
     @Test
@@ -120,7 +120,7 @@ public class AudioWidgetTest {
         when(prompt.getAppearanceHint()).thenReturn(Appearances.NEW);
         AudioWidget widget = createWidget(prompt);
 
-        assertThat(widget.binding.chooseButton.getVisibility(), equalTo(GONE));
+        assertThat(widget.binding.chooseAudioButton.getVisibility(), equalTo(GONE));
     }
 
     @Test
@@ -266,8 +266,8 @@ public class AudioWidgetTest {
         File answerFile = questionMediaManager.addAnswerFile(File.createTempFile("blah", ".mp3"));
         widget.setData(answerFile);
 
-        assertThat(widget.binding.captureButton.getVisibility(), is(GONE));
-        assertThat(widget.binding.captureButton.getVisibility(), is(GONE));
+        assertThat(widget.binding.recordAudioButton.getVisibility(), is(GONE));
+        assertThat(widget.binding.recordAudioButton.getVisibility(), is(GONE));
         assertThat(widget.binding.audioPlayer.audioController.getVisibility(), is(VISIBLE));
     }
 
@@ -277,11 +277,11 @@ public class AudioWidgetTest {
         AudioWidget widget = createWidget(promptWithAnswer(null));
         widget.setOnLongClickListener(listener);
 
-        widget.binding.captureButton.performLongClick();
-        widget.binding.chooseButton.performLongClick();
+        widget.binding.recordAudioButton.performLongClick();
+        widget.binding.chooseAudioButton.performLongClick();
 
-        verify(listener).onLongClick(widget.binding.captureButton);
-        verify(listener).onLongClick(widget.binding.chooseButton);
+        verify(listener).onLongClick(widget.binding.recordAudioButton);
+        verify(listener).onLongClick(widget.binding.chooseAudioButton);
     }
 
     @Test
@@ -289,7 +289,7 @@ public class AudioWidgetTest {
         FormEntryPrompt prompt = promptWithAnswer(null);
         AudioWidget widget = createWidget(prompt);
 
-        widget.binding.chooseButton.performClick();
+        widget.binding.chooseAudioButton.performClick();
         verify(audioFileRequester).requestFile(prompt);
     }
 
@@ -299,8 +299,19 @@ public class AudioWidgetTest {
         AudioWidget widget = createWidget(prompt);
 
         recordingRequester.setAmplitude(prompt.getIndex().toString(), 11);
-        widget.binding.captureButton.performClick();
+        widget.binding.recordAudioButton.performClick();
         assertThat(widget.binding.audioPlayer.waveform.getLatestAmplitude(), nullValue());
+    }
+
+    @Test
+    public void clickingCaptureButton_clearsError() {
+        FormEntryPrompt prompt = promptWithAnswer(null);
+        AudioWidget widget = createWidget(prompt);
+        widget.displayError("Required question!");
+
+        assertThat(widget.errorLayout.getVisibility(), equalTo(VISIBLE));
+        widget.binding.recordAudioButton.performClick();
+        assertThat(widget.errorLayout.getVisibility(), equalTo(GONE));
     }
 
     @Test
@@ -308,12 +319,12 @@ public class AudioWidgetTest {
         AudioWidget widget = createWidget(promptWithAnswer(null));
 
         recordingRequester.startRecording();
-        assertThat(widget.binding.captureButton.isEnabled(), is(false));
-        assertThat(widget.binding.chooseButton.isEnabled(), is(false));
+        assertThat(widget.binding.recordAudioButton.isEnabled(), is(false));
+        assertThat(widget.binding.chooseAudioButton.isEnabled(), is(false));
 
         recordingRequester.stopRecording();
-        assertThat(widget.binding.captureButton.isEnabled(), is(true));
-        assertThat(widget.binding.chooseButton.isEnabled(), is(true));
+        assertThat(widget.binding.recordAudioButton.isEnabled(), is(true));
+        assertThat(widget.binding.chooseAudioButton.isEnabled(), is(true));
     }
 
     @Test
@@ -322,8 +333,8 @@ public class AudioWidgetTest {
         AudioWidget widget = createWidget(prompt);
 
         recordingRequester.setDuration(prompt.getIndex().toString(), 0);
-        assertThat(widget.binding.captureButton.getVisibility(), is(GONE));
-        assertThat(widget.binding.chooseButton.getVisibility(), is(GONE));
+        assertThat(widget.binding.recordAudioButton.getVisibility(), is(GONE));
+        assertThat(widget.binding.chooseAudioButton.getVisibility(), is(GONE));
         assertThat(widget.binding.audioPlayer.audioController.getVisibility(), is(GONE));
         assertThat(widget.binding.audioPlayer.recordingDuration.getVisibility(), is(VISIBLE));
         assertThat(widget.binding.audioPlayer.waveform.getVisibility(), is(VISIBLE));
@@ -364,8 +375,8 @@ public class AudioWidgetTest {
         assertThat(widget.binding.audioPlayer.audioController.getVisibility(), is(GONE));
         assertThat(widget.binding.audioPlayer.recordingDuration.getVisibility(), is(GONE));
         assertThat(widget.binding.audioPlayer.waveform.getVisibility(), is(GONE));
-        assertThat(widget.binding.captureButton.getVisibility(), is(VISIBLE));
-        assertThat(widget.binding.chooseButton.getVisibility(), is(VISIBLE));
+        assertThat(widget.binding.recordAudioButton.getVisibility(), is(VISIBLE));
+        assertThat(widget.binding.chooseAudioButton.getVisibility(), is(VISIBLE));
     }
 
     @Test
@@ -458,8 +469,8 @@ public class AudioWidgetTest {
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
         RobolectricHelpers.runLooper();
         assertThat(widget.binding.audioPlayer.audioController.getVisibility(), is(GONE));
-        assertThat(widget.binding.captureButton.getVisibility(), is(VISIBLE));
-        assertThat(widget.binding.chooseButton.getVisibility(), is(VISIBLE));
+        assertThat(widget.binding.recordAudioButton.getVisibility(), is(VISIBLE));
+        assertThat(widget.binding.chooseAudioButton.getVisibility(), is(VISIBLE));
     }
 
     @Test
@@ -468,8 +479,8 @@ public class AudioWidgetTest {
         AudioWidget widget = createWidget(promptWithReadOnlyAndAnswer(new StringData(answerFile.getName())));
         widget.binding.audioPlayer.audioController.binding.remove.performClick();
 
-        assertThat(widget.binding.captureButton.getVisibility(), is(View.GONE));
-        assertThat(widget.binding.chooseButton.getVisibility(), is(View.GONE));
+        assertThat(widget.binding.recordAudioButton.getVisibility(), is(View.GONE));
+        assertThat(widget.binding.chooseAudioButton.getVisibility(), is(View.GONE));
     }
 
     @Test
@@ -478,8 +489,8 @@ public class AudioWidgetTest {
         AudioWidget widget = createWidget(promptWithAnswer(new StringData(answerFile.getName())), true);
         widget.binding.audioPlayer.audioController.binding.remove.performClick();
 
-        assertThat(widget.binding.captureButton.getVisibility(), is(View.GONE));
-        assertThat(widget.binding.chooseButton.getVisibility(), is(View.GONE));
+        assertThat(widget.binding.recordAudioButton.getVisibility(), is(View.GONE));
+        assertThat(widget.binding.chooseAudioButton.getVisibility(), is(View.GONE));
     }
 
     public AudioWidget createWidget(FormEntryPrompt prompt) {
@@ -490,8 +501,8 @@ public class AudioWidgetTest {
                 audioPlayer,
                 recordingRequester,
                 audioFileRequester,
-                recordingRequester
-        );
+                recordingRequester,
+                widgetDependencies());
     }
 
     public AudioWidget createWidget(FormEntryPrompt prompt, boolean readOnlyOverride) {
@@ -502,8 +513,8 @@ public class AudioWidgetTest {
                 audioPlayer,
                 recordingRequester,
                 audioFileRequester,
-                recordingRequester
-        );
+                recordingRequester,
+                widgetDependencies());
     }
 
     @NotNull
@@ -512,63 +523,6 @@ public class AudioWidgetTest {
                 "audio:" + prompt.getIndex().toString(),
                 questionMediaManager.getAnswerFile(fileName).getAbsolutePath()
         );
-    }
-
-    private static class FakeAudioPlayer implements AudioPlayer {
-
-        private final Map<String, Consumer<Boolean>> playingChangedListeners = new HashMap<>();
-        private final Map<String, Consumer<Integer>> positionChangedListeners = new HashMap<>();
-        private final Map<String, Integer> positions = new HashMap<>();
-
-        private boolean paused;
-        private Clip clip;
-
-        @Override
-        public void play(Clip clip) {
-            this.clip = clip;
-            paused = false;
-            playingChangedListeners.get(clip.getClipID()).accept(true);
-        }
-
-        @Override
-        public void pause() {
-            paused = true;
-            playingChangedListeners.get(clip.getClipID()).accept(false);
-        }
-
-        @Override
-        public void setPosition(String clipId, Integer position) {
-            positions.put(clipId, position);
-            positionChangedListeners.get(clipId).accept(position);
-        }
-
-        @Override
-        public void onPlayingChanged(String clipID, Consumer<Boolean> playingConsumer) {
-            playingChangedListeners.put(clipID, playingConsumer);
-        }
-
-        @Override
-        public void onPositionChanged(String clipID, Consumer<Integer> positionConsumer) {
-            positionChangedListeners.put(clipID, positionConsumer);
-        }
-
-        @Override
-        public void stop() {
-            clip = null;
-        }
-
-        @Nullable
-        public Clip getCurrentClip() {
-            return clip;
-        }
-
-        public boolean isPaused() {
-            return paused;
-        }
-
-        public Integer getPosition(String clipId) {
-            return positions.get(clipId);
-        }
     }
 
     private static class FakeRecordingRequester implements RecordingRequester, RecordingStatusHandler {

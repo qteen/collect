@@ -21,11 +21,10 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import org.odk.collect.android.R
-import org.odk.collect.android.analytics.AnalyticsEvents
-import org.odk.collect.android.analytics.AnalyticsUtils
 import org.odk.collect.android.formlists.blankformlist.BlankFormListItem
 import org.odk.collect.android.formlists.blankformlist.BlankFormListViewModel
 import org.odk.collect.android.injection.DaggerUtils
+import org.odk.collect.androidshared.livedata.LiveDataUtils
 import org.odk.collect.settings.SettingsProvider
 import javax.inject.Inject
 
@@ -45,21 +44,19 @@ class AndroidShortcutsActivity : AppCompatActivity() {
         super.onCreate(bundle)
         DaggerUtils.getComponent(this).inject(this)
 
-        showFormListDialog(viewModel.getAllForms())
+        LiveDataUtils.observeUntilNotNull(viewModel.formsToDisplay) { forms ->
+            showFormListDialog(forms)
+        }
     }
 
     private fun showFormListDialog(blankFormListItems: List<BlankFormListItem>) {
         MaterialAlertDialogBuilder(this)
-            .setTitle(R.string.select_odk_shortcut)
+            .setTitle(org.odk.collect.strings.R.string.select_odk_shortcut)
             .setItems(
                 blankFormListItems
                     .map { it.formName }
                     .toTypedArray()
             ) { _: DialogInterface?, item: Int ->
-                AnalyticsUtils.logServerEvent(
-                    AnalyticsEvents.CREATE_SHORTCUT,
-                    settingsProvider.getUnprotectedSettings()
-                )
                 val intent = getShortcutIntent(blankFormListItems, item)
                 setResult(RESULT_OK, intent)
                 finish()

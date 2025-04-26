@@ -4,9 +4,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
-import static org.javarosa.form.api.FormEntryController.EVENT_GROUP;
-import static org.javarosa.form.api.FormEntryController.EVENT_QUESTION;
-import static org.javarosa.form.api.FormEntryController.EVENT_REPEAT;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -23,29 +20,34 @@ import static org.odk.collect.androidshared.livedata.LiveDataUtils.liveDataOf;
 import android.net.Uri;
 
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.SavedStateHandle;
 import androidx.test.ext.junit.runners.AndroidJUnit4;
 
 import com.google.common.io.Files;
 
 import org.javarosa.form.api.FormEntryController;
-import org.javarosa.form.api.FormEntryPrompt;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.InOrder;
+import org.odk.collect.android.formentry.FormSession;
 import org.odk.collect.android.formentry.saving.FormSaveViewModel;
 import org.odk.collect.android.formentry.saving.FormSaver;
 import org.odk.collect.android.javarosawrapper.FormController;
-import org.odk.collect.android.javarosawrapper.RepeatsInFieldListException;
-import org.odk.collect.android.projects.CurrentProjectProvider;
+import org.odk.collect.android.projects.ProjectsDataService;
 import org.odk.collect.android.support.CollectHelpers;
-import org.odk.collect.android.support.MockFormEntryPromptBuilder;
 import org.odk.collect.android.tasks.SaveFormToDisk;
 import org.odk.collect.android.tasks.SaveToDiskResult;
 import org.odk.collect.android.utilities.MediaUtils;
 import org.odk.collect.audiorecorder.recording.AudioRecorder;
-import org.odk.collect.entities.EntitiesRepository;
+import org.odk.collect.entities.storage.EntitiesRepository;
+import org.odk.collect.forms.Form;
+import org.odk.collect.forms.instances.Instance;
+import org.odk.collect.forms.instances.InstancesRepository;
+import org.odk.collect.forms.savepoints.SavepointsRepository;
+import org.odk.collect.formstest.InMemInstancesRepository;
+import org.odk.collect.formstest.InMemSavepointsRepository;
 import org.odk.collect.projects.Project;
 import org.odk.collect.shared.TempFiles;
 import org.odk.collect.testshared.FakeScheduler;
@@ -55,7 +57,6 @@ import org.robolectric.annotation.LooperMode;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 @RunWith(AndroidJUnit4.class)
 @LooperMode(LooperMode.Mode.LEGACY)
@@ -70,10 +71,15 @@ public class FormSaveViewModelTest {
     private FormSaveViewModel viewModel;
     private MediaUtils mediaUtils;
     private FormController formController;
+    private Form form;
     private AudioRecorder audioRecorder;
-    private CurrentProjectProvider currentProjectProvider;
+    private ProjectsDataService projectsDataService;
 
     private final EntitiesRepository entitiesRepository = mock(EntitiesRepository.class);
+
+    private final InstancesRepository instancesRepository = new InMemInstancesRepository();
+    private final SavepointsRepository savepointsRepository = new InMemSavepointsRepository();
+    private MutableLiveData<FormSession> formSession;
 
     @Before
     public void setup() {
@@ -81,6 +87,7 @@ public class FormSaveViewModelTest {
         Robolectric.getBackgroundThreadScheduler().pause();
 
         formController = mock(FormController.class);
+        form = mock(Form.class);
         logger = mock(AuditEventLogger.class);
         mediaUtils = mock(MediaUtils.class);
 
@@ -90,11 +97,11 @@ public class FormSaveViewModelTest {
         when(logger.isChangeReasonRequired()).thenReturn(false);
 
         audioRecorder = mock(AudioRecorder.class);
-        currentProjectProvider = mock(CurrentProjectProvider.class);
-        when(currentProjectProvider.getCurrentProject()).thenReturn(Project.Companion.getDEMO_PROJECT());
+        projectsDataService = mock(ProjectsDataService.class);
+        when(projectsDataService.requireCurrentProject()).thenReturn(Project.Companion.getDEMO_PROJECT());
 
-        LiveData<FormController> formSession = liveDataOf(formController);
-        viewModel = new FormSaveViewModel(savedStateHandle, () -> CURRENT_TIME, formSaver, mediaUtils, scheduler, audioRecorder, currentProjectProvider, formSession, entitiesRepository);
+        formSession = new MutableLiveData<>(new FormSession(formController, form));
+        viewModel = new FormSaveViewModel(savedStateHandle, () -> CURRENT_TIME, formSaver, mediaUtils, scheduler, audioRecorder, projectsDataService, formSession, entitiesRepository, instancesRepository, savepointsRepository, mock());
 
         CollectHelpers.createDemoProject(); // Needed to deal with `new StoragePathProvider()` calls in `FormSaveViewModel`
     }
@@ -145,93 +152,6 @@ public class FormSaveViewModelTest {
 
         whenFormSaverFinishes(SaveFormToDisk.SAVED);
         assertThat(saveResult.getValue().getState(), equalTo(SAVED));
-    }
-
-    @Test
-    public void whenFormSaverFinishes_saved_andFormIsCurrentlyOnQuestion_logsSaveAndQuestionAuditEventsAfterFlush() throws RepeatsInFieldListException {
-        when(formController.getEvent()).thenReturn(EVENT_QUESTION);
-        FormEntryPrompt prompt = new MockFormEntryPromptBuilder()
-                .withIndex("index1")
-                .withAnswerDisplayText("answer")
-                .build();
-        when(formController.getQuestionPrompts()).thenReturn(Arrays.asList(prompt).toArray(new FormEntryPrompt[]{}));
-
-        viewModel.saveForm(Uri.parse("file://form"), true, "", false);
-        whenFormSaverFinishes(SaveFormToDisk.SAVED);
-
-        InOrder verifier = inOrder(logger);
-        verifier.verify(logger).flush();
-        verifier.verify(logger).logEvent(
-                AuditEvent.AuditEventType.FORM_SAVE,
-                false,
-                CURRENT_TIME
-        );
-        verifier.verify(logger).logEvent(
-                AuditEvent.AuditEventType.QUESTION,
-                prompt.getIndex(),
-                true,
-                prompt.getAnswerValue().getDisplayText(),
-                CURRENT_TIME,
-                null
-        );
-    }
-
-    @Test
-    public void whenFormSaverFinishes_saved_andFormIsCurrentlyOnGroup_logsSaveAndQuestionAuditEventsAfterFlush() throws RepeatsInFieldListException {
-        when(formController.getEvent()).thenReturn(EVENT_GROUP);
-        FormEntryPrompt prompt = new MockFormEntryPromptBuilder()
-                .withIndex("index1")
-                .withAnswerDisplayText("answer")
-                .build();
-        when(formController.getQuestionPrompts()).thenReturn(Arrays.asList(prompt).toArray(new FormEntryPrompt[]{}));
-
-        viewModel.saveForm(Uri.parse("file://form"), true, "", false);
-        whenFormSaverFinishes(SaveFormToDisk.SAVED);
-
-        InOrder verifier = inOrder(logger);
-        verifier.verify(logger).flush();
-        verifier.verify(logger).logEvent(
-                AuditEvent.AuditEventType.FORM_SAVE,
-                false,
-                CURRENT_TIME
-        );
-        verifier.verify(logger).logEvent(
-                AuditEvent.AuditEventType.QUESTION,
-                prompt.getIndex(),
-                true,
-                prompt.getAnswerValue().getDisplayText(),
-                CURRENT_TIME,
-                null
-        );
-    }
-
-    @Test
-    public void whenFormSaverFinishes_saved_andFormIsCurrentlyOnRepeat_logsSaveAndQuestionAuditEventsAfterFlush() throws RepeatsInFieldListException {
-        when(formController.getEvent()).thenReturn(EVENT_REPEAT);
-        FormEntryPrompt prompt = new MockFormEntryPromptBuilder()
-                .withIndex("index1")
-                .withAnswerDisplayText("answer")
-                .build();
-        when(formController.getQuestionPrompts()).thenReturn(Arrays.asList(prompt).toArray(new FormEntryPrompt[]{}));
-
-        viewModel.saveForm(Uri.parse("file://form"), true, "", false);
-        whenFormSaverFinishes(SaveFormToDisk.SAVED);
-
-        InOrder verifier = inOrder(logger);
-        verifier.verify(logger).flush();
-        verifier.verify(logger).logEvent(
-                AuditEvent.AuditEventType.FORM_SAVE,
-                false,
-                CURRENT_TIME
-        );
-        verifier.verify(logger).logEvent(
-                AuditEvent.AuditEventType.QUESTION,
-                prompt.getIndex(),
-                true,
-                prompt.getAnswerValue().getDisplayText(),
-                CURRENT_TIME,
-                null
-        );
     }
 
     @Test
@@ -466,7 +386,7 @@ public class FormSaveViewModelTest {
     public void deleteAnswerFile_whenAnswerFileHasAlreadyBeenDeleted_onRecreatingViewModel_actuallyDeletesNewFile() {
         viewModel.deleteAnswerFile("index", "blah1");
 
-        FormSaveViewModel restoredViewModel = new FormSaveViewModel(savedStateHandle, () -> CURRENT_TIME, formSaver, mediaUtils, scheduler, mock(AudioRecorder.class), currentProjectProvider, liveDataOf(formController), entitiesRepository);
+        FormSaveViewModel restoredViewModel = new FormSaveViewModel(savedStateHandle, () -> CURRENT_TIME, formSaver, mediaUtils, scheduler, mock(AudioRecorder.class), projectsDataService, liveDataOf(new FormSession(formController, form)), entitiesRepository, instancesRepository, savepointsRepository, mock());
         restoredViewModel.deleteAnswerFile("index", "blah2");
 
         verify(mediaUtils).deleteMediaFile("blah2");
@@ -488,7 +408,7 @@ public class FormSaveViewModelTest {
     public void replaceAnswerFile_whenAnswerFileHasAlreadyBeenReplaced_afterRecreatingViewModel_deletesPreviousReplacement() {
         viewModel.replaceAnswerFile("index", "blah1");
 
-        FormSaveViewModel restoredViewModel = new FormSaveViewModel(savedStateHandle, () -> CURRENT_TIME, formSaver, mediaUtils, scheduler, mock(AudioRecorder.class), currentProjectProvider, liveDataOf(formController), entitiesRepository);
+        FormSaveViewModel restoredViewModel = new FormSaveViewModel(savedStateHandle, () -> CURRENT_TIME, formSaver, mediaUtils, scheduler, mock(AudioRecorder.class), projectsDataService, liveDataOf(new FormSession(formController, form)), entitiesRepository, instancesRepository, savepointsRepository, mock());
         restoredViewModel.replaceAnswerFile("index", "blah2");
 
         verify(mediaUtils).deleteMediaFile("blah1");
@@ -510,7 +430,7 @@ public class FormSaveViewModelTest {
 
         File externalFile = File.createTempFile("external", ".file");
         LiveData<Result<File>> answerFile = viewModel.createAnswerFile(externalFile);
-        scheduler.runBackground();
+        scheduler.flush();
 
         assertThat(tempDir.listFiles().length, is(1));
         assertThat(answerFile.getValue().getOrNull().getName(), is(tempDir.listFiles()[0].getName()));
@@ -524,7 +444,7 @@ public class FormSaveViewModelTest {
 
         File externalFile = File.createTempFile("external", ".file");
         LiveData<Result<File>> answerFile = viewModel.createAnswerFile(externalFile);
-        scheduler.runBackground();
+        scheduler.flush();
 
         assertThat(answerFile.getValue().getOrNull(), nullValue());
         assertThat(viewModel.getAnswerFileError().getValue(), equalTo(externalFile.getAbsolutePath()));
@@ -537,9 +457,9 @@ public class FormSaveViewModelTest {
 
         File externalFile = File.createTempFile("external", ".file");
         LiveData<Result<File>> fileName1 = viewModel.createAnswerFile(externalFile);
-        scheduler.runBackground();
+        scheduler.flush();
         LiveData<Result<File>> fileName2 = viewModel.createAnswerFile(externalFile);
-        scheduler.runBackground();
+        scheduler.flush();
 
         assertThat(fileName1.getValue().getOrNull(), is(fileName2.getValue().getOrNull()));
     }
@@ -556,14 +476,37 @@ public class FormSaveViewModelTest {
         viewModel.createAnswerFile(File.createTempFile("external", ".file"));
         assertThat(viewModel.isSavingAnswerFile().getValue(), is(true));
 
-        scheduler.runBackground();
+        scheduler.flush();
         assertThat(viewModel.isSavingAnswerFile().getValue(), is(false));
     }
 
     @Test
     public void ignoreChanges_whenFormControllerNotSet_doesNothing() {
-        FormSaveViewModel viewModel = new FormSaveViewModel(savedStateHandle, () -> CURRENT_TIME, formSaver, mediaUtils, scheduler, mock(AudioRecorder.class), currentProjectProvider, liveDataOf(formController), entitiesRepository);
+        FormSaveViewModel viewModel = new FormSaveViewModel(savedStateHandle, () -> CURRENT_TIME, formSaver, mediaUtils, scheduler, mock(AudioRecorder.class), projectsDataService, liveDataOf(new FormSession(formController, form)), entitiesRepository, instancesRepository, savepointsRepository, mock());
         viewModel.ignoreChanges(); // Checks nothing explodes
+    }
+
+    @Test
+    public void getLastSavedTime_whenNewInstance_returnsNull() {
+        assertThat(viewModel.getLastSavedTime(), equalTo(null));
+    }
+
+    @Test
+    public void getLastSavedTime_whenInstanceNotSaved_returnsLastStatusChange() {
+        Instance instance = new Instance.Builder()
+                .lastStatusChangeDate(123L)
+                .build();
+
+        formSession.setValue(new FormSession(formController, form, instance));
+        assertThat(viewModel.getLastSavedTime(), equalTo(instance.getLastStatusChangeDate()));
+    }
+
+    @Test
+    public void getLastSavedTime_whenInstanceSaved_returnsLastStatusChange() {
+        viewModel.saveForm(Uri.parse("file://form"), false, "", false);
+        whenFormSaverFinishes(SaveFormToDisk.SAVED);
+
+        assertThat(viewModel.getLastSavedTime(), equalTo(formSaver.instance.getLastStatusChangeDate()));
     }
 
     private void whenReasonRequiredToSave() {
@@ -591,11 +534,21 @@ public class FormSaveViewModelTest {
 
         public int numberOfTimesCalled;
 
+        public final Instance instance = new Instance.Builder()
+                .lastStatusChangeDate(123L)
+                .build();
+
         @Override
         public SaveToDiskResult save(Uri instanceContentURI, FormController formController, MediaUtils mediaUtils, boolean shouldFinalize,
-                                     boolean exitAfter, String updatedSaveName, ProgressListener progressListener, ArrayList<String> tempFiles, String currentProjectId, EntitiesRepository entitiesRepository) {
+                                     boolean exitAfter, String updatedSaveName, ProgressListener progressListener, ArrayList<String> tempFiles, String currentProjectId, EntitiesRepository entitiesRepository, InstancesRepository instancesRepository) {
             this.tempFiles = tempFiles;
             numberOfTimesCalled++;
+
+            if (saveToDiskResult.getSaveResult() == SaveFormToDisk.SAVED) {
+                saveToDiskResult.setInstance(new Instance.Builder()
+                        .lastStatusChangeDate(123L)
+                        .build());
+            }
 
             return saveToDiskResult;
         }

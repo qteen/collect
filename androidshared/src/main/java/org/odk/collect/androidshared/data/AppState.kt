@@ -6,6 +6,8 @@ import android.app.Service
 import android.content.Context
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * [AppState] can be used as a shared store of state that lives at an "app"/"in-memory" level
@@ -41,11 +43,25 @@ class AppState {
 
     @Suppress("UNCHECKED_CAST")
     fun <T> get(key: String): T? {
-        return map.get(key) as T?
+        return map[key] as T?
+    }
+
+    fun <T> getFlow(key: String, default: T): StateFlow<T> {
+        return get(key, MutableStateFlow(default))
     }
 
     fun set(key: String, value: Any?) {
         map[key] = value
+    }
+
+    fun <T> setFlow(key: String, value: T) {
+        get<MutableStateFlow<T>>(key).let {
+            if (it != null) {
+                it.value = value
+            } else {
+                map[key] = MutableStateFlow(value)
+            }
+        }
     }
 
     fun clear() {
@@ -62,8 +78,12 @@ interface StateStore {
 }
 
 fun Application.getState(): AppState {
-    val stateStore = this as StateStore
-    return stateStore.getState()
+    try {
+        val stateStore = this as StateStore
+        return stateStore.getState()
+    } catch (e: ClassCastException) {
+        throw ClassCastException("${this.javaClass} cannot be cast to StateStore")
+    }
 }
 
 fun Context.getState(): AppState {

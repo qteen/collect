@@ -1,20 +1,16 @@
-import dependencies.Dependencies
-import dependencies.Versions
-
 plugins {
-    id("com.android.library")
-    id("kotlin-android")
+    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.kotlinAndroid)
 }
 
 apply(from = "../config/quality.gradle")
 
 android {
     namespace = "org.odk.collect.shadows"
-    compileSdk = Versions.android_compile_sdk
+    compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
-        minSdk = Versions.android_min_sdk
-        targetSdk = Versions.android_target_sdk
+        minSdk = libs.versions.minSdk.get().toInt()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -27,12 +23,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-
-    kotlinOptions {
-        jvmTarget = "1.8"
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     testOptions {
@@ -43,9 +35,9 @@ android {
 }
 
 dependencies {
-    implementation(Dependencies.robolectric)
-    implementation(Dependencies.androidx_appcompat)
+    implementation(libs.robolectric)
+    implementation(libs.androidxAppcompat)
 
-    testImplementation(Dependencies.junit)
-    testImplementation(Dependencies.hamcrest)
+    testImplementation(libs.junit)
+    testImplementation(libs.hamcrest)
 }

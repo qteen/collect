@@ -14,7 +14,6 @@ import androidx.test.ext.junit.runners.AndroidJUnit4;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.odk.collect.android.R;
 import org.odk.collect.fragmentstest.FragmentScenarioLauncherRule;
 import org.odk.collect.testshared.RobolectricHelpers;
 
@@ -22,9 +21,7 @@ import org.odk.collect.testshared.RobolectricHelpers;
 public class RefreshFormListDialogFragmentTest {
 
     @Rule
-    public FragmentScenarioLauncherRule launcherRule = new FragmentScenarioLauncherRule(
-            R.style.Theme_MaterialComponents
-    );
+    public FragmentScenarioLauncherRule launcherRule = new FragmentScenarioLauncherRule();
 
     @Test
     public void dialogIsNotCancellable() {

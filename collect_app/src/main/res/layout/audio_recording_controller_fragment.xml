@@ -6,7 +6,7 @@
     android:layout_height="wrap_content"
     android:baselineAligned="false"
     android:orientation="horizontal"
-    android:paddingVertical="@dimen/margin_small"
+    android:paddingVertical="@dimen/margin_extra_small"
     android:paddingStart="@dimen/margin_standard"
     android:paddingEnd="@dimen/margin_standard"
     tools:ignore="RtlSymmetry">
@@ -31,7 +31,7 @@
             style="@style/TextAppearance.Collect.Subtitle1"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/margin_small"
+            android:layout_marginStart="@dimen/margin_extra_small"
             android:text="@string/recording"
             android:textColor="?colorOnSurface"/>
 
@@ -49,18 +49,18 @@
         android:layout_marginStart="@dimen/margin_standard"
         android:orientation="horizontal">
 
-        <com.google.android.material.button.MaterialButton
+        <org.odk.collect.androidshared.ui.multiclicksafe.MultiClickSafeMaterialButton
             android:id="@+id/pause_recording"
-            style="@style/Widget.Collect.Button.OutlinedIconButton"
+            style="?materialIconButtonOutlinedStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginEnd="@dimen/margin_standard"
             android:contentDescription="@string/pause_recording"
             app:icon="@drawable/ic_pause_24dp" />
 
-        <com.google.android.material.button.MaterialButton
+        <org.odk.collect.androidshared.ui.multiclicksafe.MultiClickSafeMaterialButton
             android:id="@+id/stop_recording"
-            style="@style/Widget.Collect.Button.IconButton"
+            style="@style/Widget.Material3.Button.IconButton.Filled"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:contentDescription="@string/stop_recording"

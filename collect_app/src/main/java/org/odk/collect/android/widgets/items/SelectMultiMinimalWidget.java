@@ -8,8 +8,7 @@ import android.content.Context;
 import org.javarosa.core.model.data.IAnswerData;
 import org.javarosa.core.model.data.SelectMultiData;
 import org.javarosa.core.model.data.helper.Selection;
-import org.odk.collect.android.R;
-import org.odk.collect.android.activities.FormEntryActivity;
+import org.odk.collect.android.activities.FormFillingActivity;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.fragments.dialogs.SelectMinimalDialog;
 import org.odk.collect.android.fragments.dialogs.SelectMultiMinimalDialog;
@@ -27,8 +26,8 @@ import java.util.List;
 public class SelectMultiMinimalWidget extends SelectMinimalWidget {
     private List<Selection> selectedItems;
 
-    public SelectMultiMinimalWidget(Context context, QuestionDetails prompt, WaitingForDataRegistry waitingForDataRegistry, SelectChoiceLoader selectChoiceLoader) {
-        super(context, prompt, waitingForDataRegistry, selectChoiceLoader);
+    public SelectMultiMinimalWidget(Context context, QuestionDetails prompt, WaitingForDataRegistry waitingForDataRegistry, SelectChoiceLoader selectChoiceLoader, Dependencies dependencies) {
+        super(context, prompt, waitingForDataRegistry, selectChoiceLoader, dependencies);
         render();
 
         selectedItems = getFormEntryPrompt().getAnswerValue() == null
@@ -51,7 +50,7 @@ public class SelectMultiMinimalWidget extends SelectMinimalWidget {
                 getFormEntryPrompt(), getReferenceManager(),
                 getPlayColor(getFormEntryPrompt(), themeUtils), numColumns, noButtonsMode, mediaUtils);
 
-        DialogFragmentUtils.showIfNotShowing(dialog, SelectMinimalDialog.class, ((FormEntryActivity) getContext()).getSupportFragmentManager());
+        DialogFragmentUtils.showIfNotShowing(dialog, SelectMinimalDialog.class, ((FormFillingActivity) getContext()).getSupportFragmentManager());
     }
 
     @Override
@@ -85,7 +84,7 @@ public class SelectMultiMinimalWidget extends SelectMinimalWidget {
 
     private void updateAnswerLabel() {
         if (selectedItems.isEmpty()) {
-            binding.answer.setText(R.string.select_answer);
+            binding.answer.setText(org.odk.collect.strings.R.string.select_answer);
         } else {
             StringBuilder builder = new StringBuilder();
             for (Selection selectedItem : selectedItems) {

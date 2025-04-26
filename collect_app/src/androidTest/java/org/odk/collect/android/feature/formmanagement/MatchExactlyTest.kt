@@ -8,8 +8,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
 import org.junit.runner.RunWith
-import org.odk.collect.android.R
 import org.odk.collect.android.support.TestDependencies
+import org.odk.collect.android.support.pages.ErrorPage
 import org.odk.collect.android.support.pages.FillBlankFormPage
 import org.odk.collect.android.support.pages.MainMenuPage
 import org.odk.collect.android.support.rules.CollectTestRule
@@ -54,7 +54,7 @@ class MatchExactlyTest {
     }
 
     @Test
-    fun whenMatchExactlyEnabled_clickingFillBlankForm_andClickingRefresh_whenThereIsAnError_showsNotification_andClickingNotification_returnsToFillBlankForms() {
+    fun whenMatchExactlyEnabled_clickingFillBlankForm_andClickingRefresh_whenThereIsAnError_showsNotification_andClickingNotification_returnsToApp() {
         testDependencies.server.alwaysReturnError()
 
         rule.startAtMainMenu()
@@ -67,12 +67,37 @@ class MatchExactlyTest {
 
         notificationDrawerRule
             .open()
-            .assertNotification("ODK Collect", "Form update failed", "The server https://server.example.com returned status code 500. If you keep having this problem, report it to the person who asked you to collect data.")
+            .assertNotification("ODK Collect", "Form update failed", "Demo project")
             .clickNotification(
                 "ODK Collect",
                 "Form update failed",
                 FillBlankFormPage()
-            ).pressBack(MainMenuPage()) // Check we return to Fill Blank Form, not open a new one
+            ).pressBack(MainMenuPage())
+    }
+
+    @Test
+    fun whenMatchExactlyEnabled_clickingFillBlankForm_andClickingRefresh_whenThereIsAnError_showsNotification_andClickingShowDetails_showsErrorDetails() {
+        testDependencies.server.alwaysReturnError()
+
+        rule.startAtMainMenu()
+            .copyForm("one-question.xml")
+            .copyForm("one-question-repeat.xml")
+            .setServer(testDependencies.server.url)
+            .enableMatchExactly()
+            .clickFillBlankForm()
+            .clickRefreshWithError()
+
+        notificationDrawerRule
+            .open()
+            .assertNotification("ODK Collect", "Form update failed", "Demo project")
+            .clickAction(
+                "ODK Collect",
+                "Form update failed",
+                "Show details",
+                ErrorPage()
+            ).assertText(org.odk.collect.strings.R.string.form_update_error)
+            .assertText("Demo project")
+            .assertText("The server https://server.example.com returned status code 500. If you keep having this problem, report it to the person who asked you to collect data.")
     }
 
     @Test
@@ -141,9 +166,9 @@ class MatchExactlyTest {
             .copyForm("one-question.xml")
             .copyForm("one-question-repeat.xml")
             .enableMatchExactly()
-            .assertTextDoesNotExist(R.string.get_forms)
+            .assertTextDoesNotExist(org.odk.collect.strings.R.string.get_forms)
             .clickDeleteSavedForm()
-            .assertTextDoesNotExist(R.string.forms)
+            .assertTextDoesNotExist(org.odk.collect.strings.R.string.forms)
     }
 
     @Test
@@ -155,6 +180,47 @@ class MatchExactlyTest {
             .enableMatchExactly()
             .enableManualUpdates()
 
-        assertThat(testDependencies.scheduler.deferredTasks, `is`(empty()))
+        assertThat(testDependencies.scheduler.getDeferredTasks(), `is`(empty()))
+    }
+
+    @Test
+    fun whenMatchExactlyEnabled_getsLatestFormsFromServerDuringFillingAFormWithoutEntities() {
+        testDependencies.server.addForm(
+            "One Question Updated",
+            "one_question",
+            "2",
+            "one-question-updated.xml"
+        )
+
+        rule.startAtMainMenu()
+            .copyForm("one-question.xml")
+            .setServer(testDependencies.server.url)
+            .enableMatchExactly()
+            .startBlankForm("One Question")
+            .also { testDependencies.scheduler.runDeferredTasks() }
+            .pressBackAndDiscardForm()
+            .clickFillBlankForm()
+            .assertFormExists("One Question Updated")
+    }
+
+    @Test
+    fun whenMatchExactlyEnabled_doesNotGetLatestFormsFromServerDuringFillingAFormWithEntities() {
+        testDependencies.server.addForm(
+            "One Question Updated",
+            "one_question",
+            "2",
+            "one-question-updated.xml"
+        )
+
+        rule.startAtMainMenu()
+            .copyForm("one-question-entity-registration.xml")
+            .copyForm("one-question.xml")
+            .setServer(testDependencies.server.url)
+            .enableMatchExactly()
+            .startBlankForm("One Question Entity Registration")
+            .also { testDependencies.scheduler.runDeferredTasks() }
+            .pressBackAndDiscardForm()
+            .clickFillBlankForm()
+            .assertFormDoesNotExist("One Question Updated")
     }
 }

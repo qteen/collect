@@ -9,21 +9,18 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
 import org.odk.collect.android.R
-import org.odk.collect.android.support.StorageUtils
 import org.odk.collect.android.support.TestDependencies
 import org.odk.collect.android.support.pages.ErrorPage
-import org.odk.collect.android.support.pages.FillBlankFormPage
-import org.odk.collect.android.support.pages.GetBlankFormPage
 import org.odk.collect.android.support.pages.MainMenuPage
 import org.odk.collect.android.support.rules.CollectTestRule
 import org.odk.collect.android.support.rules.NotificationDrawerRule
 import org.odk.collect.android.support.rules.TestRuleChain
-import org.odk.collect.projects.Project
 
 class PreviouslyDownloadedOnlyTest {
+
     private val testDependencies = TestDependencies()
     private val notificationDrawerRule = NotificationDrawerRule()
-    private val rule = CollectTestRule()
+    private val rule = CollectTestRule(useDemoProject = false)
 
     @get:Rule
     var ruleChain: RuleChain = TestRuleChain.chain(testDependencies)
@@ -32,9 +29,7 @@ class PreviouslyDownloadedOnlyTest {
 
     @Test
     fun whenPreviouslyDownloadedOnlyEnabled_notifiesOnFormUpdates_automaticallyAndRepeatedly() {
-        rule.startAtMainMenu()
-            .copyForm("one-question.xml")
-            .copyForm("two-question.xml")
+        rule.withProject(testDependencies.server, "one-question.xml", "two-question.xml")
             .setServer(testDependencies.server.url)
             .enablePreviouslyDownloadedOnlyUpdates()
 
@@ -47,7 +42,11 @@ class PreviouslyDownloadedOnlyTest {
         testDependencies.scheduler.runDeferredTasks()
 
         notificationDrawerRule.open()
-            .assertNotification("ODK Collect", "Form updates available", Project.DEMO_PROJECT_NAME)
+            .assertNotification(
+                "ODK Collect",
+                "Form updates available",
+                testDependencies.server.hostName
+            )
             .clearAll()
 
         testDependencies.server.addForm(
@@ -56,24 +55,26 @@ class PreviouslyDownloadedOnlyTest {
             "1",
             "two-question-updated.xml"
         )
+
         testDependencies.scheduler.runDeferredTasks()
 
         notificationDrawerRule.open()
-            .assertNotification("ODK Collect", "Form updates available", Project.DEMO_PROJECT_NAME)
+            .assertNotification(
+                "ODK Collect",
+                "Form updates available",
+                testDependencies.server.hostName
+            )
             .clickNotification(
                 "ODK Collect",
                 "Form updates available",
-                GetBlankFormPage()
+                MainMenuPage()
             )
     }
 
     @Test
     fun whenPreviouslyDownloadedOnlyEnabledWithAutomaticDownload_checkingAutoDownload_downloadsUpdatedForms_andDisplaysNotification() {
-        val page = MainMenuPage().assertOnPage()
-            .setServer(testDependencies.server.url)
+        rule.withProject(testDependencies.server, "one-question.xml")
             .enablePreviouslyDownloadedOnlyUpdatesWithAutomaticDownload()
-
-        StorageUtils.copyFormToDemoProject("one-question.xml")
 
         testDependencies.server.addForm(
             "One Question Updated",
@@ -83,9 +84,6 @@ class PreviouslyDownloadedOnlyTest {
         )
 
         testDependencies.scheduler.runDeferredTasks()
-
-        page.clickFillBlankForm()
-            .assertText("One Question Updated")
 
         notificationDrawerRule.open()
             .assertNotification(
@@ -96,19 +94,18 @@ class PreviouslyDownloadedOnlyTest {
             .clickNotification(
                 "ODK Collect",
                 "Forms download succeeded",
-                FillBlankFormPage()
-            )
+                MainMenuPage()
+            ).clickFillBlankForm()
+            .assertText("One Question Updated")
     }
 
     @Test
     fun whenPreviouslyDownloadedOnlyEnabledWithAutomaticDownload_checkingAutoDownload_downloadsUpdatedForms_andDisplaysNotificationWhenFails() {
         testDependencies.server.errorOnFetchingForms()
 
-        val page = MainMenuPage().assertOnPage()
-            .setServer(testDependencies.server.url)
-            .enablePreviouslyDownloadedOnlyUpdatesWithAutomaticDownload()
-
-        StorageUtils.copyFormToDemoProject("one-question.xml")
+        val mainMenuPage =
+            rule.withProject(testDependencies.server, "one-question.xml")
+                .enablePreviouslyDownloadedOnlyUpdatesWithAutomaticDownload()
 
         testDependencies.server.addForm(
             "One Question Updated",
@@ -119,7 +116,7 @@ class PreviouslyDownloadedOnlyTest {
 
         testDependencies.scheduler.runDeferredTasks()
 
-        page.clickFillBlankForm()
+        mainMenuPage.clickFillBlankForm()
             .assertFormDoesNotExist("One Question Updated")
 
         notificationDrawerRule.open()
@@ -128,23 +125,24 @@ class PreviouslyDownloadedOnlyTest {
                 "Forms download failed",
                 "1 of 1 downloads failed!"
             )
-            .clickNotification(
+            .clickAction(
                 "ODK Collect",
                 "Forms download failed",
+                "Show details",
                 ErrorPage()
             )
     }
 
     @Test
     fun whenPreviouslyDownloadedOnlyEnabled_getBlankFormsIsAvailable() {
-        rule.startAtMainMenu()
+        rule.withProject(testDependencies.server.url)
             .enablePreviouslyDownloadedOnlyUpdates()
-            .assertText(R.string.get_forms)
+            .assertText(org.odk.collect.strings.R.string.get_forms)
     }
 
     @Test
     fun whenPreviouslyDownloadedOnlyEnabled_fillBlankFormRefreshButtonIsGone() {
-        rule.startAtMainMenu()
+        rule.withProject(testDependencies.server.url)
             .enablePreviouslyDownloadedOnlyUpdates()
             .clickFillBlankForm()
         onView(withId(R.id.menu_refresh)).check(doesNotExist())
@@ -152,11 +150,46 @@ class PreviouslyDownloadedOnlyTest {
 
     @Test
     fun whenPreviouslyDownloadedOnlyDisabled_stopsCheckingForUpdates() {
-        rule.startAtMainMenu()
-            .setServer(testDependencies.server.url)
+        rule.withProject(testDependencies.server.url)
             .enablePreviouslyDownloadedOnlyUpdates()
             .enableManualUpdates()
 
-        assertThat(testDependencies.scheduler.deferredTasks, equalTo(emptyList()))
+        assertThat(testDependencies.scheduler.getDeferredTasks(), equalTo(emptyList()))
+    }
+
+    @Test
+    fun whenPreviouslyDownloadedOnlyEnabledWithAutomaticDownload_getsLatestFormsFromServerDuringFillingAFormWithoutEntities() {
+        testDependencies.server.addForm(
+            "One Question Updated",
+            "one_question",
+            "2",
+            "one-question-updated.xml"
+        )
+
+        rule.withProject(testDependencies.server, "one-question.xml")
+            .enablePreviouslyDownloadedOnlyUpdatesWithAutomaticDownload()
+            .startBlankForm("One Question")
+            .also { testDependencies.scheduler.runDeferredTasks() }
+            .pressBackAndDiscardForm()
+            .clickFillBlankForm()
+            .assertFormExists("One Question Updated")
+    }
+
+    @Test
+    fun whenPreviouslyDownloadedOnlyEnabledWithAutomaticDownload_doesNotGetLatestFormsFromServerDuringFillingAFormWithEntities() {
+        testDependencies.server.addForm(
+            "One Question Updated",
+            "one_question",
+            "2",
+            "one-question-updated.xml"
+        )
+
+        rule.withProject(testDependencies.server, "one-question-entity-registration.xml", "one-question.xml")
+            .enablePreviouslyDownloadedOnlyUpdatesWithAutomaticDownload()
+            .startBlankForm("One Question Entity Registration")
+            .also { testDependencies.scheduler.runDeferredTasks() }
+            .pressBackAndDiscardForm()
+            .clickFillBlankForm()
+            .assertFormDoesNotExist("One Question Updated")
     }
 }

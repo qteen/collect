@@ -16,6 +16,7 @@ import org.odk.collect.android.injection.config.AppDependencyModule
 import org.odk.collect.android.preferences.ProjectPreferencesViewModel
 import org.odk.collect.android.support.CollectHelpers
 import org.odk.collect.android.utilities.AdminPasswordProvider
+import org.odk.collect.androidshared.ui.FragmentFactoryBuilder
 import org.odk.collect.fragmentstest.FragmentScenarioLauncherRule
 import org.odk.collect.settings.keys.ProtectedProjectKeys
 import org.odk.collect.shared.settings.Settings
@@ -30,8 +31,13 @@ class ProjectPreferencesFragmentTest {
     }
     private val projectPreferencesViewModel = ProjectPreferencesViewModel(adminPasswordProvider)
 
+    private val fragmentFactory = FragmentFactoryBuilder()
+        .forClass(ProjectPreferencesFragment::class) {
+            ProjectPreferencesFragment(false)
+        }.build()
+
     @get:Rule
-    val launcherRule = FragmentScenarioLauncherRule()
+    val launcherRule = FragmentScenarioLauncherRule(defaultFactory = fragmentFactory)
 
     @Before
     fun setup() {
@@ -77,7 +83,6 @@ class ProjectPreferencesFragmentTest {
         adminSettings.save(ProtectedProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS, false)
         adminSettings.save(ProtectedProjectKeys.KEY_AUTOSEND, false)
         adminSettings.save(ProtectedProjectKeys.KEY_DELETE_AFTER_SEND, false)
-        adminSettings.save(ProtectedProjectKeys.KEY_DEFAULT_TO_FINALIZED, false)
         adminSettings.save(ProtectedProjectKeys.KEY_CONSTRAINT_BEHAVIOR, false)
         adminSettings.save(ProtectedProjectKeys.KEY_HIGH_RESOLUTION, false)
         adminSettings.save(ProtectedProjectKeys.KEY_IMAGE_SIZE, false)
@@ -385,7 +390,6 @@ class ProjectPreferencesFragmentTest {
         adminSettings.save(ProtectedProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS, false)
         adminSettings.save(ProtectedProjectKeys.KEY_AUTOSEND, false)
         adminSettings.save(ProtectedProjectKeys.KEY_DELETE_AFTER_SEND, true)
-        adminSettings.save(ProtectedProjectKeys.KEY_DEFAULT_TO_FINALIZED, false)
         adminSettings.save(ProtectedProjectKeys.KEY_CONSTRAINT_BEHAVIOR, false)
         adminSettings.save(ProtectedProjectKeys.KEY_HIGH_RESOLUTION, false)
         adminSettings.save(ProtectedProjectKeys.KEY_IMAGE_SIZE, false)
@@ -409,7 +413,6 @@ class ProjectPreferencesFragmentTest {
         adminSettings.save(ProtectedProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS, false)
         adminSettings.save(ProtectedProjectKeys.KEY_AUTOSEND, false)
         adminSettings.save(ProtectedProjectKeys.KEY_DELETE_AFTER_SEND, false)
-        adminSettings.save(ProtectedProjectKeys.KEY_DEFAULT_TO_FINALIZED, false)
         adminSettings.save(ProtectedProjectKeys.KEY_CONSTRAINT_BEHAVIOR, false)
         adminSettings.save(ProtectedProjectKeys.KEY_HIGH_RESOLUTION, false)
         adminSettings.save(ProtectedProjectKeys.KEY_IMAGE_SIZE, false)
@@ -433,7 +436,6 @@ class ProjectPreferencesFragmentTest {
         adminSettings.save(ProtectedProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS, false)
         adminSettings.save(ProtectedProjectKeys.KEY_AUTOSEND, false)
         adminSettings.save(ProtectedProjectKeys.KEY_DELETE_AFTER_SEND, true)
-        adminSettings.save(ProtectedProjectKeys.KEY_DEFAULT_TO_FINALIZED, false)
         adminSettings.save(ProtectedProjectKeys.KEY_CONSTRAINT_BEHAVIOR, false)
         adminSettings.save(ProtectedProjectKeys.KEY_HIGH_RESOLUTION, false)
         adminSettings.save(ProtectedProjectKeys.KEY_IMAGE_SIZE, false)
@@ -457,7 +459,6 @@ class ProjectPreferencesFragmentTest {
         adminSettings.save(ProtectedProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS, false)
         adminSettings.save(ProtectedProjectKeys.KEY_AUTOSEND, false)
         adminSettings.save(ProtectedProjectKeys.KEY_DELETE_AFTER_SEND, false)
-        adminSettings.save(ProtectedProjectKeys.KEY_DEFAULT_TO_FINALIZED, false)
         adminSettings.save(ProtectedProjectKeys.KEY_CONSTRAINT_BEHAVIOR, false)
         adminSettings.save(ProtectedProjectKeys.KEY_HIGH_RESOLUTION, false)
         adminSettings.save(ProtectedProjectKeys.KEY_IMAGE_SIZE, false)
@@ -481,7 +482,6 @@ class ProjectPreferencesFragmentTest {
         adminSettings.save(ProtectedProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS, false)
         adminSettings.save(ProtectedProjectKeys.KEY_AUTOSEND, false)
         adminSettings.save(ProtectedProjectKeys.KEY_DELETE_AFTER_SEND, true)
-        adminSettings.save(ProtectedProjectKeys.KEY_DEFAULT_TO_FINALIZED, false)
         adminSettings.save(ProtectedProjectKeys.KEY_CONSTRAINT_BEHAVIOR, false)
         adminSettings.save(ProtectedProjectKeys.KEY_HIGH_RESOLUTION, false)
         adminSettings.save(ProtectedProjectKeys.KEY_IMAGE_SIZE, false)
@@ -505,7 +505,6 @@ class ProjectPreferencesFragmentTest {
         adminSettings.save(ProtectedProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS, false)
         adminSettings.save(ProtectedProjectKeys.KEY_AUTOSEND, false)
         adminSettings.save(ProtectedProjectKeys.KEY_DELETE_AFTER_SEND, false)
-        adminSettings.save(ProtectedProjectKeys.KEY_DEFAULT_TO_FINALIZED, false)
         adminSettings.save(ProtectedProjectKeys.KEY_CONSTRAINT_BEHAVIOR, false)
         adminSettings.save(ProtectedProjectKeys.KEY_HIGH_RESOLUTION, false)
         adminSettings.save(ProtectedProjectKeys.KEY_IMAGE_SIZE, false)

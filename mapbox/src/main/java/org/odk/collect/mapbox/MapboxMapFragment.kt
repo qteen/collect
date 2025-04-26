@@ -12,8 +12,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.startup.AppInitializer
 import com.google.android.gms.location.LocationListener
-import com.mapbox.android.core.location.LocationEngineProvider
-import com.mapbox.android.core.location.LocationEngineRequest
+import com.mapbox.android.gestures.StandardScaleGestureDetector
 import com.mapbox.geojson.Point
 import com.mapbox.maps.EdgeInsets
 import com.mapbox.maps.MapView
@@ -43,13 +42,17 @@ import com.mapbox.maps.plugin.annotation.generated.createPolylineAnnotationManag
 import com.mapbox.maps.plugin.compass.compass
 import com.mapbox.maps.plugin.gestures.OnMapClickListener
 import com.mapbox.maps.plugin.gestures.OnMapLongClickListener
+import com.mapbox.maps.plugin.gestures.OnScaleListener
 import com.mapbox.maps.plugin.gestures.addOnMapClickListener
 import com.mapbox.maps.plugin.gestures.addOnMapLongClickListener
+import com.mapbox.maps.plugin.gestures.addOnScaleListener
 import com.mapbox.maps.plugin.locationcomponent.location
-import com.mapbox.maps.plugin.scalebar.scalebar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.odk.collect.androidshared.utils.ScreenUtils
+import org.odk.collect.location.LocationClient
+import org.odk.collect.location.LocationClient.LocationClientListener
+import org.odk.collect.maps.LineDescription
 import org.odk.collect.maps.MapFragment
 import org.odk.collect.maps.MapFragment.ErrorListener
 import org.odk.collect.maps.MapFragment.FeatureListener
@@ -57,6 +60,7 @@ import org.odk.collect.maps.MapFragment.PointListener
 import org.odk.collect.maps.MapFragment.ReadyListener
 import org.odk.collect.maps.MapFragmentDelegate
 import org.odk.collect.maps.MapPoint
+import org.odk.collect.maps.PolygonDescription
 import org.odk.collect.maps.layers.MapFragmentReferenceLayerUtils.getReferenceLayerFile
 import org.odk.collect.maps.layers.MbtilesFile
 import org.odk.collect.maps.layers.ReferenceLayerRepository
@@ -74,7 +78,8 @@ class MapboxMapFragment :
     MapFragment,
     OnMapClickListener,
     OnMapLongClickListener,
-    LocationListener {
+    LocationListener,
+    LocationClientListener {
 
     private lateinit var mapView: MapView
     private lateinit var mapboxMap: MapboxMap
@@ -102,10 +107,11 @@ class MapboxMapFragment :
     private var clientWantsLocationUpdates = false
     private var topStyleLayerId: String? = null
     private val locationCallback = MapboxLocationCallback(this)
-    private var mapFragmentDelegate = MapFragmentDelegate(
+    override val mapFragmentDelegate = MapFragmentDelegate(
         this,
         { MapboxMapConfigurator() },
         { settingsProvider.getUnprotectedSettings() },
+        { settingsProvider.getMetaSettings() },
         this::onConfigChanged
     )
 
@@ -117,6 +123,10 @@ class MapboxMapFragment :
 
     private val referenceLayerRepository: ReferenceLayerRepository by lazy {
         (requireActivity().applicationContext as ObjectProviderHost).getObjectProvider().provide(ReferenceLayerRepository::class.java)
+    }
+
+    private val locationClient: LocationClient by lazy {
+        (requireActivity().applicationContext as ObjectProviderHost).getObjectProvider().provide(LocationClient::class.java)
     }
 
     override fun init(readyListener: ReadyListener?, errorListener: ErrorListener?) {
@@ -142,10 +152,9 @@ class MapboxMapFragment :
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?,
+        savedInstanceState: Bundle?
     ): View {
         mapView = MapView(inflater.context).apply {
-            scalebar.enabled = false
             compass.position = Gravity.TOP or Gravity.START
             compass.marginTop = 36f
             compass.marginBottom = 36f
@@ -158,6 +167,15 @@ class MapboxMapFragment :
             .apply {
                 addOnMapClickListener(this@MapboxMapFragment)
                 addOnMapLongClickListener(this@MapboxMapFragment)
+                addOnScaleListener(object : OnScaleListener {
+                    override fun onScale(detector: StandardScaleGestureDetector) = Unit
+
+                    override fun onScaleBegin(detector: StandardScaleGestureDetector) = Unit
+
+                    override fun onScaleEnd(detector: StandardScaleGestureDetector) {
+                        mapFragmentDelegate.onZoomLevelChangedByUserListener(cameraState.zoom.toFloat())
+                    }
+                })
             }
 
         polylineAnnotationManager = mapView
@@ -256,7 +274,7 @@ class MapboxMapFragment :
     override fun zoomToBoundingBox(
         mapPoints: Iterable<MapPoint>?,
         scaleFactor: Double,
-        animate: Boolean,
+        animate: Boolean
     ) {
         mapPoints?.let {
             val points = mapPoints.map {
@@ -331,29 +349,34 @@ class MapboxMapFragment :
         }
     }
 
-    override fun addPolyLine(points: MutableIterable<MapPoint>, closed: Boolean, draggable: Boolean): Int {
+    override fun addPolyLine(lineDescription: LineDescription): Int {
         val featureId = nextFeatureId++
-        features[featureId] = PolyLineFeature(
-            requireContext(),
-            pointAnnotationManager,
-            polylineAnnotationManager,
-            featureId,
-            featureClickListener,
-            featureDragEndListener,
-            closed,
-            draggable,
-            points
-        )
+        if (lineDescription.draggable) {
+            features[featureId] = DynamicPolyLineFeature(
+                requireContext(),
+                pointAnnotationManager,
+                polylineAnnotationManager,
+                featureId,
+                featureClickListener,
+                featureDragEndListener,
+                lineDescription
+            )
+        } else {
+            features[featureId] = StaticPolyLineFeature(
+                polylineAnnotationManager,
+                featureId,
+                featureClickListener,
+                lineDescription
+            )
+        }
         return featureId
     }
 
-    override fun addPolygon(points: MutableIterable<MapPoint>): Int {
+    override fun addPolygon(polygonDescription: PolygonDescription): Int {
         val featureId = nextFeatureId++
-        features[featureId] = PolygonFeature(
-            requireContext(),
-            pointAnnotationManager,
+        features[featureId] = StaticPolygonFeature(
             mapView.annotations.createPolygonAnnotationManager(),
-            points,
+            polygonDescription,
             featureClickListener,
             featureId
         )
@@ -363,22 +386,22 @@ class MapboxMapFragment :
 
     override fun appendPointToPolyLine(featureId: Int, point: MapPoint) {
         val feature = features[featureId]
-        if (feature is PolyLineFeature) {
+        if (feature is DynamicPolyLineFeature) {
             feature.appendPoint(point)
         }
     }
 
     override fun removePolyLineLastPoint(featureId: Int) {
         val feature = features[featureId]
-        if (feature is PolyLineFeature) {
+        if (feature is DynamicPolyLineFeature) {
             feature.removeLastPoint()
         }
     }
 
     override fun getPolyLinePoints(featureId: Int): List<MapPoint> {
         val feature = features[featureId]
-        return if (feature is PolyLineFeature) {
-            feature.mapPoints
+        return if (feature is LineFeature) {
+            feature.points
         } else {
             emptyList()
         }
@@ -461,8 +484,10 @@ class MapboxMapFragment :
 
     override fun onLocationChanged(location: Location) {
         lastLocationFix = MapPoint(
-            location.latitude, location.longitude,
-            location.altitude, location.accuracy.toDouble()
+            location.latitude,
+            location.longitude,
+            location.altitude,
+            location.accuracy.toDouble()
         )
         lastLocationProvider = location.provider
         Timber.i(
@@ -479,22 +504,14 @@ class MapboxMapFragment :
 
     @SuppressWarnings("MissingPermission") // permission checks for location services are handled in widgets
     private fun enableLocationUpdates(enabled: Boolean) {
-        val engine = LocationEngineProvider.getBestLocationEngine(requireContext())
         if (enabled) {
-            Timber.i("Requesting location updates from %s (to %s)", engine, this)
-            engine.requestLocationUpdates(
-                LocationEngineRequest.Builder(1000)
-                    .setPriority(LocationEngineRequest.PRIORITY_HIGH_ACCURACY)
-                    .setMaxWaitTime(5000)
-                    .build(),
-                locationCallback,
-                null
-            )
-            engine.getLastLocation(locationCallback)
+            Timber.i("Starting LocationClient %s (for MapFragment %s)", locationClient, this)
+            locationClient.start(this)
         } else {
-            Timber.i("Stopping location updates from %s (to %s)", engine, this)
-            engine.removeLocationUpdates(locationCallback)
+            Timber.i("Stopping LocationClient %s (for MapFragment %s)", locationClient, this)
+            locationClient.stop()
         }
+
         mapView.location.enabled = enabled
     }
 
@@ -504,7 +521,7 @@ class MapboxMapFragment :
             this.locationPuck = LocationPuck2D(
                 AppCompatResources.getDrawable(
                     requireContext(),
-                    R.drawable.ic_crosshairs,
+                    org.odk.collect.maps.R.drawable.ic_crosshairs
                 )
             )
         }
@@ -575,7 +592,7 @@ class MapboxMapFragment :
                 tileSet.minZoom(mbtiles.getMetadata("minzoom").toInt())
                 tileSet.maxZoom(mbtiles.getMetadata("maxzoom").toInt())
             } catch (e: NumberFormatException) {
-                /* ignore */
+                // ignore
             }
             var parts = mbtiles.getMetadata("center").split(",").toTypedArray()
             if (parts.size == 3) { // latitude, longitude, zoom
@@ -588,7 +605,7 @@ class MapboxMapFragment :
                         )
                     )
                 } catch (e: NumberFormatException) {
-                    /* ignore */
+                    // ignore
                 }
             }
             parts = mbtiles.getMetadata("bounds").split(",").toTypedArray()
@@ -603,7 +620,7 @@ class MapboxMapFragment :
                         )
                     )
                 } catch (e: NumberFormatException) {
-                    /* ignore */
+                    // ignore
                 }
             }
         } catch (e: MbtilesFile.MbtilesException) {
@@ -622,6 +639,17 @@ class MapboxMapFragment :
         if (mapboxMap.getStyle()?.getSource(source.sourceId) == null) {
             mapboxMap.getStyle()?.addSource(source)
         }
+    }
+
+    override fun onClientStart() {
+        Timber.i("Requesting location updates (to %s)", this)
+        locationClient.requestLocationUpdates(this)
+    }
+
+    override fun onClientStartFailure() {
+    }
+
+    override fun onClientStop() {
     }
 
     companion object {

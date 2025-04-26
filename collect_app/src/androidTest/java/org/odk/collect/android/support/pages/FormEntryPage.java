@@ -7,26 +7,38 @@ import static androidx.test.espresso.action.ViewActions.replaceText;
 import static androidx.test.espresso.action.ViewActions.scrollTo;
 import static androidx.test.espresso.action.ViewActions.swipeLeft;
 import static androidx.test.espresso.action.ViewActions.swipeRight;
+import static androidx.test.espresso.assertion.PositionAssertions.isCompletelyBelow;
+import static androidx.test.espresso.assertion.ViewAssertions.doesNotExist;
 import static androidx.test.espresso.assertion.ViewAssertions.matches;
+import static androidx.test.espresso.matcher.ViewMatchers.hasFocus;
+import static androidx.test.espresso.matcher.ViewMatchers.isCompletelyDisplayed;
+import static androidx.test.espresso.matcher.ViewMatchers.isDescendantOfA;
 import static androidx.test.espresso.matcher.ViewMatchers.isDisplayed;
 import static androidx.test.espresso.matcher.ViewMatchers.withClassName;
 import static androidx.test.espresso.matcher.ViewMatchers.withId;
 import static androidx.test.espresso.matcher.ViewMatchers.withText;
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.core.StringEndsWith.endsWith;
+import static org.odk.collect.android.support.matchers.CustomMatchers.isQuestionView;
 import static org.odk.collect.android.support.matchers.CustomMatchers.withIndex;
 
+import android.graphics.Bitmap;
 import android.os.Build;
+import android.view.View;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.test.core.app.ApplicationProvider;
-import androidx.test.espresso.Espresso;
 
+import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.odk.collect.android.R;
-import org.odk.collect.android.support.ActivityHelpers;
-import org.odk.collect.android.support.WaitFor;
-import org.odk.collect.android.utilities.FlingRegister;
+import org.odk.collect.androidtest.DrawableMatcher;
+import org.odk.collect.testshared.Interactions;
+import org.odk.collect.testshared.ViewActions;
+import org.odk.collect.testshared.WaitFor;
 
 import java.util.concurrent.Callable;
 
@@ -42,11 +54,19 @@ public class FormEntryPage extends Page<FormEntryPage> {
     public FormEntryPage assertOnPage() {
         // Make sure we wait for loading to finish
         WaitFor.waitFor((Callable<Void>) () -> {
-            assertTextDoesNotExist(R.string.loading_form);
+            assertTextDoesNotExist(org.odk.collect.strings.R.string.loading_form);
             return null;
         });
 
-        assertToolbarTitle(formName);
+        WaitFor.waitFor((Callable<Void>) () -> {
+            assertToolbarTitle(formName);
+            return null;
+        });
+
+        // Check we are not on the Form Hierarchy page
+        assertTextDoesNotExist(org.odk.collect.strings.R.string.jump_to_beginning);
+        assertTextDoesNotExist(org.odk.collect.strings.R.string.jump_to_end);
+
         return this;
     }
 
@@ -66,10 +86,22 @@ public class FormEntryPage extends Page<FormEntryPage> {
         return page;
     }
 
+    public <D extends Page<D>> D fillOutAndSave(D destination, QuestionAndAnswer... questionsAndAnswers) {
+        return fillOut(questionsAndAnswers)
+                .pressBack(new SaveOrDiscardFormDialog<>(destination))
+                .clickSaveChanges();
+    }
+
     public MainMenuPage fillOutAndSave(QuestionAndAnswer... questionsAndAnswers) {
         return fillOut(questionsAndAnswers)
+                .pressBack(new SaveOrDiscardFormDialog<>(new MainMenuPage()))
+                .clickSaveChanges();
+    }
+
+    public MainMenuPage fillOutAndFinalize(QuestionAndAnswer... questionsAndAnswers) {
+        return fillOut(questionsAndAnswers)
                 .swipeToEndScreen()
-                .clickSaveAndExit();
+                .clickFinalize();
     }
 
     public FormEntryPage swipeToNextQuestion(String questionText) {
@@ -111,19 +143,31 @@ public class FormEntryPage extends Page<FormEntryPage> {
         return this;
     }
 
+    public FormEndPage swipeToEndScreen(String instanceName) {
+        flingLeft();
+        return WaitFor.waitFor(() -> new FormEndPage(instanceName).assertOnPage());
+    }
+
     public FormEndPage swipeToEndScreen() {
         flingLeft();
         return WaitFor.waitFor(() -> new FormEndPage(formName).assertOnPage());
     }
 
-    public ErrorDialog swipeToNextQuestionWithError() {
+    public ErrorDialog swipeToNextQuestionWithError(boolean isFatal) {
         flingLeft();
-        return new ErrorDialog().assertOnPage();
+        return new ErrorDialog().assertOnPage(isFatal);
+    }
+
+    public FormEntryPage swipeToNextQuestionWithConstraintViolation(int constraintText) {
+        flingLeft();
+        assertText(constraintText);
+
+        return this;
     }
 
     public FormEntryPage swipeToNextQuestionWithConstraintViolation(String constraintText) {
         flingLeft();
-        assertConstraintDisplayed(constraintText);
+        assertText(constraintText);
 
         return this;
     }
@@ -133,16 +177,11 @@ public class FormEntryPage extends Page<FormEntryPage> {
     }
 
     public FormEntryPage clickOptionsIcon() {
-        tryAgainOnFail(() -> {
-            Espresso.openActionBarOverflowOrOptionsMenu(ActivityHelpers.getActivity());
-            assertText(R.string.project_settings);
-        });
-
-        return this;
+        return clickOptionsIcon(org.odk.collect.strings.R.string.project_settings);
     }
 
-    public ProjectSettingsPage clickGeneralSettings() {
-        onView(withText(getTranslatedString(R.string.project_settings))).perform(click());
+    public ProjectSettingsPage clickProjectSettings() {
+        onView(withText(getTranslatedString(org.odk.collect.strings.R.string.project_settings))).perform(click());
         return new ProjectSettingsPage().assertOnPage();
     }
 
@@ -158,6 +197,16 @@ public class FormEntryPage extends Page<FormEntryPage> {
         return this;
     }
 
+    public FormEntryPage assertGoToIconExists() {
+        onView(withId(R.id.menu_goto)).check(matches(isDisplayed()));
+        return this;
+    }
+
+    public FormEntryPage assertGoToIconDoesNotExist() {
+        onView(withId(R.id.menu_goto)).check(doesNotExist());
+        return this;
+    }
+
     public FormHierarchyPage clickGoToArrow() {
         onView(withId(R.id.menu_goto)).perform(click());
         return new FormHierarchyPage(formName).assertOnPage();
@@ -169,29 +218,32 @@ public class FormEntryPage extends Page<FormEntryPage> {
     }
 
     public FormEntryPage clickRankingButton() {
-        onView(withId(R.id.simple_button)).perform(click());
+        onView(withId(R.id.rank_items_button)).perform(click());
         return this;
     }
 
     public FormEntryPage deleteGroup(String questionText) {
-        onView(withText(questionText)).perform(longClick());
-        onView(withText(R.string.delete_repeat)).perform(click());
-        clickOnButtonInDialog(R.string.discard_group, this);
+        longClickOnText(questionText);
+        clickOnTextInPopup(org.odk.collect.strings.R.string.delete_repeat);
+        clickOnTextInDialog(org.odk.collect.strings.R.string.discard_group, this);
         return this;
     }
 
     public FormEntryPage clickForwardButton() {
-        onView(withText(getTranslatedString(R.string.form_forward))).perform(click());
+        closeSoftKeyboard();
+        onView(withText(getTranslatedString(org.odk.collect.strings.R.string.form_forward))).perform(click());
         return this;
     }
 
     public FormEndPage clickForwardButtonToEndScreen() {
-        onView(withText(getTranslatedString(R.string.form_forward))).perform(click());
+        closeSoftKeyboard();
+        onView(withText(getTranslatedString(org.odk.collect.strings.R.string.form_forward))).perform(click());
         return new FormEndPage(formName).assertOnPage();
     }
 
     public FormEntryPage clickBackwardButton() {
-        onView(withText(getTranslatedString(R.string.form_backward))).perform(click());
+        closeSoftKeyboard();
+        onView(withText(getTranslatedString(org.odk.collect.strings.R.string.form_backward))).perform(click());
         return this;
     }
 
@@ -234,18 +286,22 @@ public class FormEntryPage extends Page<FormEntryPage> {
     }
 
     public FormEntryPage longPressOnQuestion(String question, boolean isRequired) {
-        if (isRequired) {
-            onView(withText("* " + question)).perform(longClick());
-        } else {
-            onView(withText(question)).perform(longClick());
-        }
+        WaitFor.tryAgainOnFail(() -> {
+            if (isRequired) {
+                onView(withText("* " + question)).perform(longClick());
+            } else {
+                onView(withText(question)).perform(longClick());
+            }
+
+            assertText(org.odk.collect.strings.R.string.clear_answer);
+        });
 
         return this;
     }
 
     public FormEntryPage removeResponse() {
-        onView(withText(R.string.clear_answer)).perform(click());
-        return clickOnButtonInDialog(R.string.discard_answer, this);
+        onView(withText(org.odk.collect.strings.R.string.clear_answer)).perform(click());
+        return clickOnTextInDialog(org.odk.collect.strings.R.string.discard_answer, this);
     }
 
     public AddNewRepeatDialog swipeToNextQuestionWithRepeatGroup(String repeatName) {
@@ -264,20 +320,34 @@ public class FormEntryPage extends Page<FormEntryPage> {
     }
 
     public FormEntryPage answerQuestion(String question, boolean isRequired, String answer) {
+        String questionText;
         if (isRequired) {
-            assertQuestionText("* " + question);
+            questionText = "* " + question;
         } else {
-            assertQuestionText(question);
+            questionText = question;
         }
 
-        inputText(answer);
-        closeSoftKeyboard();
+        Interactions.replaceText(getQuestionFieldMatcher(questionText), answer);
         return this;
     }
 
+    /**
+     * @deprecated Use {@link #answerQuestion(String, String)} instead
+     */
+    @Deprecated
     public FormEntryPage answerQuestion(int index, String answer) {
-        onView(withIndex(withClassName(endsWith("Text")), index)).perform(scrollTo());
-        onView(withIndex(withClassName(endsWith("Text")), index)).perform(replaceText(answer));
+        onView(withIndex(withClassName(endsWith("EditText")), index)).perform(scrollTo());
+        onView(withIndex(withClassName(endsWith("EditText")), index)).perform(replaceText(answer));
+        return this;
+    }
+
+    public FormEntryPage assertAnswer(String questionText, String answer) {
+        onView(getQuestionFieldMatcher(questionText)).check(matches(withText(answer)));
+        return this;
+    }
+
+    public FormEntryPage clickOnQuestionField(String questionText) {
+        Interactions.clickOn(getQuestionFieldMatcher(questionText));
         return this;
     }
 
@@ -295,103 +365,129 @@ public class FormEntryPage extends Page<FormEntryPage> {
         return this;
     }
 
-    private void flingLeft() {
-        tryAgainOnFail(() -> {
-            FlingRegister.attemptingFling();
-            onView(withId(R.id.questionholder)).perform(swipeLeft());
+    public FormEntryPage assertNoQuestion(String text) {
+        return assertNoQuestion(text, false);
+    }
 
-            WaitFor.waitFor(() -> {
-                if (FlingRegister.isFlingDetected()) {
-                    return true;
-                } else {
-                    throw new RuntimeException("Fling never detected!");
-                }
-            });
-        }, 5);
+    public FormEntryPage assertNoQuestion(String text, boolean isRequired) {
+        if (isRequired) {
+            assertTextDoesNotExist("* " + text);
+        } else {
+            assertTextDoesNotExist(text);
+        }
+
+        return this;
+    }
+
+    private void flingLeft() {
+        tryFlakyAction(() -> {
+            onView(withId(R.id.questionholder)).perform(swipeLeft());
+        });
     }
 
     private void flingRight() {
-        tryAgainOnFail(() -> {
-            FlingRegister.attemptingFling();
+        tryFlakyAction(() -> {
             onView(withId(R.id.questionholder)).perform(swipeRight());
-
-            WaitFor.waitFor(() -> {
-                if (FlingRegister.isFlingDetected()) {
-                    return true;
-                } else {
-                    throw new RuntimeException("Fling never detected!");
-                }
-            });
-        }, 5);
+        });
     }
 
-    public FormEntryPage openSelectMinimalDialog() {
-        openSelectMinimalDialog(0);
-        return this;
+    public SelectMinimalDialogPage openSelectMinimalDialog() {
+        return openSelectMinimalDialog(0);
     }
 
-    public FormEntryPage openSelectMinimalDialog(int index) {
+    public SelectMinimalDialogPage openSelectMinimalDialog(int index) {
         onView(withIndex(withClassName(Matchers.endsWith("TextInputEditText")), index)).perform(click());
-        return this;
+        return new SelectMinimalDialogPage(formName).assertOnPage();
     }
 
-    public FormEntryPage assertSelectMinimalDialogAnswer(String answer) {
-        onView(withId(R.id.answer)).check(matches(withText(answer)));
+    public FormEntryPage assertSelectMinimalDialogAnswer(@Nullable String answer) {
+        if (answer == null) {
+            onView(withId(R.id.answer)).check(matches(withText(org.odk.collect.strings.R.string.select_answer)));
+        } else {
+            onView(withId(R.id.answer)).check(matches(withText(answer)));
+        }
         return this;
     }
 
     public OkDialog swipeToEndScreenWhileRecording() {
         flingLeft();
         OkDialog okDialog = new OkDialog().assertOnPage();
-        assertText(R.string.recording_warning);
+        assertText(org.odk.collect.strings.R.string.recording_warning);
         return okDialog;
     }
 
     public CancelRecordingDialog clickRecordAudio() {
-        clickOnString(R.string.record_audio);
+        clickOnString(org.odk.collect.strings.R.string.record_audio_on);
         return new CancelRecordingDialog(formName);
-    }
-
-    public FormEntryPage assertConstraintDisplayed(String constraintText) {
-        // Constraints warnings show as dialogs in Android 11+
-        if (Build.VERSION.SDK_INT < 30) {
-            checkIsToastWithMessageDisplayed(constraintText);
-        } else {
-            new OkDialog().assertOnPage()
-                    .assertText(constraintText)
-                    .clickOK(this);
-        }
-
-        return this;
     }
 
     public MainMenuPage pressBackAndDiscardChanges() {
         return closeSoftKeyboard()
-                .pressBack(new SaveOrIgnoreDialog<>(formName, new MainMenuPage()))
+                .pressBack(new SaveOrDiscardFormDialog<>(new MainMenuPage()))
                 .clickDiscardChanges();
     }
 
     public <D extends Page<D>> D pressBackAndDiscardChanges(D destination) {
         return closeSoftKeyboard()
-                .pressBack(new SaveOrIgnoreDialog<>(formName, destination))
+                .pressBack(new SaveOrDiscardFormDialog<>(destination))
                 .clickDiscardChanges();
+    }
+
+    public MainMenuPage pressBackAndSaveAsDraft() {
+        return closeSoftKeyboard()
+                .pressBack(new SaveOrDiscardFormDialog<>(new MainMenuPage()))
+                .clickSaveChanges();
+    }
+
+    public <D extends Page<D>> D pressBackAndSaveAsDraft(D destination) {
+        return closeSoftKeyboard()
+                .pressBack(new SaveOrDiscardFormDialog<>(destination))
+                .clickSaveChanges();
     }
 
     public MainMenuPage pressBackAndDiscardForm() {
         return closeSoftKeyboard()
-                .pressBack(new SaveOrIgnoreDialog<>(formName, new MainMenuPage()))
+                .pressBack(new SaveOrDiscardFormDialog<>(new MainMenuPage()))
                 .clickDiscardForm();
     }
 
     public <D extends Page<D>> D pressBackAndDiscardForm(D destination) {
         return closeSoftKeyboard()
-                .pressBack(new SaveOrIgnoreDialog<D>(formName, destination))
+                .pressBack(new SaveOrDiscardFormDialog<D>(destination))
                 .clickDiscardForm();
     }
 
     public FormEntryPage assertBackgroundLocationSnackbarShown() {
         onView(withId(com.google.android.material.R.id.snackbar_text))
-                .check(matches(withText(String.format(ApplicationProvider.getApplicationContext().getString(R.string.background_location_enabled), "⋮"))));
+                .check(matches(withText(String.format(ApplicationProvider.getApplicationContext().getString(org.odk.collect.strings.R.string.background_location_enabled), "⋮"))));
+        return this;
+    }
+
+    public FormEntryPage setRating(float value) {
+        onView(allOf(withId(R.id.rating_bar1), isDisplayed())).perform(ViewActions.setRating(value));
+        return this;
+    }
+
+    public FormEntryPage assertQuestionsOrder(String questionAbove, String questionBelow) {
+        onView(withText(questionBelow)).check(isCompletelyBelow(withText(questionAbove)));
+        return this;
+    }
+
+    public FormEntryPage assertQuestionHasFocus(String questionText) {
+        onView(getQuestionFieldMatcher(questionText)).check(matches(isCompletelyDisplayed()));
+        onView(getQuestionFieldMatcher(questionText)).check(matches(hasFocus()));
+        return this;
+    }
+
+    private static @NonNull Matcher<View> getQuestionFieldMatcher(String question) {
+        return allOf(
+                withClassName(endsWith("EditText")),
+                isDescendantOfA(isQuestionView(question))
+        );
+    }
+
+    public FormEntryPage assertImageViewShowsImage(int resourceid, Bitmap image) {
+        onView(withId(resourceid)).check(matches(DrawableMatcher.withBitmap(image)));
         return this;
     }
 

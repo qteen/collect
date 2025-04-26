@@ -28,6 +28,7 @@ import org.odk.collect.androidshared.livedata.MutableNonNullLiveData
 import org.odk.collect.androidshared.livedata.NonNullLiveData
 import org.odk.collect.androidshared.ui.FragmentFactoryBuilder
 import org.odk.collect.async.Scheduler
+import org.odk.collect.geo.selection.IconifiedText
 import org.odk.collect.geo.selection.MappableSelectItem
 import org.odk.collect.geo.selection.SelectionMapData
 import org.odk.collect.geo.selection.SelectionMapFragment
@@ -70,7 +71,7 @@ class SelectOneFromMapDialogFragment(private val viewModelFactory: ViewModelProv
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
-        savedInstanceState: Bundle?,
+        savedInstanceState: Bundle?
     ): View {
         val binding = SelectOneFromMapDialogLayoutBinding.inflate(inflater)
         return binding.root
@@ -107,7 +108,7 @@ internal class SelectChoicesMapData(
     private val resources: Resources,
     scheduler: Scheduler,
     prompt: FormEntryPrompt,
-    private val selectedIndex: Int?,
+    private val selectedIndex: Int?
 ) : SelectionMapData {
 
     private val mapTitle = MutableLiveData(prompt.longText)
@@ -132,10 +133,10 @@ internal class SelectChoicesMapData(
 
     private fun loadItemsFromChoices(
         selectChoices: MutableList<SelectChoice>,
-        prompt: FormEntryPrompt,
+        prompt: FormEntryPrompt
     ): List<MappableSelectItem> {
         return selectChoices.foldIndexed(emptyList()) { index, list, selectChoice ->
-            val geometry = selectChoice.getChild("geometry")
+            val geometry = selectChoice.getChild(GEOMETRY)
 
             if (geometry != null) {
                 try {
@@ -149,29 +150,60 @@ internal class SelectChoicesMapData(
                             val properties = selectChoice.additionalChildren.filter {
                                 it.first != GeojsonFeature.GEOMETRY_CHILD_NAME
                             }.map {
-                                MappableSelectItem.IconifiedText(null, "${it.first}: ${it.second}")
+                                IconifiedText(null, "${it.first}: ${it.second}")
                             }
 
-                            val markerColor =
-                                selectChoice.additionalChildren.firstOrNull { it.first == "marker-color" }?.second
-                            val markerSymbol =
-                                selectChoice.additionalChildren.firstOrNull { it.first == "marker-symbol" }?.second
+                            if (points.size == 1) {
+                                val markerColor =
+                                    getPropertyValue(selectChoice, MARKER_COLOR)
+                                val markerSymbol =
+                                    getPropertyValue(selectChoice, MARKER_SYMBOL)
 
-                            list + MappableSelectItem.WithAction(
-                                index.toLong(),
-                                points,
-                                if (markerSymbol == null) R.drawable.ic_map_marker_with_hole_small else R.drawable.ic_map_marker_small,
-                                if (markerSymbol == null) R.drawable.ic_map_marker_with_hole_big else R.drawable.ic_map_marker_big,
-                                prompt.getSelectChoiceText(selectChoice),
-                                properties,
-                                MappableSelectItem.IconifiedText(
-                                    R.drawable.ic_save,
-                                    resources.getString(R.string.select_item)
-                                ),
-                                selectChoice.index == selectedIndex,
-                                markerColor,
-                                markerSymbol
-                            )
+                                list + MappableSelectItem.MappableSelectPoint(
+                                    index.toLong(),
+                                    prompt.getSelectChoiceText(selectChoice),
+                                    properties,
+                                    selectChoice.index == selectedIndex,
+                                    point = points[0],
+                                    smallIcon = if (markerSymbol == null) org.odk.collect.icons.R.drawable.ic_map_marker_with_hole_small else org.odk.collect.icons.R.drawable.ic_map_marker_small,
+                                    largeIcon = if (markerSymbol == null) org.odk.collect.icons.R.drawable.ic_map_marker_with_hole_big else org.odk.collect.icons.R.drawable.ic_map_marker_big,
+                                    color = markerColor,
+                                    symbol = markerSymbol,
+                                    action = IconifiedText(
+                                        org.odk.collect.icons.R.drawable.ic_save,
+                                        resources.getString(org.odk.collect.strings.R.string.select_item)
+                                    )
+                                )
+                            } else if (points.first() != points.last()) {
+                                list + MappableSelectItem.MappableSelectLine(
+                                    index.toLong(),
+                                    prompt.getSelectChoiceText(selectChoice),
+                                    properties,
+                                    selectChoice.index == selectedIndex,
+                                    points = points,
+                                    action = IconifiedText(
+                                        org.odk.collect.icons.R.drawable.ic_save,
+                                        resources.getString(org.odk.collect.strings.R.string.select_item)
+                                    ),
+                                    strokeWidth = getPropertyValue(selectChoice, STROKE_WIDTH),
+                                    strokeColor = getPropertyValue(selectChoice, STROKE)
+                                )
+                            } else {
+                                list + MappableSelectItem.MappableSelectPolygon(
+                                    index.toLong(),
+                                    prompt.getSelectChoiceText(selectChoice),
+                                    properties,
+                                    selectChoice.index == selectedIndex,
+                                    points = points,
+                                    action = IconifiedText(
+                                        org.odk.collect.icons.R.drawable.ic_save,
+                                        resources.getString(org.odk.collect.strings.R.string.select_item)
+                                    ),
+                                    strokeWidth = getPropertyValue(selectChoice, STROKE_WIDTH),
+                                    strokeColor = getPropertyValue(selectChoice, STROKE),
+                                    fillColor = getPropertyValue(selectChoice, FILL)
+                                )
+                            }
                         } else {
                             list
                         }
@@ -187,6 +219,10 @@ internal class SelectChoicesMapData(
         }
     }
 
+    private fun getPropertyValue(selectChoice: SelectChoice, propertyName: String): String? {
+        return selectChoice.additionalChildren.firstOrNull { it.first == propertyName }?.second
+    }
+
     override fun isLoading(): NonNullLiveData<Boolean> {
         return isLoading
     }
@@ -196,7 +232,7 @@ internal class SelectChoicesMapData(
     }
 
     override fun getItemType(): String {
-        return resources.getString(R.string.choices)
+        return resources.getString(org.odk.collect.strings.R.string.choices)
     }
 
     override fun getItemCount(): NonNullLiveData<Int> {
@@ -205,5 +241,14 @@ internal class SelectChoicesMapData(
 
     override fun getMappableItems(): LiveData<List<MappableSelectItem>?> {
         return items
+    }
+
+    companion object PropertyNames {
+        const val GEOMETRY = "geometry"
+        const val MARKER_COLOR = "marker-color"
+        const val MARKER_SYMBOL = "marker-symbol"
+        const val STROKE = "stroke"
+        const val STROKE_WIDTH = "stroke-width"
+        const val FILL = "fill"
     }
 }

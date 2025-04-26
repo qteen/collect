@@ -1,5 +1,6 @@
 package org.odk.collect.async
 
+import kotlinx.coroutines.flow.Flow
 import java.util.function.Consumer
 import java.util.function.Supplier
 
@@ -22,20 +23,21 @@ interface Scheduler {
     fun <T> immediate(background: Supplier<T>, foreground: Consumer<T>)
 
     /**
-     * Run work in the foreground. Cancelled if application closed.
+     * Run work in the foreground or background. Cancelled if application closed.
      */
-    fun immediate(foreground: Runnable)
+    fun immediate(foreground: Boolean = false, runnable: Runnable)
 
     /**
      * Schedule a task to run in the background even if the app isn't running. The task
      * will only be run when the network is available.
      *
      * @param tag used to identify this task in future. If there is a previously scheduled task
-     * with the same tag then that task then nothing new will be scheduled (this becomes  no-op)
+     * with the same tag then that task will be cancelled and this will replace it
      * @param spec defines the task to be run
      * @param inputData a map of input data that can be accessed by the task
+     * @param networkConstraint the specific kind of network required
      */
-    fun networkDeferred(tag: String, spec: TaskSpec, inputData: Map<String, String>)
+    fun networkDeferred(tag: String, spec: TaskSpec, inputData: Map<String, String>, networkConstraint: NetworkType? = null)
 
     /**
      * Schedule a task to run in the background repeatedly even if the app isn't running. The task
@@ -47,7 +49,7 @@ interface Scheduler {
      * @param repeatPeriod the period between each run of the task
      * @param inputData a map of input data that can be accessed by the task
      */
-    fun networkDeferred(
+    fun networkDeferredRepeat(
         tag: String,
         spec: TaskSpec,
         repeatPeriod: Long,
@@ -74,4 +76,16 @@ interface Scheduler {
     fun repeat(foreground: Runnable, repeatPeriod: Long): Cancellable
 
     fun cancelAllDeferred()
+
+    fun <T> flowOnBackground(flow: Flow<T>): Flow<T>
+
+    enum class NetworkType {
+        WIFI,
+        CELLULAR,
+        OTHER
+    }
+}
+
+fun <T> Flow<T>.flowOnBackground(scheduler: Scheduler): Flow<T> {
+    return scheduler.flowOnBackground(this)
 }

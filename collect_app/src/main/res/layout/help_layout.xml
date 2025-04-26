@@ -5,9 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:paddingLeft="@dimen/margin_standard"
-    android:paddingRight="@dimen/margin_standard">
+    android:orientation="vertical">
 
     <RelativeLayout
         android:id="@+id/text_layout"
@@ -22,7 +20,7 @@
             android:layout_centerVertical="true"
             android:layout_marginEnd="@dimen/margin_standard"
             android:visibility="gone"
-            app:srcCompat="@drawable/information_outline"
+            app:srcCompat="@drawable/ic_information_outline"
             tools:visibility="visible" />
 
         <TextView

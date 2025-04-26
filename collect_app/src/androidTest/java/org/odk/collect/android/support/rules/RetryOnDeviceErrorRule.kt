@@ -1,5 +1,6 @@
 package org.odk.collect.android.support.rules
 
+import androidx.test.espresso.NoMatchingRootException
 import androidx.test.espresso.PerformException
 import org.junit.rules.TestRule
 import org.junit.runner.Description
@@ -15,9 +16,15 @@ class RetryOnDeviceErrorRule : TestRule {
                 } catch (e: Exception) {
                     if (e is PerformException) {
                         Timber.w("RetryOnDeviceErrorRule: Retrying due to PerformException!")
+                        Timber.e(e)
+                        base.evaluate()
+                    } else if (e is NoMatchingRootException) {
+                        Timber.w("RetryOnDeviceErrorRule: Retrying due to NoMatchingRootException!")
+                        Timber.e(e)
                         base.evaluate()
                     } else if (e::class.simpleName == "RootViewWithoutFocusException") {
                         Timber.w("RetryOnDeviceErrorRule: Retrying due to RootViewWithoutFocusException!")
+                        Timber.e(e)
                         base.evaluate()
                     } else {
                         throw e

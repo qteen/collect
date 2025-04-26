@@ -7,7 +7,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.odk.collect.android.utilities.QuestionFontSizeUtils.DEFAULT_FONT_SIZE;
 import static org.odk.collect.settings.keys.ProjectKeys.KEY_FONT_SIZE;
 
 import android.view.View;
@@ -25,6 +24,7 @@ import org.odk.collect.android.utilities.MediaUtils;
 import org.odk.collect.android.widgets.base.FileWidgetTest;
 import org.odk.collect.android.widgets.support.FakeQuestionMediaManager;
 import org.odk.collect.android.widgets.support.FakeWaitingForDataRegistry;
+import org.odk.collect.android.widgets.utilities.QuestionFontSizeUtils;
 import org.odk.collect.androidshared.system.IntentLauncher;
 
 public class ArbitraryFileWidgetTest extends FileWidgetTest<ArbitraryFileWidget> {
@@ -57,21 +57,15 @@ public class ArbitraryFileWidgetTest extends FileWidgetTest<ArbitraryFileWidget>
     @Override
     public ArbitraryFileWidget createWidget() {
         return new ArbitraryFileWidget(activity, new QuestionDetails(formEntryPrompt, readOnlyOverride),
-                new FakeQuestionMediaManager(), new FakeWaitingForDataRegistry());
-    }
-
-    @Test
-    public void whenFontSizeNotChanged_defaultFontSizeShouldBeUsed() {
-        assertThat((int) getWidget().binding.arbitraryFileButton.getTextSize(), is(DEFAULT_FONT_SIZE - 1));
-        assertThat((int) getWidget().binding.arbitraryFileAnswerText.getTextSize(), is(DEFAULT_FONT_SIZE - 1));
+                new FakeQuestionMediaManager(), new FakeWaitingForDataRegistry(), dependencies);
     }
 
     @Test
     public void whenFontSizeChanged_CustomFontSizeShouldBeUsed() {
         settingsProvider.getUnprotectedSettings().save(KEY_FONT_SIZE, "30");
 
-        assertThat((int) getWidget().binding.arbitraryFileButton.getTextSize(), is(29));
-        assertThat((int) getWidget().binding.arbitraryFileAnswerText.getTextSize(), is(29));
+        assertThat((int) getWidget().binding.arbitraryFileButton.getTextSize(), is(QuestionFontSizeUtils.getFontSize(settingsProvider.getUnprotectedSettings(), QuestionFontSizeUtils.FontSize.BODY_LARGE)));
+        assertThat((int) getWidget().binding.arbitraryFileAnswerText.getTextSize(), is(QuestionFontSizeUtils.getFontSize(settingsProvider.getUnprotectedSettings(), QuestionFontSizeUtils.FontSize.HEADLINE_6)));
     }
 
     @Test

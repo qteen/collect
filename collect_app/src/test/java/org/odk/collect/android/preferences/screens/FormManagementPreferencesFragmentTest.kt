@@ -20,17 +20,17 @@ import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
-import org.odk.collect.android.R
 import org.odk.collect.android.TestSettingsProvider
 import org.odk.collect.android.backgroundwork.InstanceSubmitScheduler
 import org.odk.collect.android.injection.config.AppDependencyModule
 import org.odk.collect.android.preferences.ProjectPreferencesViewModel
-import org.odk.collect.android.preferences.utilities.FormUpdateMode
 import org.odk.collect.android.support.CollectHelpers
 import org.odk.collect.android.utilities.AdminPasswordProvider
 import org.odk.collect.async.Scheduler
 import org.odk.collect.fragmentstest.FragmentScenarioLauncherRule
 import org.odk.collect.settings.SettingsProvider
+import org.odk.collect.settings.enums.AutoSend
+import org.odk.collect.settings.enums.FormUpdateMode
 import org.odk.collect.settings.keys.ProjectKeys
 import org.odk.collect.settings.keys.ProtectedProjectKeys
 import org.odk.collect.shared.settings.Settings
@@ -73,36 +73,6 @@ class FormManagementPreferencesFragmentTest {
         context = ApplicationProvider.getApplicationContext()
         generalSettings = TestSettingsProvider.getUnprotectedSettings()
         adminSettings = TestSettingsProvider.getProtectedSettings()
-    }
-
-    @Test
-    fun `When Google Drive used as server shows update mode as manual and disable prefs`() {
-        generalSettings.save(ProjectKeys.KEY_PROTOCOL, ProjectKeys.PROTOCOL_GOOGLE_SHEETS)
-        generalSettings.save(ProjectKeys.KEY_FORM_UPDATE_MODE, FormUpdateMode.MATCH_EXACTLY.getValue(context))
-
-        val scenario = launcherRule.launch(FormManagementPreferencesFragment::class.java)
-        scenario.onFragment { f: FormManagementPreferencesFragment ->
-            assertThat(
-                f.findPreference<Preference>(ProjectKeys.KEY_FORM_UPDATE_MODE)!!.summary,
-                `is`(context.getString(R.string.manual))
-            )
-            assertThat(
-                generalSettings.getString(ProjectKeys.KEY_FORM_UPDATE_MODE),
-                `is`(FormUpdateMode.MATCH_EXACTLY.getValue(context))
-            )
-            assertThat(
-                f.findPreference<Preference>(ProjectKeys.KEY_FORM_UPDATE_MODE)!!.isEnabled,
-                `is`(false)
-            )
-            assertThat(
-                f.findPreference<Preference>(ProjectKeys.KEY_PERIODIC_FORM_UPDATES_CHECK)!!.isEnabled,
-                `is`(false)
-            )
-            assertThat(
-                f.findPreference<Preference>(ProjectKeys.KEY_AUTOMATIC_UPDATE)!!.isEnabled,
-                `is`(false)
-            )
-        }
     }
 
     @Test
@@ -184,21 +154,6 @@ class FormManagementPreferencesFragmentTest {
     }
 
     @Test
-    fun `When Google Drive used as server and 'Automatic Download' enabled shows 'Automatic Download' as not checked`() {
-        generalSettings.save(ProjectKeys.KEY_PROTOCOL, ProjectKeys.PROTOCOL_GOOGLE_SHEETS)
-        generalSettings.save(ProjectKeys.KEY_AUTOMATIC_UPDATE, true)
-        val scenario = launcherRule.launch(FormManagementPreferencesFragment::class.java)
-        scenario.onFragment { f: FormManagementPreferencesFragment ->
-            val automaticDownload = f.findPreference<CheckBoxPreference>(ProjectKeys.KEY_AUTOMATIC_UPDATE)
-            assertThat(automaticDownload!!.isChecked, `is`(false))
-            assertThat(
-                generalSettings.getBoolean(ProjectKeys.KEY_AUTOMATIC_UPDATE),
-                `is`(true)
-            )
-        }
-    }
-
-    @Test
     fun `When 'Manual Updates' enabled and 'Automatic Download' disabled setting to 'Previously Downloaded' resets 'Automatic Download'`() {
         generalSettings.save(ProjectKeys.KEY_FORM_UPDATE_MODE, FormUpdateMode.MANUAL.getValue(context))
         generalSettings.save(ProjectKeys.KEY_AUTOMATIC_UPDATE, false)
@@ -245,7 +200,6 @@ class FormManagementPreferencesFragmentTest {
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_AUTOSEND)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_DELETE_AFTER_SEND)!!.isVisible, `is`(true))
-            assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_COMPLETED_DEFAULT)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_CONSTRAINT_BEHAVIOR)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_HIGH_RESOLUTION)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_IMAGE_SIZE)!!.isVisible, `is`(true))
@@ -263,7 +217,6 @@ class FormManagementPreferencesFragmentTest {
         adminSettings.save(ProtectedProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS, false)
         adminSettings.save(ProtectedProjectKeys.KEY_AUTOSEND, false)
         adminSettings.save(ProtectedProjectKeys.KEY_DELETE_AFTER_SEND, false)
-        adminSettings.save(ProtectedProjectKeys.KEY_DEFAULT_TO_FINALIZED, false)
         adminSettings.save(ProtectedProjectKeys.KEY_CONSTRAINT_BEHAVIOR, false)
         adminSettings.save(ProtectedProjectKeys.KEY_HIGH_RESOLUTION, false)
         adminSettings.save(ProtectedProjectKeys.KEY_IMAGE_SIZE, false)
@@ -281,7 +234,6 @@ class FormManagementPreferencesFragmentTest {
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS)!!.isVisible, `is`(false))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_AUTOSEND)!!.isVisible, `is`(false))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_DELETE_AFTER_SEND)!!.isVisible, `is`(false))
-            assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_COMPLETED_DEFAULT)!!.isVisible, `is`(false))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_CONSTRAINT_BEHAVIOR)!!.isVisible, `is`(false))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_HIGH_RESOLUTION)!!.isVisible, `is`(false))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_IMAGE_SIZE)!!.isVisible, `is`(false))
@@ -303,7 +255,6 @@ class FormManagementPreferencesFragmentTest {
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_AUTOSEND)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_DELETE_AFTER_SEND)!!.isVisible, `is`(true))
-            assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_COMPLETED_DEFAULT)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_CONSTRAINT_BEHAVIOR)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_HIGH_RESOLUTION)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_IMAGE_SIZE)!!.isVisible, `is`(true))
@@ -321,7 +272,6 @@ class FormManagementPreferencesFragmentTest {
         adminSettings.save(ProtectedProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS, false)
         adminSettings.save(ProtectedProjectKeys.KEY_AUTOSEND, false)
         adminSettings.save(ProtectedProjectKeys.KEY_DELETE_AFTER_SEND, false)
-        adminSettings.save(ProtectedProjectKeys.KEY_DEFAULT_TO_FINALIZED, false)
         adminSettings.save(ProtectedProjectKeys.KEY_CONSTRAINT_BEHAVIOR, false)
         adminSettings.save(ProtectedProjectKeys.KEY_HIGH_RESOLUTION, false)
         adminSettings.save(ProtectedProjectKeys.KEY_IMAGE_SIZE, false)
@@ -339,7 +289,6 @@ class FormManagementPreferencesFragmentTest {
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_AUTOSEND)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_DELETE_AFTER_SEND)!!.isVisible, `is`(true))
-            assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_COMPLETED_DEFAULT)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_CONSTRAINT_BEHAVIOR)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_HIGH_RESOLUTION)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_IMAGE_SIZE)!!.isVisible, `is`(true))
@@ -361,7 +310,6 @@ class FormManagementPreferencesFragmentTest {
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_AUTOSEND)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_DELETE_AFTER_SEND)!!.isVisible, `is`(true))
-            assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_COMPLETED_DEFAULT)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_CONSTRAINT_BEHAVIOR)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_HIGH_RESOLUTION)!!.isVisible, `is`(true))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_IMAGE_SIZE)!!.isVisible, `is`(true))
@@ -379,7 +327,6 @@ class FormManagementPreferencesFragmentTest {
         adminSettings.save(ProtectedProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS, false)
         adminSettings.save(ProtectedProjectKeys.KEY_AUTOSEND, false)
         adminSettings.save(ProtectedProjectKeys.KEY_DELETE_AFTER_SEND, false)
-        adminSettings.save(ProtectedProjectKeys.KEY_DEFAULT_TO_FINALIZED, false)
         adminSettings.save(ProtectedProjectKeys.KEY_CONSTRAINT_BEHAVIOR, false)
         adminSettings.save(ProtectedProjectKeys.KEY_HIGH_RESOLUTION, false)
         adminSettings.save(ProtectedProjectKeys.KEY_IMAGE_SIZE, false)
@@ -397,7 +344,6 @@ class FormManagementPreferencesFragmentTest {
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_HIDE_OLD_FORM_VERSIONS)!!.isVisible, `is`(false))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_AUTOSEND)!!.isVisible, `is`(false))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_DELETE_AFTER_SEND)!!.isVisible, `is`(false))
-            assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_COMPLETED_DEFAULT)!!.isVisible, `is`(false))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_CONSTRAINT_BEHAVIOR)!!.isVisible, `is`(false))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_HIGH_RESOLUTION)!!.isVisible, `is`(false))
             assertThat(fragment.findPreference<Preference>(ProjectKeys.KEY_IMAGE_SIZE)!!.isVisible, `is`(false))
@@ -457,7 +403,6 @@ class FormManagementPreferencesFragmentTest {
 
     @Test
     fun `When all preferences in 'Form filling' category are hidden, the category should be hidden as well`() {
-        adminSettings.save(ProtectedProjectKeys.KEY_DEFAULT_TO_FINALIZED, false)
         adminSettings.save(ProtectedProjectKeys.KEY_CONSTRAINT_BEHAVIOR, false)
         adminSettings.save(ProtectedProjectKeys.KEY_HIGH_RESOLUTION, false)
         adminSettings.save(ProtectedProjectKeys.KEY_IMAGE_SIZE, false)
@@ -472,7 +417,6 @@ class FormManagementPreferencesFragmentTest {
 
     @Test
     fun `When al least one preference in 'Form filling' category is visible, the category should be visible as well`() {
-        adminSettings.save(ProtectedProjectKeys.KEY_DEFAULT_TO_FINALIZED, false)
         adminSettings.save(ProtectedProjectKeys.KEY_CONSTRAINT_BEHAVIOR, false)
         adminSettings.save(ProtectedProjectKeys.KEY_HIGH_RESOLUTION, false)
         adminSettings.save(ProtectedProjectKeys.KEY_IMAGE_SIZE, true)
@@ -509,17 +453,17 @@ class FormManagementPreferencesFragmentTest {
     fun `When Auto send preference is enabled, finalized forms should be scheduled for submission`() {
         val scenario = launcherRule.launch(FormManagementPreferencesFragment::class.java)
         scenario.onFragment { fragment: FormManagementPreferencesFragment ->
-            fragment.findPreference<ListPreference>(ProjectKeys.KEY_AUTOSEND)!!.value = "wifi"
+            fragment.findPreference<ListPreference>(ProjectKeys.KEY_AUTOSEND)!!.value = AutoSend.WIFI_ONLY.getValue(context)
         }
-        verify(instanceSubmitScheduler).scheduleSubmit(projectID)
+        verify(instanceSubmitScheduler).scheduleAutoSend(projectID)
     }
 
     @Test
     fun `When Auto send preference is disabled, no submissions should be scheduled`() {
         val scenario = launcherRule.launch(FormManagementPreferencesFragment::class.java)
         scenario.onFragment { fragment: FormManagementPreferencesFragment ->
-            fragment.findPreference<ListPreference>(ProjectKeys.KEY_AUTOSEND)!!.value = "off"
+            fragment.findPreference<ListPreference>(ProjectKeys.KEY_AUTOSEND)!!.value = AutoSend.OFF.getValue(context)
         }
-        verify(instanceSubmitScheduler, never()).scheduleSubmit(projectID)
+        verify(instanceSubmitScheduler, never()).scheduleAutoSend(projectID)
     }
 }

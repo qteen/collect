@@ -5,6 +5,9 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
+import org.mockito.kotlin.mock
+import org.mockito.kotlin.whenever
+import org.odk.collect.maps.MapConfigurator
 import org.odk.collect.maps.MapFragment
 import org.odk.collect.shared.TempFiles.createTempDir
 import org.robolectric.RobolectricTestRunner
@@ -21,7 +24,7 @@ class MapFragmentReferenceLayerUtilsTest {
         assertNull(
             MapFragmentReferenceLayerUtils.getReferenceLayerFile(
                 config,
-                DirectoryReferenceLayerRepository(layersPath)
+                DirectoryReferenceLayerRepository(layersPath, "", mock())
             )
         )
     }
@@ -34,7 +37,7 @@ class MapFragmentReferenceLayerUtilsTest {
         assertNull(
             MapFragmentReferenceLayerUtils.getReferenceLayerFile(
                 config,
-                DirectoryReferenceLayerRepository(layersPath)
+                DirectoryReferenceLayerRepository(layersPath, "", mock())
             )
         )
     }
@@ -42,15 +45,22 @@ class MapFragmentReferenceLayerUtilsTest {
     @Test
     fun whenOfflineLayerFileExist_should_getReferenceLayerFileReturnThatFile() {
         val layersPath = createTempDir().absolutePath
-        File(layersPath, "blah").writeBytes(byteArrayOf())
+        val file = File(layersPath, "blah").also {
+            it.writeBytes(byteArrayOf())
+        }
 
         val config = Bundle()
         config.putString(MapFragment.KEY_REFERENCE_LAYER, "blah")
 
+        val mapConfigurator = mock<MapConfigurator>().also {
+            whenever(it.supportsLayer(file)).thenReturn(true)
+            whenever(it.getDisplayName(File(layersPath, "blah"))).thenReturn("blah")
+        }
+
         assertNotNull(
             MapFragmentReferenceLayerUtils.getReferenceLayerFile(
                 config,
-                DirectoryReferenceLayerRepository(layersPath)
+                DirectoryReferenceLayerRepository(layersPath, "") { mapConfigurator }
             )
         )
     }

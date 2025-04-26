@@ -2,7 +2,6 @@ package org.odk.collect.settings;
 
 import static org.odk.collect.settings.keys.ProjectKeys.BASEMAP_SOURCE_CARTO;
 import static org.odk.collect.settings.keys.ProjectKeys.BASEMAP_SOURCE_OSM;
-import static org.odk.collect.settings.keys.ProjectKeys.BASEMAP_SOURCE_STAMEN;
 import static org.odk.collect.settings.keys.ProjectKeys.BASEMAP_SOURCE_USGS;
 import static org.odk.collect.settings.keys.ProjectKeys.KEY_BASEMAP_SOURCE;
 import static org.odk.collect.settings.keys.ProjectKeys.KEY_CARTO_MAP_STYLE;
@@ -16,11 +15,11 @@ import static org.odk.collect.settings.migration.MigrationUtils.removeKey;
 import static org.odk.collect.settings.migration.MigrationUtils.renameKey;
 import static org.odk.collect.settings.migration.MigrationUtils.translateKey;
 import static org.odk.collect.settings.migration.MigrationUtils.translateValue;
+import static org.odk.collect.settings.migration.MigrationUtils.updateKeys;
 import static java.util.Arrays.asList;
 
 import org.odk.collect.settings.importing.SettingsMigrator;
-import org.odk.collect.settings.migration.KeyRenamer;
-import org.odk.collect.settings.migration.KeyTranslator;
+import org.odk.collect.settings.keys.ProtectedProjectKeys;
 import org.odk.collect.settings.migration.Migration;
 import org.odk.collect.shared.settings.Settings;
 
@@ -31,24 +30,27 @@ import java.util.List;
  */
 public class ODKAppSettingsMigrator implements SettingsMigrator {
 
-    private final Settings metaPrefs;
+    private final Settings metaSettings;
+    private Settings protectedSettings;
 
-    public ODKAppSettingsMigrator(Settings metaPrefs) {
-        this.metaPrefs = metaPrefs;
+    public ODKAppSettingsMigrator(Settings metaSettings) {
+        this.metaSettings = metaSettings;
     }
 
     @Override
-    public void migrate(Settings generalSettings, Settings adminSettings) {
+    public void migrate(Settings unprotectedSettings, Settings protectedSettings) {
+        this.protectedSettings = protectedSettings;
+
         for (Migration migration : getUnprotectedMigrations()) {
-            migration.apply(generalSettings);
+            migration.apply(unprotectedSettings);
         }
 
         for (Migration migration : getProtectedMigrations()) {
-            migration.apply(adminSettings);
+            migration.apply(protectedSettings);
         }
 
         for (Migration migration : getMetaMigrations()) {
-            migration.apply(metaPrefs);
+            migration.apply(metaSettings);
         }
     }
 
@@ -91,7 +93,7 @@ public class ODKAppSettingsMigrator implements SettingsMigrator {
                         .toPairs(KEY_BASEMAP_SOURCE, BASEMAP_SOURCE_USGS, KEY_USGS_MAP_STYLE, "satellite")
 
                         .withValues("osmdroid", "openmap_stamen_terrain")
-                        .toPairs(KEY_BASEMAP_SOURCE, BASEMAP_SOURCE_STAMEN)
+                        .toPairs(KEY_BASEMAP_SOURCE, "stamen")
 
                         .withValues("osmdroid", "openmap_cartodb_positron")
                         .toPairs(KEY_BASEMAP_SOURCE, BASEMAP_SOURCE_CARTO, KEY_CARTO_MAP_STYLE, "positron")
@@ -102,9 +104,9 @@ public class ODKAppSettingsMigrator implements SettingsMigrator {
 
                 removeKey("firstRun"),
                 removeKey("lastVersion"),
-                moveKey("scoped_storage_used").toPreferences(metaPrefs),
+                moveKey("scoped_storage_used").toPreferences(metaSettings),
                 removeKey("metadata_migrated"),
-                moveKey("mapbox_initialized").toPreferences(metaPrefs),
+                moveKey("mapbox_initialized").toPreferences(metaSettings),
 
                 combineKeys("autosend_wifi", "autosend_network")
                         .withValues(false, false).toPairs("autosend", "off")
@@ -124,11 +126,15 @@ public class ODKAppSettingsMigrator implements SettingsMigrator {
 
                 translateValue("never").toValue("every_fifteen_minutes").forKey("periodic_form_updates_check"),
 
-                moveKey("knownUrlList").toPreferences(metaPrefs)
+                moveKey("knownUrlList").toPreferences(metaSettings),
+
+                moveKey("default_completed").toPreferences(protectedSettings),
+
+                translateValue("stamen").toValue(BASEMAP_SOURCE_OSM).forKey(KEY_BASEMAP_SOURCE)
         );
     }
 
-    public List<KeyRenamer> getMetaMigrations() {
+    public List<Migration> getMetaMigrations() {
         return asList(
                 renameKey("firstRun").toKey("first_run"),
                 renameKey("lastVersion").toKey("last_version"),
@@ -137,14 +143,50 @@ public class ODKAppSettingsMigrator implements SettingsMigrator {
         );
     }
 
-    public List<KeyTranslator> getProtectedMigrations() {
+    public List<Migration> getProtectedMigrations() {
         return asList(
                 // When either the map SDK or the basemap selection were previously
                 // hidden, we want to hide the entire Maps preference screen.
                 translateKey("show_map_sdk").toKey("maps")
                         .fromValue(false).toValue(false),
                 translateKey("show_map_basemap").toKey("maps")
-                        .fromValue(false).toValue(false)
+                        .fromValue(false).toValue(false),
+
+                combineKeys("mark_as_finalized", "default_completed")
+                        .withValues(false, false)
+                        .toPairs(
+                                ProtectedProjectKeys.KEY_SAVE_AS_DRAFT, true,
+                                "finalize", false
+                        )
+                        .withValues(false, true)
+                        .toPairs(
+                                ProtectedProjectKeys.KEY_SAVE_AS_DRAFT, false,
+                                "finalize", true
+                        )
+                        .withValues(false, null)
+                        .toPairs(
+                                ProtectedProjectKeys.KEY_SAVE_AS_DRAFT, false,
+                                "finalize", true
+                        ),
+                removeKey("mark_as_finalized"),
+                removeKey("default_completed"),
+                updateKeys(ProtectedProjectKeys.ALLOW_OTHER_WAYS_OF_EDITING_FORM)
+                        .withValues(false)
+                        .toPairs(
+                                ProtectedProjectKeys.KEY_SAVE_AS_DRAFT, false,
+                                "finalize", true
+                        ),
+                updateKeys("finalize").withValues(false)
+                        .toPairs(
+                                ProtectedProjectKeys.KEY_FINALIZE_IN_FORM_ENTRY, false,
+                                ProtectedProjectKeys.KEY_BULK_FINALIZE, false
+                        )
+                        .withValues(true)
+                        .toPairs(
+                                ProtectedProjectKeys.KEY_FINALIZE_IN_FORM_ENTRY, true,
+                                ProtectedProjectKeys.KEY_BULK_FINALIZE, true
+                        ),
+                removeKey("finalize")
         );
     }
 }

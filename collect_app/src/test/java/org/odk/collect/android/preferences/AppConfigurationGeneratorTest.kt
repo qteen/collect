@@ -10,7 +10,7 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.odk.collect.android.configure.qr.AppConfigurationGenerator
-import org.odk.collect.android.projects.CurrentProjectProvider
+import org.odk.collect.android.projects.ProjectsDataService
 import org.odk.collect.projects.Project
 import org.odk.collect.settings.InMemSettingsProvider
 import org.odk.collect.settings.keys.AppConfigurationKeys
@@ -22,8 +22,8 @@ class AppConfigurationGeneratorTest {
 
     private val settingsProvider = InMemSettingsProvider()
 
-    private val currentProjectProvider: CurrentProjectProvider = mock {
-        on { getCurrentProject() } doReturn Project.Saved("1", "Project X", "X", "#cccccc")
+    private val projectsDataService: ProjectsDataService = mock {
+        on { requireCurrentProject() } doReturn Project.Saved("1", "Project X", "X", "#cccccc")
     }
 
     val projectDetails = mapOf(
@@ -37,7 +37,7 @@ class AppConfigurationGeneratorTest {
     @Before
     fun setup() {
         appConfigurationGenerator =
-            AppConfigurationGenerator(settingsProvider, currentProjectProvider)
+            AppConfigurationGenerator(settingsProvider, projectsDataService)
     }
 
     @Test
@@ -153,20 +153,6 @@ class AppConfigurationGeneratorTest {
         )
 
         verifyJsonContent(jsonPrefs, generalPrefs, emptyMap<String, Any>(), emptyMap())
-    }
-
-    @Test
-    fun `When Google account provided, getAppConfigurationAsJsonWithGoogleDriveDetails generates expected json`() {
-        val expectedPrefs = mapOf<String, Any>(
-            ProjectKeys.KEY_SERVER_URL to "",
-            ProjectKeys.KEY_PROTOCOL to ProjectKeys.PROTOCOL_GOOGLE_SHEETS,
-            ProjectKeys.KEY_SELECTED_GOOGLE_ACCOUNT to "foo@bar.baz"
-        )
-
-        val jsonPrefs =
-            appConfigurationGenerator.getAppConfigurationAsJsonWithGoogleDriveDetails("foo@bar.baz")
-
-        verifyJsonContent(jsonPrefs, expectedPrefs, emptyMap<String, Any>(), emptyMap())
     }
 
     private fun verifyJsonContent(

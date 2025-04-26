@@ -29,7 +29,9 @@ To contribute code to ODK Collect, you will need to open a [pull request](https:
 
         git checkout -b NAME_OF_YOUR_BRANCH
 
-1. If there is an [issue](https://github.com/getodk/collect/issues) corresponding to what you will work on, leave a comment on issue asking to claim it. If there is no issue yet, create one to provide background on the problem you are solving.
+1. If there is an [issue](https://github.com/getodk/collect/issues) corresponding to what you will work on, leave a comment on the issue asking to claim it. If there is no issue yet, create one to provide background on the problem you are solving. Issues that have been prioritised by the core team can be found in Collect's [backlog](https://github.com/orgs/getodk/projects/9/views/8).
+
+1. If you are an external contributor, make sure to discuss working on the issue with a maintainer who will then assign you to it. If you're on the core team you can either assign yourself to an issue in [the backlog](https://github.com/orgs/getodk/projects/9/views/8) and move it to "in progress" or discuss adding an item to the backlog with the rest of the team.
 
 1. Once you've made incremental progress towards you goal, commit your changes with a meaningful commit message. Use [keywords for closing issues](https://help.github.com/articles/closing-issues-via-commit-messages/) to refer to issues and have them automatically close when your changes are merged.
 
@@ -39,7 +41,7 @@ To contribute code to ODK Collect, you will need to open a [pull request](https:
 
         git push
 
-1. Once you have completed your code changes, verify that you have followed the [style guidelines](https://github.com/getodk/collect/blob/master/CONTRIBUTING.md#style-guidelines).
+1. Once you have completed your code changes, verify that you have followed the [style guidelines](CODE-GUIDELINES.md).
 
 1. When your changes are ready to be added to the core ODK Collect project, [open a pull request](https://help.github.com/articles/creating-a-pull-request/). Make sure to set the base fork to `getodk/collect`. Describe your changes in the comment, refer to any relevant issues using [keywords for closing issues](https://help.github.com/articles/closing-issues-via-commit-messages/) and tag any person you think might need to know about the changes.
 
@@ -79,14 +81,13 @@ We encourage everyone to participate in the review process to get familiar with 
 - Is the code easy to understand and to maintain?
 - Is there sufficient detail to inform any changes to documentation?
 
-Community members review the code and leave their comments, verifying that the changes included are relevant and properly address the issue. A maintainer does a thorough code review and when satisfied with the code, accepts and may label the pull request as `needs testing` to indicate the need for a manual [black-box testing](https://en.wikipedia.org/wiki/Black-box_testing) pass. A pull request may have `needs testing` removed and added again several times until the behavior is thoroughly verified. Once the behavior has been verified, the pull request is labelled as `behavior verified`.
+A maintainer does a thorough code review and when satisfied with the code, accepts and merges. Typically, manual testing is a requirement and then the needs testing label should be added after merging. Only in rare cases do we merge pull requests that are deemed safe enough to skip additional testing.
 
 ## Merging pull requests
 
-Pull requests can be merged by committers once they are accepted or once they have been accepted and have been labelled as `behavior verified` unless:
+Pull requests can be merged by maintainers once they are accepted unless [CI](https://app.circleci.com/pipelines/github/getodk/collect) is currently failing.
 
-* There is a currently a "code freeze" due to an [ongoing release](/README.md#release-cycle)
-* [CI](https://app.circleci.com/pipelines/github/getodk/collect) is currently failing
+If a PR is being merged to a release branch rather than `master`, any strings added as part of the changes should also be added to `master` (with `tools:ignore="UnusedResources"`) as a follow-up PR so that they can be translated.
 
 ## Work in progress pull requests
 

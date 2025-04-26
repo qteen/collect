@@ -41,7 +41,8 @@ class StringRequesterImpl(
             if (intent != null && Intent.ACTION_SENDTO == intent.action) {
                 intentLauncher.launch(activity, intent) {
                     intentLauncher.launch(
-                        activity, intentWithoutDefaultCategory
+                        activity,
+                        intentWithoutDefaultCategory
                     ) {
                         onError(getErrorMessage(formEntryPrompt, activity))
                     }
@@ -49,7 +50,9 @@ class StringRequesterImpl(
             } else {
                 intentLauncher.launchForResult(activity, intent, requestCode) {
                     intentLauncher.launchForResult(
-                        activity, intentWithoutDefaultCategory, requestCode
+                        activity,
+                        intentWithoutDefaultCategory,
+                        requestCode
                     ) {
                         onError(getErrorMessage(formEntryPrompt, activity))
                     }
@@ -64,7 +67,7 @@ class StringRequesterImpl(
 
     private fun getErrorMessage(formEntryPrompt: FormEntryPrompt, activity: Activity): String {
         val customErrorMessage = formEntryPrompt.getSpecialFormQuestionText("noAppErrorString")
-        return customErrorMessage ?: activity.getString(R.string.no_app)
+        return customErrorMessage ?: activity.getString(org.odk.collect.strings.R.string.no_app)
     }
 }
 

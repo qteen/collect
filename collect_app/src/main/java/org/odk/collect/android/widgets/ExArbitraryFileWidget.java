@@ -22,8 +22,8 @@ public class ExArbitraryFileWidget extends BaseArbitraryFileWidget {
 
     public ExArbitraryFileWidget(Context context, QuestionDetails questionDetails,
                                  QuestionMediaManager questionMediaManager, WaitingForDataRegistry waitingForDataRegistry,
-                                 FileRequester fileRequester) {
-        super(context, questionDetails, questionMediaManager, waitingForDataRegistry);
+                                 FileRequester fileRequester, Dependencies dependencies) {
+        super(context, questionDetails, questionMediaManager, waitingForDataRegistry, dependencies);
         this.fileRequester = fileRequester;
     }
 
@@ -32,7 +32,6 @@ public class ExArbitraryFileWidget extends BaseArbitraryFileWidget {
         binding = ExArbitraryFileWidgetAnswerBinding.inflate(((Activity) context).getLayoutInflater());
         setupAnswerFile(prompt.getAnswerText());
 
-        binding.exArbitraryFileButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, answerFontSize);
         binding.exArbitraryFileAnswerText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, answerFontSize);
 
         if (questionDetails.isReadOnly()) {

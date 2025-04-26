@@ -19,9 +19,8 @@ package org.odk.collect.android.feature.formentry;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
-import org.odk.collect.android.R;
-import org.odk.collect.android.support.rules.CollectTestRule;
 import org.odk.collect.android.support.TestDependencies;
+import org.odk.collect.android.support.rules.CollectTestRule;
 import org.odk.collect.android.support.rules.TestRuleChain;
 import org.odk.collect.android.support.pages.MainMenuPage;
 import org.odk.collect.android.support.pages.SendFinalizedFormPage;
@@ -38,18 +37,19 @@ public class EncryptedFormTest {
             .around(rule);
 
     @Test
-    public void instanceOfEncryptedForm_cantBeEditedWhenFinalized() {
+    public void instanceOfEncryptedForm_cantBeViewedAfterFinalizing() {
         rule.startAtMainMenu()
                 .copyForm("encrypted.xml")
+
                 .startBlankForm("encrypted")
                 .assertQuestion("Question 1")
                 .swipeToEndScreen()
-                .clickSaveAndExit()
-                .checkIsToastWithMessageDisplayed(R.string.data_saved_ok)
-                .clickEditSavedForm()
-                .checkInstanceState("encrypted", Instance.STATUS_COMPLETE)
-                .clickOnFormWithDialog("encrypted")
-                .assertText(R.string.cannot_edit_completed_form);
+                .clickFinalize()
+
+                .clickSendFinalizedForm(1)
+                .clickOnText("encrypted")
+                .checkIsToastWithMessageDisplayed(org.odk.collect.strings.R.string.encrypted_form)
+                .assertOnPage();
     }
 
     @Test
@@ -61,21 +61,20 @@ public class EncryptedFormTest {
                 .startBlankForm("encrypted")
                 .assertQuestion("Question 1")
                 .swipeToEndScreen()
-                .clickSaveAndExit()
+                .clickFinalize()
 
                 .clickSendFinalizedForm(1)
-                .clickOnForm("encrypted")
+                .clickSelectAll()
                 .clickSendSelected()
                 .clickOK(new SendFinalizedFormPage())
                 .pressBack(new MainMenuPage())
 
                 .clickViewSentForm(1)
                 .clickOnText("encrypted")
-                .assertText(R.string.encrypted_form)
+                .assertText(org.odk.collect.strings.R.string.encrypted_form)
                 .assertOnPage();
     }
 
-    //TestCase47
     @Test
     public void instanceOfEncryptedFormWithoutInstanceID_failsFinalizationWithMessage() {
         rule.startAtMainMenu()
@@ -83,9 +82,21 @@ public class EncryptedFormTest {
                 .startBlankForm("encrypted-no-instanceID")
                 .assertQuestion("Question 1")
                 .swipeToEndScreen()
-                .clickSaveAndExit()
+                .clickFinalize()
                 .checkIsToastWithMessageDisplayed("This form does not specify an instanceID. You must specify one to enable encryption. Form has not been saved as finalized.")
-                .clickEditSavedForm()
+                .clickDrafts()
                 .checkInstanceState("encrypted-no-instanceID", Instance.STATUS_INCOMPLETE);
+    }
+
+    @Test
+    public void instanceOfEncryptedFormWithoutInstanceID_doesNotLeaveSavepointOnFinalization() {
+        rule.startAtMainMenu()
+                .copyForm("encrypted-no-instanceID.xml")
+                .startBlankForm("encrypted-no-instanceID")
+                .clickGoToArrow()
+                .clickGoToEnd()
+                .clickFinalize()
+                .checkIsToastWithMessageDisplayed("This form does not specify an instanceID. You must specify one to enable encryption. Form has not been saved as finalized.")
+                .startBlankForm("encrypted-no-instanceID");
     }
 }

@@ -4,10 +4,8 @@ import static junit.framework.Assert.assertTrue;
 
 import android.view.View;
 
-import org.javarosa.core.model.QuestionDef;
 import org.javarosa.core.model.data.IAnswerData;
 import org.junit.Test;
-import org.mockito.Mock;
 import org.odk.collect.android.R;
 import org.odk.collect.android.support.WidgetTestActivity;
 import org.odk.collect.android.widgets.StringWidget;
@@ -24,15 +22,6 @@ import java.util.List;
  */
 public abstract class GeneralStringWidgetTest<W extends StringWidget, A extends IAnswerData>
         extends QuestionWidgetTest<W, A> {
-
-    @Mock
-    QuestionDef questionDef;
-
-    @Override
-    public void setUp() throws Exception {
-        super.setUp();
-        when(formEntryPrompt.getQuestion()).thenReturn(questionDef);
-    }
 
     @Override
     public void callingClearShouldRemoveTheExistingAnswer() {
@@ -71,8 +60,7 @@ public abstract class GeneralStringWidgetTest<W extends StringWidget, A extends 
     public void usingReadOnlyOptionShouldMakeAllClickableElementsDisabled() {
         when(formEntryPrompt.isReadOnly()).thenReturn(true);
 
-        assertThat(getSpyWidget().answerText.getVisibility(), is(View.VISIBLE));
-        assertThat(getSpyWidget().answerText.isEnabled(), is(Boolean.FALSE));
+        assertThat(getSpyWidget().widgetAnswerText.isEditableState(), is(false));
     }
 
     @Test
@@ -80,8 +68,7 @@ public abstract class GeneralStringWidgetTest<W extends StringWidget, A extends 
         readOnlyOverride = true;
         when(formEntryPrompt.isReadOnly()).thenReturn(false);
 
-        assertThat(getSpyWidget().answerText.getVisibility(), is(View.VISIBLE));
-        assertThat(getSpyWidget().answerText.isEnabled(), is(Boolean.FALSE));
+        assertThat(getSpyWidget().widgetAnswerText.isEditableState(), is(false));
     }
 
     /**
@@ -95,12 +82,16 @@ public abstract class GeneralStringWidgetTest<W extends StringWidget, A extends 
         StringWidget widget = createWidget();
         List<View> viewsRegisterForContextMenu = ((WidgetTestActivity) activity).viewsRegisterForContextMenu;
 
-        assertThat(viewsRegisterForContextMenu.size(), is(2));
+        assertThat(viewsRegisterForContextMenu.size(), is(3));
 
         assertTrue(viewsRegisterForContextMenu.contains(widget.findViewWithTag(R.id.question_label)));
         assertTrue(viewsRegisterForContextMenu.contains(widget.findViewWithTag(R.id.help_text)));
+        assertTrue(viewsRegisterForContextMenu.contains(widget.findViewWithTag(R.id.error_message_container)));
 
         assertThat(viewsRegisterForContextMenu.get(0).getId(), is(widget.getId()));
         assertThat(viewsRegisterForContextMenu.get(1).getId(), is(widget.getId()));
     }
+
+    @Test
+    public abstract void verifyInputType();
 }

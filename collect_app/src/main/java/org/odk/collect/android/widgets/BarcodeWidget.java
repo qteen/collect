@@ -15,6 +15,7 @@
 package org.odk.collect.android.widgets;
 
 import static org.odk.collect.android.utilities.Appearances.FRONT;
+import static org.odk.collect.android.utilities.Appearances.hasAppearance;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -27,7 +28,6 @@ import com.google.zxing.integration.android.IntentIntegrator;
 import org.javarosa.core.model.data.IAnswerData;
 import org.javarosa.core.model.data.StringData;
 import org.javarosa.form.api.FormEntryPrompt;
-import org.odk.collect.android.R;
 import org.odk.collect.android.activities.ScannerWithFlashlightActivity;
 import org.odk.collect.android.databinding.BarcodeWidgetAnswerBinding;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
@@ -49,8 +49,8 @@ public class BarcodeWidget extends QuestionWidget implements WidgetDataReceiver 
     private final CameraUtils cameraUtils;
 
     public BarcodeWidget(Context context, QuestionDetails questionDetails, WaitingForDataRegistry waitingForDataRegistry,
-                         CameraUtils cameraUtils) {
-        super(context, questionDetails);
+                         CameraUtils cameraUtils, Dependencies dependencies) {
+        super(context, dependencies, questionDetails);
         render();
 
         this.waitingForDataRegistry = waitingForDataRegistry;
@@ -64,25 +64,27 @@ public class BarcodeWidget extends QuestionWidget implements WidgetDataReceiver 
         if (prompt.isReadOnly()) {
             binding.barcodeButton.setVisibility(GONE);
         } else {
-            binding.barcodeButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, answerFontSize);
             binding.barcodeButton.setOnClickListener(v -> onButtonClick());
         }
         binding.barcodeAnswerText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, answerFontSize);
 
         String answer = prompt.getAnswerText();
         if (answer != null && !answer.isEmpty()) {
-            binding.barcodeButton.setText(getContext().getString(R.string.replace_barcode));
+            binding.barcodeButton.setText(getContext().getString(org.odk.collect.strings.R.string.replace_barcode));
             binding.barcodeAnswerText.setText(answer);
         }
 
+        updateVisibility();
         return binding.getRoot();
     }
 
     @Override
     public void clearAnswer() {
         binding.barcodeAnswerText.setText(null);
-        binding.barcodeButton.setText(getContext().getString(R.string.get_barcode));
+        binding.barcodeButton.setText(getContext().getString(org.odk.collect.strings.R.string.get_barcode));
         widgetValueChanged();
+
+        updateVisibility();
     }
 
     @Override
@@ -94,9 +96,20 @@ public class BarcodeWidget extends QuestionWidget implements WidgetDataReceiver 
     @Override
     public void setData(Object answer) {
         String response = (String) answer;
+
         binding.barcodeAnswerText.setText(stripInvalidCharacters(response));
-        binding.barcodeButton.setText(getContext().getString(R.string.replace_barcode));
+        binding.barcodeButton.setText(getContext().getString(org.odk.collect.strings.R.string.replace_barcode));
+        updateVisibility();
+
         widgetValueChanged();
+    }
+
+    private void updateVisibility() {
+        if (hasAppearance(getFormEntryPrompt(), Appearances.HIDDEN_ANSWER)) {
+            binding.barcodeAnswerText.setVisibility(GONE);
+        } else {
+            binding.barcodeAnswerText.setVisibility(binding.barcodeAnswerText.getText().toString().isBlank() ? GONE : VISIBLE);
+        }
     }
 
     // Remove control characters, invisible characters and unused code points.
@@ -134,7 +147,7 @@ public class BarcodeWidget extends QuestionWidget implements WidgetDataReceiver 
             if (cameraUtils.isFrontCameraAvailable(getContext())) {
                 intent.addExtra(FRONT, true);
             } else {
-                ToastUtils.showLongToast(getContext(), R.string.error_front_camera_unavailable);
+                ToastUtils.showLongToast(org.odk.collect.strings.R.string.error_front_camera_unavailable);
             }
         }
     }

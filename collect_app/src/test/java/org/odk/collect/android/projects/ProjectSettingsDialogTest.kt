@@ -1,7 +1,9 @@
 package org.odk.collect.android.projects
 
 import androidx.core.view.children
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.pressBack
 import androidx.test.espresso.intent.Intents
@@ -20,15 +22,12 @@ import org.junit.runner.RunWith
 import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
-import org.odk.collect.android.R
 import org.odk.collect.android.activities.AboutActivity
-import org.odk.collect.android.activities.viewmodels.CurrentProjectViewModel
-import org.odk.collect.android.application.initialization.AnalyticsInitializer
 import org.odk.collect.android.injection.config.AppDependencyModule
+import org.odk.collect.android.mainmenu.CurrentProjectViewModel
 import org.odk.collect.android.preferences.screens.ProjectPreferencesActivity
-import org.odk.collect.android.storage.StoragePathProvider
 import org.odk.collect.android.support.CollectHelpers
-import org.odk.collect.androidshared.livedata.MutableNonNullLiveData
+import org.odk.collect.androidshared.ui.FragmentFactoryBuilder
 import org.odk.collect.fragmentstest.FragmentScenarioLauncherRule
 import org.odk.collect.projects.InMemProjectsRepository
 import org.odk.collect.projects.Project
@@ -40,8 +39,8 @@ import org.odk.collect.testshared.RobolectricHelpers
 @RunWith(AndroidJUnit4::class)
 class ProjectSettingsDialogTest {
 
-    val currentProjectViewModel: CurrentProjectViewModel = mock {
-        on { currentProject } doReturn MutableNonNullLiveData(
+    private val currentProjectViewModel: CurrentProjectViewModel = mock {
+        on { currentProject } doReturn MutableLiveData(
             Project.Saved(
                 "x",
                 "Project X",
@@ -51,31 +50,24 @@ class ProjectSettingsDialogTest {
         )
     }
 
-    val projectsRepository = InMemProjectsRepository(UUIDGenerator(),)
+    private val projectsRepository = InMemProjectsRepository(UUIDGenerator())
+
+    private val viewModelFactory = viewModelFactory {
+        initializer {
+            currentProjectViewModel
+        }
+    }
 
     @get:Rule
-    val launcherRule =
-        FragmentScenarioLauncherRule(defaultThemeResId = R.style.Theme_MaterialComponents)
+    val launcherRule = FragmentScenarioLauncherRule(
+        defaultFactory = FragmentFactoryBuilder()
+            .forClass(ProjectSettingsDialog::class) { ProjectSettingsDialog(viewModelFactory) }
+            .build()
+    )
 
     @Before
     fun setup() {
         CollectHelpers.overrideAppDependencyModule(object : AppDependencyModule() {
-            override fun providesCurrentProjectViewModel(
-                currentProjectProvider: CurrentProjectProvider,
-                analyticsInitializer: AnalyticsInitializer,
-                storagePathProvider: StoragePathProvider,
-                projectsRepository: ProjectsRepository
-            ): CurrentProjectViewModel.Factory {
-                return object : CurrentProjectViewModel.Factory(
-                    currentProjectProvider,
-                    analyticsInitializer
-                ) {
-                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                        return currentProjectViewModel as T
-                    }
-                }
-            }
-
             override fun providesProjectsRepository(
                 uuidGenerator: UUIDGenerator?,
                 gson: Gson?,

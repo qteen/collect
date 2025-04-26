@@ -29,6 +29,7 @@ import androidx.annotation.StyleRes;
 import androidx.appcompat.app.AppCompatDelegate;
 
 import org.odk.collect.android.R;
+import org.odk.collect.android.application.FeatureFlags;
 import org.odk.collect.android.injection.DaggerUtils;
 import org.odk.collect.settings.SettingsProvider;
 import org.odk.collect.settings.keys.ProjectKeys;
@@ -84,12 +85,12 @@ public final class ThemeUtils {
                 R.style.Theme_Collect_Light_Spinner_TimePicker_Dialog;
     }
 
-    public int getAccountPickerTheme() {
-        return isDarkTheme() ? 0 : 1;
-    }
-
     public boolean isSystemTheme() {
-        return getPrefsTheme().equals(context.getString(R.string.app_theme_system));
+        if (FeatureFlags.NO_THEME_SETTING) {
+            return true;
+        } else {
+            return getPrefsTheme().equals(context.getString(org.odk.collect.strings.R.string.app_theme_system));
+        }
     }
 
     public boolean isDarkTheme() {
@@ -98,7 +99,7 @@ public final class ThemeUtils {
             return (uiMode & UI_MODE_NIGHT_MASK) == UI_MODE_NIGHT_YES;
         } else {
             String theme = getPrefsTheme();
-            return theme.equals(context.getString(R.string.app_theme_dark));
+            return theme.equals(context.getString(org.odk.collect.strings.R.string.app_theme_dark));
         }
     }
 
@@ -119,46 +120,16 @@ public final class ThemeUtils {
      */
     @ColorInt
     public int getColorOnSurface() {
-        return getThemeAttributeValue(context, R.attr.colorOnSurface);
-    }
-
-    @ColorInt
-    public int getColorOnSurfaceLowEmphasis() {
-        return context.getResources().getColor(R.color.color_on_surface_low_emphasis);
+        return getThemeAttributeValue(context, com.google.android.material.R.attr.colorOnSurface);
     }
 
     @ColorInt
     public int getAccentColor() {
-        return getThemeAttributeValue(context, R.attr.colorAccent);
-    }
-
-    @ColorInt
-    public int getIconColor() {
-        return getThemeAttributeValue(context, R.attr.colorOnSurface);
+        return getThemeAttributeValue(context, com.google.android.material.R.attr.colorAccent);
     }
 
     @ColorInt
     public int getColorPrimary() {
-        return getThemeAttributeValue(context, R.attr.colorPrimary);
-    }
-
-    @ColorInt
-    public int getColorOnPrimary() {
-        return getThemeAttributeValue(context, R.attr.colorOnPrimary);
-    }
-
-    @ColorInt
-    public int getColorSecondary() {
-        return getThemeAttributeValue(context, R.attr.colorSecondary);
-    }
-
-    @ColorInt
-    public int getColorError() {
-        return getThemeAttributeValue(context, R.attr.colorError);
-    }
-
-    @ColorInt
-    public int getColorPrimaryDark() {
-        return getThemeAttributeValue(context, R.attr.colorPrimaryDark);
+        return getThemeAttributeValue(context, com.google.android.material.R.attr.colorPrimary);
     }
 }

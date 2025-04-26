@@ -14,19 +14,18 @@
 
 package org.odk.collect.android.instancemanagement;
 
+import static org.odk.collect.strings.localization.LocalizedApplicationKt.getLocalizedString;
+
 import android.net.Uri;
 
 import org.apache.commons.io.FileUtils;
-import org.odk.collect.android.R;
-import org.odk.collect.android.analytics.AnalyticsEvents;
-import org.odk.collect.android.analytics.AnalyticsUtils;
 import org.odk.collect.android.application.Collect;
 import org.odk.collect.android.exception.EncryptionException;
 import org.odk.collect.android.external.InstancesContract;
 import org.odk.collect.android.injection.DaggerUtils;
 import org.odk.collect.android.injection.config.AppDependencyComponent;
 import org.odk.collect.android.javarosawrapper.InstanceMetadata;
-import org.odk.collect.android.projects.CurrentProjectProvider;
+import org.odk.collect.android.projects.ProjectsDataService;
 import org.odk.collect.android.storage.StoragePathProvider;
 import org.odk.collect.android.storage.StorageSubdirectory;
 import org.odk.collect.android.tasks.SaveFormToDisk;
@@ -51,14 +50,12 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import timber.log.Timber;
 
-import static org.odk.collect.strings.localization.LocalizedApplicationKt.getLocalizedString;
-
 public class InstanceDiskSynchronizer {
 
     private static int counter;
 
     private String currentStatus = "";
-    private final CurrentProjectProvider currentProjectProvider;
+    private final ProjectsDataService projectsDataService;
     private final SettingsProvider settingsProvider;
     private final StoragePathProvider storagePathProvider = new StoragePathProvider();
     private final InstancesRepository instancesRepository;
@@ -69,9 +66,9 @@ public class InstanceDiskSynchronizer {
 
     public InstanceDiskSynchronizer(SettingsProvider settingsProvider) {
         this.settingsProvider = settingsProvider;
-        instancesRepository = new InstancesRepositoryProvider(Collect.getInstance()).get();
+        instancesRepository = new InstancesRepositoryProvider(Collect.getInstance()).create();
         AppDependencyComponent component = DaggerUtils.getComponent(Collect.getInstance());
-        currentProjectProvider = component.currentProjectProvider();
+        projectsDataService = component.currentProjectProvider();
     }
 
     public String doInBackground() {
@@ -119,7 +116,7 @@ public class InstanceDiskSynchronizer {
                         try {
                             // TODO: optimize this by caching the previously found form definition
                             // TODO: optimize this by caching unavailable form definition to skip
-                            List<Form> forms = new FormsRepositoryProvider(Collect.getInstance()).get().getAllByFormId(instanceFormId);
+                            List<Form> forms = new FormsRepositoryProvider(Collect.getInstance()).create().getAllByFormId(instanceFormId);
 
                             if (!forms.isEmpty()) {
                                 Form form = forms.get(0);
@@ -148,7 +145,7 @@ public class InstanceDiskSynchronizer {
                     }
                 }
                 if (counter > 0) {
-                    currentStatus += getLocalizedString(Collect.getInstance(), R.string.instance_scan_count, counter);
+                    currentStatus += getLocalizedString(Collect.getInstance(), org.odk.collect.strings.R.string.instance_scan_count, counter);
                 }
             }
         } finally {
@@ -188,27 +185,16 @@ public class InstanceDiskSynchronizer {
     private void encryptInstanceIfNeeded(Form form, Instance instance) throws EncryptionException, IOException {
         if (instance != null) {
             if (shouldInstanceBeEncrypted(form)) {
-                logImportAndEncrypt(form);
                 encryptInstance(instance);
-            } else {
-                logImport(form);
             }
         }
-    }
-
-    private void logImport(Form form) {
-        AnalyticsUtils.logFormEvent(AnalyticsEvents.IMPORT_INSTANCE, form.getFormId(), form.getDisplayName());
-    }
-
-    private void logImportAndEncrypt(Form form) {
-        AnalyticsUtils.logFormEvent(AnalyticsEvents.IMPORT_AND_ENCRYPT_INSTANCE, form.getFormId(), form.getDisplayName());
     }
 
     private void encryptInstance(Instance instance) throws EncryptionException, IOException {
         String instancePath = instance.getInstanceFilePath();
         File instanceXml = new File(instancePath);
         if (!new File(instanceXml.getParentFile(), "submission.xml.enc").exists()) {
-            Uri uri = InstancesContract.getUri(currentProjectProvider.getCurrentProject().getUuid(), instance.getDbId());
+            Uri uri = InstancesContract.getUri(projectsDataService.requireCurrentProject().getUuid(), instance.getDbId());
             InstanceMetadata instanceMetadata = new InstanceMetadata(getInstanceIdFromInstance(instancePath), null, null);
             EncryptionUtils.EncryptedFormInformation formInfo = EncryptionUtils.getEncryptedFormInformation(uri, instanceMetadata);
 

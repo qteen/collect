@@ -1,33 +1,31 @@
 package org.odk.collect.android.instancemanagement.autosend
 
-import android.net.ConnectivityManager
-import org.odk.collect.analytics.Analytics
-import org.odk.collect.android.analytics.AnalyticsEvents
-import org.odk.collect.androidshared.network.NetworkStateProvider
+import android.app.Application
+import org.odk.collect.async.Scheduler
+import org.odk.collect.async.network.NetworkStateProvider
 import org.odk.collect.settings.SettingsProvider
-import org.odk.collect.settings.keys.ProjectKeys
+import org.odk.collect.settings.enums.AutoSend
+import org.odk.collect.settings.enums.StringIdEnumUtils.getAutoSend
 
 class AutoSendSettingsProvider(
+    private val application: Application,
     private val networkStateProvider: NetworkStateProvider,
     private val settingsProvider: SettingsProvider
 ) {
 
-    fun isAutoSendEnabledInSettings(projectId: String): Boolean {
-        val currentNetworkInfo = networkStateProvider.networkInfo ?: return false
+    fun isAutoSendEnabledInSettings(projectId: String? = null): Boolean {
+        val currentNetworkType = networkStateProvider.currentNetwork ?: return false
 
-        val autosend = settingsProvider.getUnprotectedSettings(projectId).getString(ProjectKeys.KEY_AUTOSEND)
-        var sendwifi = autosend == "wifi_only"
-        var sendnetwork = (autosend == "cellular_only").also {
-            if (it) {
-                Analytics.log(AnalyticsEvents.CELLULAR_ONLY)
-            }
-        }
+        val autosend = settingsProvider.getUnprotectedSettings(projectId).getAutoSend(application)
+        var sendwifi = autosend == AutoSend.WIFI_ONLY
+        var sendnetwork = autosend == AutoSend.CELLULAR_ONLY
 
-        if (autosend == "wifi_and_cellular") {
+        if (autosend == AutoSend.WIFI_AND_CELLULAR) {
             sendwifi = true
             sendnetwork = true
         }
-        return currentNetworkInfo.type == ConnectivityManager.TYPE_WIFI &&
-            sendwifi || currentNetworkInfo.type == ConnectivityManager.TYPE_MOBILE && sendnetwork
+
+        return currentNetworkType == Scheduler.NetworkType.WIFI &&
+            sendwifi || currentNetworkType == Scheduler.NetworkType.CELLULAR && sendnetwork
     }
 }

@@ -14,29 +14,34 @@
 
 package org.odk.collect.android.widgets;
 
-import static org.odk.collect.android.formentry.questions.WidgetViewUtils.createSimpleButton;
-import static org.odk.collect.android.injection.DaggerUtils.getComponent;
+import static org.odk.collect.android.utilities.Appearances.hasAppearance;
 import static org.odk.collect.android.utilities.ApplicationConstants.RequestCodes;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
-import android.text.Editable;
-import android.text.Selection;
-import android.text.TextWatcher;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.LinearLayout;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+
+import org.javarosa.core.model.data.IAnswerData;
 import org.javarosa.core.model.data.StringData;
+import org.javarosa.form.api.FormEntryPrompt;
+import org.odk.collect.android.databinding.ExStringQuestionTypeBinding;
+import org.odk.collect.android.dynamicpreload.ExternalAppsUtils;
 import org.odk.collect.android.R;
-import org.odk.collect.android.externaldata.ExternalAppsUtils;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
-import org.odk.collect.android.formentry.questions.WidgetViewUtils;
-import org.odk.collect.android.widgets.interfaces.ButtonClickListener;
+import org.odk.collect.android.utilities.Appearances;
 import org.odk.collect.android.widgets.interfaces.WidgetDataReceiver;
+import org.odk.collect.android.widgets.utilities.QuestionFontSizeUtils;
 import org.odk.collect.android.widgets.utilities.StringRequester;
+import org.odk.collect.android.widgets.utilities.StringWidgetUtils;
 import org.odk.collect.android.widgets.utilities.WaitingForDataRegistry;
 
 import java.io.Serializable;
@@ -83,37 +88,54 @@ import timber.log.Timber;
  * </pre>
  */
 @SuppressLint("ViewConstructor")
-public class ExStringWidget extends StringWidget implements WidgetDataReceiver, ButtonClickListener {
+public class ExStringWidget extends QuestionWidget implements WidgetDataReceiver {
+    public ExStringQuestionTypeBinding binding;
     private final WaitingForDataRegistry waitingForDataRegistry;
 
     private boolean hasExApp = true;
-    public Button launchIntentButton;
     private final StringRequester stringRequester;
 
-    public ExStringWidget(Context context, QuestionDetails questionDetails, WaitingForDataRegistry waitingForDataRegistry, StringRequester stringRequester) {
-        super(context, questionDetails);
+    public ExStringWidget(Context context, QuestionDetails questionDetails, WaitingForDataRegistry waitingForDataRegistry, StringRequester stringRequester, Dependencies dependencies) {
+        super(context, dependencies, questionDetails);
         render();
 
         this.waitingForDataRegistry = waitingForDataRegistry;
         this.stringRequester = stringRequester;
-        getComponent(context).inject(this);
     }
 
     @Override
-    protected void setUpLayout(Context context) {
-        answerText.setText(getFormEntryPrompt().getAnswerText());
-        launchIntentButton = createSimpleButton(getContext(), getFormEntryPrompt().isReadOnly(), getButtonText(), getAnswerFontSize(), this);
+    protected View onCreateAnswerView(@NonNull Context context, @NonNull FormEntryPrompt prompt, int answerFontSize) {
+        binding = ExStringQuestionTypeBinding.inflate(LayoutInflater.from(context));
+        binding.launchAppButton.setText(getButtonText());
+        binding.launchAppButton.setOnClickListener(v -> {
+            waitingForDataRegistry.waitForData(getFormEntryPrompt().getIndex());
+            stringRequester.launch((Activity) getContext(), getRequestCode(), getFormEntryPrompt(), getAnswerForIntent(), (String errorMsg) -> {
+                onException(errorMsg);
+                return null;
+            });
+        });
+        if (questionDetails.isReadOnly()) {
+            binding.launchAppButton.setVisibility(GONE);
+        }
+        binding.widgetAnswerText.init(
+                QuestionFontSizeUtils.getFontSize(settings, QuestionFontSizeUtils.FontSize.HEADLINE_6),
+                true,
+                StringWidgetUtils.getNumberOfRows(questionDetails.getPrompt()),
+                Appearances.isMultiline(prompt),
+                Appearances.isMasked(prompt),
+                this::widgetValueChanged
+        );
+        binding.widgetAnswerText.setAnswer(getFormEntryPrompt().getAnswerText());
+        if (hasAppearance(getFormEntryPrompt(), Appearances.HIDDEN_ANSWER)) {
+            binding.widgetAnswerText.setVisibility(GONE);
+        }
 
-        LinearLayout answerLayout = new LinearLayout(getContext());
-        answerLayout.setOrientation(LinearLayout.VERTICAL);
-        answerLayout.addView(launchIntentButton);
-        answerLayout.addView(answerText);
-        addAnswerView(answerLayout, WidgetViewUtils.getStandardMargin(context));
+        return binding.getRoot();
     }
 
     private String getButtonText() {
         String v = getFormEntryPrompt().getSpecialFormQuestionText("buttonText");
-        return v != null ? v : getContext().getString(R.string.launch_app);
+        return v != null ? v : getContext().getString(org.odk.collect.strings.R.string.launch_app);
     }
 
     protected Serializable getAnswerForIntent() {
@@ -124,22 +146,33 @@ public class ExStringWidget extends StringWidget implements WidgetDataReceiver, 
         return RequestCodes.EX_STRING_CAPTURE;
     }
 
+    @Nullable
+    @Override
+    public IAnswerData getAnswer() {
+        String answer = binding.widgetAnswerText.getAnswer();
+        return !answer.isEmpty() ? new StringData(answer) : null;
+    }
+
+    @Override
+    public void clearAnswer() {
+        binding.widgetAnswerText.clearAnswer();
+    }
+
     @Override
     public void setData(Object answer) {
         StringData stringData = ExternalAppsUtils.asStringData(answer);
-        answerText.setText(stringData == null ? null : stringData.getValue().toString());
-        widgetValueChanged();
+        binding.widgetAnswerText.setAnswer(stringData == null ? null : stringData.getValue().toString());
     }
 
     @Override
     public void setFocus(Context context) {
         if (hasExApp) {
-            softKeyboardController.hideSoftKeyboard(answerText);
+            binding.widgetAnswerText.setFocus(false);
             // focus on launch button
-            launchIntentButton.requestFocus();
+            binding.launchAppButton.requestFocus();
         } else {
             if (!getFormEntryPrompt().isReadOnly()) {
-                softKeyboardController.showSoftKeyboard(answerText);
+                binding.widgetAnswerText.setFocus(true);
             /*
              * If you do a multi-question screen after a "add another group" dialog, this won't
              * automatically pop up. It's an Android issue.
@@ -151,61 +184,52 @@ public class ExStringWidget extends StringWidget implements WidgetDataReceiver, 
              * is focused before the dialog pops up, everything works fine. great.
              */
             } else {
-                softKeyboardController.hideSoftKeyboard(answerText);
+                binding.widgetAnswerText.setFocus(false);
             }
         }
     }
 
     @Override
     public void setOnLongClickListener(OnLongClickListener l) {
-        answerText.setOnLongClickListener(l);
-        launchIntentButton.setOnLongClickListener(l);
+        binding.widgetAnswerText.setOnLongClickListener(l);
+        binding.launchAppButton.setOnLongClickListener(l);
     }
 
     @Override
     public void cancelLongPress() {
         super.cancelLongPress();
-        answerText.cancelLongPress();
-        launchIntentButton.cancelLongPress();
+        binding.widgetAnswerText.cancelLongPress();
+        binding.launchAppButton.cancelLongPress();
     }
 
+    /**
+     * Registers all subviews except for the answer_container (which contains the EditText) to clear on long press.
+     * This makes it possible to long-press to paste or perform other text editing functions.
+     */
     @Override
-    public void onButtonClick(int buttonId) {
-        waitingForDataRegistry.waitForData(getFormEntryPrompt().getIndex());
-        stringRequester.launch((Activity) getContext(), getRequestCode(), getFormEntryPrompt(), getAnswerForIntent(), (String errorMsg) -> {
-            onException(errorMsg);
-            return null;
-        });
+    protected void registerToClearAnswerOnLongPress(Activity activity, ViewGroup viewGroup) {
+        ViewGroup view = findViewById(R.id.question_widget_container);
+        for (int i = 0; i < view.getChildCount(); i++) {
+            View childView = view.getChildAt(i);
+            if (childView.getId() != R.id.answer_container) {
+                childView.setTag(childView.getId());
+                childView.setId(getId());
+                activity.registerForContextMenu(childView);
+            }
+        }
     }
 
     private void focusAnswer() {
-        softKeyboardController.showSoftKeyboard(answerText);
+        binding.widgetAnswerText.setFocus(true);
     }
 
     private void onException(String toastText) {
         hasExApp = false;
         if (!getFormEntryPrompt().isReadOnly()) {
-            answerText.setBackground((new EditText(getContext())).getBackground());
-            answerText.setFocusable(true);
-            answerText.setFocusableInTouchMode(true);
-            answerText.setEnabled(true);
-            answerText.addTextChangedListener(new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                }
-
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {
-                }
-
-                @Override
-                public void afterTextChanged(Editable s) {
-                    widgetValueChanged();
-                }
-            });
+            binding.widgetAnswerText.updateState(false);
         }
-        launchIntentButton.setEnabled(false);
-        launchIntentButton.setFocusable(false);
+        binding.launchAppButton.setEnabled(false);
+        binding.launchAppButton.setFocusable(false);
         waitingForDataRegistry.cancelWaitingForData();
 
         Toast.makeText(getContext(),
@@ -213,6 +237,25 @@ public class ExStringWidget extends StringWidget implements WidgetDataReceiver, 
                 .show();
         Timber.d(toastText);
         focusAnswer();
-        Selection.setSelection(answerText.getText(), answerText.getText().toString().length());
+    }
+
+    @Override
+    public void hideError() {
+        super.hideError();
+        binding.widgetAnswerText.setError(null);
+    }
+
+    @Override
+    public void displayError(String errorMessage) {
+        hideError();
+
+        if (binding.widgetAnswerText.isEditableState()) {
+            binding.widgetAnswerText.setError(errorMessage);
+            setBackground(ContextCompat.getDrawable(getContext(), R.drawable.question_with_error_border));
+        } else {
+            ((TextView) errorLayout.findViewById(R.id.error_message)).setText(errorMessage);
+            errorLayout.setVisibility(VISIBLE);
+            setBackground(ContextCompat.getDrawable(getContext(), R.drawable.question_with_error_border));
+        }
     }
 }

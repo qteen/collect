@@ -7,7 +7,7 @@ references:
   android_config: &android_config
     working_directory: ~/work
     docker:
-      - image: cimg/android:2022.12.1
+      - image: cimg/android:2025.02
     resource_class: medium+
 
 jobs:
@@ -17,7 +17,7 @@ jobs:
       - checkout
       - run:
           name: Generate combined build.gradle file for cache key
-          command: cat build.gradle */build.gradle .circleci/gradle.properties .circleci/config.yml > deps.txt
+          command: cat build.gradle */build.gradle */build.gradle.kts .circleci/gradle.properties .circleci/config.yml gradle/libs.versions.toml > deps.txt
       - restore_cache:
           keys:
             - compile-deps-{{ checksum "deps.txt" }}
@@ -91,10 +91,7 @@ jobs:
 
       - run:
           name: Run code quality checks
-          command: ./gradlew checkCode
-      - store_artifacts:
-          path: collect_app/build/reports
-          destination: reports
+          command: ./gradlew pmd ktlintCheck checkstyle lintDebug
 
   test_modules:
     <<: *android_config
@@ -125,11 +122,8 @@ jobs:
       - run:
           name: Run module unit tests
           command: |
-            ./gradlew $(cat .circleci/fork_test_modules.txt | awk '{for (i=1; i<=NF; i++) printf "%s ",$i}')
+            ./gradlew $(cat .circleci/fork_test_modules.txt | awk '{for (i=1; i<=NF; i++) printf "%s:testDebug ",$i}')
 
-      - store_artifacts:
-          path: collect_app/build/reports
-          destination: reports
       - store_test_results:
           path: collect_app/build/test-results
 
@@ -235,6 +229,16 @@ jobs:
           name: Assemble self signed release build
           command: ./gradlew assembleSelfSignedRelease
 
+      - run:
+          name: Check APK size isn't larger than 11.8MB
+          command: ./check-size.sh
+
+      - run:
+          name: Copy APK to predictable path for artifact storage
+          command: cp collect_app/build/outputs/apk/selfSignedRelease/*.apk selfSignedRelease.apk
+      - store_artifacts:
+          path: selfSignedRelease.apk
+
   test_smoke_instrumented:
     <<: *android_config
     steps:
@@ -278,7 +282,7 @@ jobs:
               --type instrumentation \
               --app collect_app/build/outputs/apk/debug/*.apk \
               --test collect_app/build/outputs/apk/androidTest/debug/*.apk \
-              --device model=MediumPhone.arm,version=30,locale=en,orientation=portrait \
+              --device model=MediumPhone.arm,version=34,locale=en,orientation=portrait \
               --results-bucket opendatakit-collect-test-results \
               --directories-to-pull /sdcard --timeout 20m \
               --test-targets "package org.odk.collect.android.feature.smoke"
@@ -329,9 +333,11 @@ jobs:
               --num-uniform-shards=25 \
               --app collect_app/build/outputs/apk/debug/*.apk \
               --test collect_app/build/outputs/apk/androidTest/debug/*.apk \
-              --device model=MediumPhone.arm,version=30,locale=en,orientation=portrait \
+              --device model=MediumPhone.arm,version=34,locale=en,orientation=portrait \
               --results-bucket opendatakit-collect-test-results \
-              --directories-to-pull /sdcard --timeout 20m
+              --directories-to-pull /sdcard --timeout 20m \
+              --test-targets "notPackage org.odk.collect.android.regression" \
+              --test-targets "notPackage org.odk.collect.android.benchmark"
             fi
           no_output_timeout: 25m
 
@@ -340,14 +346,6 @@ workflows:
   commit:
     jobs:
       - compile
-      - create_dependency_backup:
-          requires:
-            - compile
-          filters:
-            tags:
-              only: /^v((20)[0-9]{2})\.\d+\.\d+$/ # matches semvers like v1.2.3
-            branches:
-              ignore: /.*/
       - check_quality:
           requires:
             - compile
@@ -365,13 +363,15 @@ workflows:
             - compile
           filters:
             branches:
-              ignore: master
+              ignore:
+                - master
       - test_smoke_instrumented:
           requires:
             - compile
           filters:
             branches:
-              only: master
+              only:
+                - master
 
   nightly:
     triggers:
@@ -386,3 +386,21 @@ workflows:
       - test_instrumented:
           requires:
             - compile
+
+  release:
+    jobs:
+      - compile:
+          filters:
+            tags:
+              only: /^v((20)[0-9]{2})\.\d+\.\d+$/ # matches semvers like v1.2.3
+            branches:
+              ignore: /.*/
+      - create_dependency_backup:
+          requires:
+            - compile
+          filters:
+            tags:
+              only: /^v((20)[0-9]{2})\.\d+\.\d+$/ # matches semvers like v1.2.3
+            branches:
+              ignore: /.*/
+

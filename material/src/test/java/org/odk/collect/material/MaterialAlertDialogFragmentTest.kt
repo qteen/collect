@@ -24,8 +24,7 @@ class MaterialAlertDialogFragmentTest {
     }
 
     @get:Rule
-    val launcherRule =
-        FragmentScenarioLauncherRule(defaultThemeResId = R.style.Theme_MaterialComponents)
+    val launcherRule = FragmentScenarioLauncherRule()
 
     @Test
     fun `dialog should be cancelable`() {
@@ -41,7 +40,7 @@ class MaterialAlertDialogFragmentTest {
         scenario.onFragment {
             assertThat(
                 (it.dialog as AlertDialog).getButton(AlertDialog.BUTTON_POSITIVE).text,
-                `is`(ApplicationProvider.getApplicationContext<Application>().getString(R.string.ok))
+                `is`(ApplicationProvider.getApplicationContext<Application>().getString(org.odk.collect.strings.R.string.ok))
             )
         }
     }

@@ -18,7 +18,7 @@ object GeoWidgetUtils {
             if (answer != null && answer.isNotEmpty()) {
                 val parts = answer.split(" ").toTypedArray()
                 return context.getString(
-                    R.string.gps_result,
+                    org.odk.collect.strings.R.string.gps_result,
                     convertCoordinatesIntoDegreeFormat(context, parts[0].toDouble(), "lat"),
                     convertCoordinatesIntoDegreeFormat(context, parts[1].toDouble(), "lon"),
                     truncateDouble(parts[2]),
@@ -83,7 +83,7 @@ object GeoWidgetUtils {
     fun convertCoordinatesIntoDegreeFormat(
         context: Context,
         coordinate: Double,
-        type: String,
+        type: String
     ): String {
         val coordinateDegrees = Location.convert(abs(coordinate), Location.FORMAT_SECONDS)
         val coordinateSplit = coordinateDegrees.split(":").toTypedArray()
@@ -115,14 +115,14 @@ object GeoWidgetUtils {
     private fun getCardinalDirection(context: Context, coordinate: Double, type: String): String {
         return if (type.equals("lon", ignoreCase = true)) {
             if (coordinate < 0) {
-                context.getString(R.string.west)
+                context.getString(org.odk.collect.strings.R.string.west)
             } else {
-                context.getString(R.string.east)
+                context.getString(org.odk.collect.strings.R.string.east)
             }
         } else if (coordinate < 0) {
-            context.getString(R.string.south)
+            context.getString(org.odk.collect.strings.R.string.south)
         } else {
-            context.getString(R.string.north)
+            context.getString(org.odk.collect.strings.R.string.north)
         }
     }
 }

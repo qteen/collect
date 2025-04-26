@@ -7,10 +7,9 @@ import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers.`is`
 import org.junit.Test
 import org.junit.runner.RunWith
-import org.odk.collect.android.R
-import org.odk.collect.android.formmanagement.FormDownloadException
-import org.odk.collect.android.formmanagement.FormDownloadExceptionMapper
 import org.odk.collect.android.formmanagement.ServerFormDetails
+import org.odk.collect.android.formmanagement.download.FormDownloadException
+import org.odk.collect.android.formmanagement.download.FormDownloadExceptionMapper
 
 @RunWith(AndroidJUnit4::class)
 class FormsDownloadResultInterpreterTest {
@@ -26,20 +25,41 @@ class FormsDownloadResultInterpreterTest {
 
     private var resultWithOneError = mapOf<ServerFormDetails, FormDownloadException?>(
         formDetails1 to null,
-        formDetails2 to FormDownloadException.FormParsingError()
+        formDetails2 to FormDownloadException.FormParsingError(RuntimeException())
     )
 
     @Test
     fun `When all forms downloaded successfully getFailures() should return an empty list`() {
-        assertThat(FormsDownloadResultInterpreter.getFailures(resultWithoutErrors, context).size, `is`(0))
+        assertThat(
+            FormsDownloadResultInterpreter.getFailures(resultWithoutErrors, context).size,
+            `is`(0)
+        )
     }
 
     @Test
     fun `When not all forms downloaded successfully getFailures() should return list of failures`() {
-        assertThat(FormsDownloadResultInterpreter.getFailures(resultWithOneError, context).size, `is`(1))
-        assertThat(FormsDownloadResultInterpreter.getFailures(resultWithOneError, context)[0].title, `is`("Form 2"))
-        assertThat(FormsDownloadResultInterpreter.getFailures(resultWithOneError, context)[0].secondaryText, `is`(context.getString(R.string.form_details, "5", "4")))
-        assertThat(FormsDownloadResultInterpreter.getFailures(resultWithOneError, context)[0].supportingText, `is`(FormDownloadExceptionMapper(context).getMessage(resultWithOneError[formDetails2])))
+        assertThat(
+            FormsDownloadResultInterpreter.getFailures(resultWithOneError, context).size,
+            `is`(1)
+        )
+        assertThat(
+            FormsDownloadResultInterpreter.getFailures(resultWithOneError, context)[0].title,
+            `is`("Form 2")
+        )
+        assertThat(
+            FormsDownloadResultInterpreter.getFailures(
+                resultWithOneError,
+                context
+            )[0].secondaryText,
+            `is`(context.getString(org.odk.collect.strings.R.string.form_details, "5", "4"))
+        )
+        assertThat(
+            FormsDownloadResultInterpreter.getFailures(
+                resultWithOneError,
+                context
+            )[0].supportingText,
+            `is`(FormDownloadExceptionMapper(context).getMessage(resultWithOneError[formDetails2]))
+        )
     }
 
     @Test
@@ -54,11 +74,17 @@ class FormsDownloadResultInterpreterTest {
 
     @Test
     fun `When all forms downloaded successfully allFormsDownloadedSuccessfully() should return true`() {
-        assertThat(FormsDownloadResultInterpreter.allFormsDownloadedSuccessfully(resultWithoutErrors), `is`(true))
+        assertThat(
+            FormsDownloadResultInterpreter.allFormsDownloadedSuccessfully(resultWithoutErrors),
+            `is`(true)
+        )
     }
 
     @Test
     fun `When not all forms downloaded successfully allFormsDownloadedSuccessfully() should return false`() {
-        assertThat(FormsDownloadResultInterpreter.allFormsDownloadedSuccessfully(resultWithOneError), `is`(false))
+        assertThat(
+            FormsDownloadResultInterpreter.allFormsDownloadedSuccessfully(resultWithOneError),
+            `is`(false)
+        )
     }
 }

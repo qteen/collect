@@ -4,13 +4,13 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.RuleChain;
 import org.odk.collect.android.R;
-import org.odk.collect.android.support.rules.FormActivityTestRule;
+import org.odk.collect.android.support.rules.BlankFormTestRule;
 import org.odk.collect.android.support.rules.TestRuleChain;
 
 public class ContextMenuTest {
     private static final String STRING_WIDGETS_TEST_FORM = "string_widgets_in_field_list.xml";
 
-    public FormActivityTestRule activityTestRule = new FormActivityTestRule(STRING_WIDGETS_TEST_FORM, "fl");
+    public BlankFormTestRule activityTestRule = new BlankFormTestRule(STRING_WIDGETS_TEST_FORM, "fl");
 
     @Rule
     public RuleChain copyFormChain = TestRuleChain.chain()
@@ -40,6 +40,6 @@ public class ContextMenuTest {
         activityTestRule.startInFormEntry()
                 .assertOnPage()
                 .longPressOnQuestion(R.id.answer_container, 0)
-                .assertTextDoesNotExist(R.string.clear_answer);
+                .assertTextDoesNotExist(org.odk.collect.strings.R.string.clear_answer);
     }
 }

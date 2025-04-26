@@ -20,49 +20,57 @@ import static org.odk.collect.strings.localization.LocalizedApplicationKt.getLoc
 import android.content.Intent;
 import android.database.Cursor;
 import android.database.SQLException;
-import android.os.AsyncTask;
+import android.net.Uri;
+
+import androidx.annotation.NonNull;
 
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 
 import org.javarosa.core.model.FormDef;
 import org.javarosa.core.model.FormIndex;
-import org.javarosa.core.model.instance.InstanceInitializationFactory;
+import org.javarosa.core.model.FormInitializationMode;
 import org.javarosa.core.model.instance.TreeElement;
 import org.javarosa.core.model.instance.TreeReference;
 import org.javarosa.core.model.instance.utils.DefaultAnswerResolver;
 import org.javarosa.core.reference.ReferenceManager;
-import org.javarosa.entities.EntityFormFinalizationProcessor;
 import org.javarosa.form.api.FormEntryController;
-import org.javarosa.form.api.FormEntryModel;
 import org.javarosa.xform.parse.XFormParser;
 import org.javarosa.xform.util.XFormUtils;
 import org.javarosa.xpath.XPathTypeMismatchException;
-import org.odk.collect.android.R;
 import org.odk.collect.android.application.Collect;
-import org.odk.collect.android.externaldata.ExternalAnswerResolver;
-import org.odk.collect.android.externaldata.ExternalDataHandler;
-import org.odk.collect.android.externaldata.ExternalDataManager;
-import org.odk.collect.android.externaldata.ExternalDataManagerImpl;
-import org.odk.collect.android.externaldata.ExternalDataReader;
-import org.odk.collect.android.externaldata.ExternalDataReaderImpl;
-import org.odk.collect.android.externaldata.handler.ExternalDataHandlerPull;
+import org.odk.collect.android.dynamicpreload.ExternalAnswerResolver;
+import org.odk.collect.android.dynamicpreload.ExternalDataManager;
+import org.odk.collect.android.dynamicpreload.ExternalDataUseCases;
+import org.odk.collect.android.external.FormsContract;
+import org.odk.collect.android.external.InstancesContract;
 import org.odk.collect.android.fastexternalitemset.ItemsetDbAdapter;
+import org.odk.collect.android.formentry.FormEntryUseCases;
 import org.odk.collect.android.javarosawrapper.FormController;
 import org.odk.collect.android.javarosawrapper.JavaRosaFormController;
 import org.odk.collect.android.listeners.FormLoaderListener;
+import org.odk.collect.android.utilities.ContentUriHelper;
+import org.odk.collect.android.utilities.ExternalizableFormDefCache;
 import org.odk.collect.android.utilities.FileUtils;
-import org.odk.collect.android.utilities.FormDefCache;
+import org.odk.collect.android.utilities.FormsRepositoryProvider;
+import org.odk.collect.android.utilities.InstancesRepositoryProvider;
 import org.odk.collect.android.utilities.ZipUtils;
+import org.odk.collect.async.Scheduler;
+import org.odk.collect.async.SchedulerAsyncTaskMimic;
+import org.odk.collect.entities.javarosa.spec.UnrecognizedEntityVersionException;
+import org.odk.collect.forms.Form;
+import org.odk.collect.forms.instances.Instance;
+import org.odk.collect.forms.savepoints.Savepoint;
+import org.odk.collect.forms.savepoints.SavepointsRepository;
 import org.odk.collect.shared.strings.Md5;
 
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 
 import timber.log.Timber;
 
@@ -72,21 +80,46 @@ import timber.log.Timber;
  * @author Carl Hartung (carlhartung@gmail.com)
  * @author Yaw Anokwa (yanokwa@gmail.com)
  */
-public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FECWrapper> {
+public class FormLoaderTask extends SchedulerAsyncTaskMimic<Void, String, FormLoaderTask.FECWrapper> {
     private static final String ITEMSETS_CSV = "itemsets.csv";
 
     private FormLoaderListener stateListener;
     private String errorMsg;
     private String warningMsg;
     private String instancePath;
+    private final Uri uri;
+    private final String uriMimeType;
     private final String xpath;
     private final String waitingXPath;
+    private FormEntryControllerFactory formEntryControllerFactory;
     private boolean pendingActivityResult;
     private int requestCode;
     private int resultCode;
     private Intent intent;
     private ExternalDataManager externalDataManager;
     private FormDef formDef;
+    private Form form;
+    private Instance instance;
+    private Savepoint savepoint;
+    private final SavepointsRepository savepointsRepository;
+    private final boolean isFinalizedFormEdit;
+
+    @Override
+    protected void onPreExecute() {
+
+    }
+
+    public String getInstancePath() {
+        return instancePath;
+    }
+
+    public Form getForm() {
+        return form;
+    }
+
+    public Instance getInstance() {
+        return instance;
+    }
 
     public static class FECWrapper {
         FormController controller;
@@ -112,10 +145,17 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
 
     FECWrapper data;
 
-    public FormLoaderTask(String instancePath, String xpath, String waitingXPath) {
-        this.instancePath = instancePath;
+    public FormLoaderTask(Uri uri, String uriMimeType, String xpath, String waitingXPath,
+                          FormEntryControllerFactory formEntryControllerFactory, Scheduler scheduler,
+                          SavepointsRepository savepointsRepository, boolean isFinalizedFormEdit) {
+        super(scheduler);
+        this.uri = uri;
+        this.uriMimeType = uriMimeType;
         this.xpath = xpath;
         this.waitingXPath = waitingXPath;
+        this.formEntryControllerFactory = formEntryControllerFactory;
+        this.savepointsRepository = savepointsRepository;
+        this.isFinalizedFormEdit = isFinalizedFormEdit;
     }
 
     /**
@@ -123,28 +163,52 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
      * from XML. If given an instance, it will be used to fill the {@link FormDef}.
      */
     @Override
-    protected FECWrapper doInBackground(String... path) {
+    protected FECWrapper doInBackground(Void... ignored) {
         errorMsg = null;
 
-        final String formPath = path[0];
-        if (formPath == null) {
+        if (uriMimeType != null && uriMimeType.equals(InstancesContract.CONTENT_ITEM_TYPE)) {
+            instance = new InstancesRepositoryProvider(Collect.getInstance()).create().get(ContentUriHelper.getIdFromUri(uri));
+            instancePath = instance.getInstanceFilePath();
+
+            List<Form> candidateForms = new FormsRepositoryProvider(Collect.getInstance()).create().getAllByFormIdAndVersion(instance.getFormId(), instance.getFormVersion());
+
+            form = candidateForms.get(0);
+            savepoint = savepointsRepository.get(form.getDbId(), instance.getDbId());
+        } else if (uriMimeType != null && uriMimeType.equals(FormsContract.CONTENT_ITEM_TYPE)) {
+            form = new FormsRepositoryProvider(Collect.getInstance()).create().get(ContentUriHelper.getIdFromUri(uri));
+            if (form == null) {
+                Timber.e(new Error("form is null"));
+                errorMsg = "This form no longer exists, please email support@getodk.org with a description of what you were doing when this happened.";
+                return null;
+            }
+
+            savepoint = savepointsRepository.get(form.getDbId(), null);
+            instancePath = savepoint != null ? savepoint.getInstanceFilePath() : null;
+        }
+
+        if (form.getFormFilePath() == null) {
             Timber.e(new Error("formPath is null"));
             errorMsg = "formPath is null, please email support@getodk.org with a description of what you were doing when this happened.";
             return null;
         }
 
-        final File formXml = new File(formPath);
+        final File formXml = new File(form.getFormFilePath());
         final File formMediaDir = FileUtils.getFormMediaDir(formXml);
 
+        unzipMediaFiles(formMediaDir);
         setupReferenceManagerForForm(ReferenceManager.instance(), formMediaDir);
+
+        logFormDetails(formXml, formMediaDir);
 
         FormDef formDef = null;
         try {
-            formDef = createFormDefFromCacheOrXml(formPath, formXml);
+            formDef = createFormDefFromCacheOrXml(form.getFormFilePath(), formXml);
         } catch (StackOverflowError e) {
             Timber.e(e);
-            errorMsg = getLocalizedString(Collect.getInstance(), R.string.too_complex_form);
-        } catch (Exception | Error e) {
+            errorMsg = getLocalizedString(Collect.getInstance(), org.odk.collect.strings.R.string.too_complex_form);
+        } catch (UnrecognizedEntityVersionException e) {
+            errorMsg = getLocalizedString(Collect.getInstance(), org.odk.collect.strings.R.string.unrecognized_entity_version, e.getEntityVersion());
+        } catch (Exception e) {
             Timber.w(e);
             errorMsg = "An unknown error has occurred. Please ask your project leadership to email support@getodk.org with information about this form.";
             errorMsg += "\n\n" + e.getMessage();
@@ -155,15 +219,12 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
             return null;
         }
 
-        externalDataManager = new ExternalDataManagerImpl(formMediaDir);
-
-        // add external data function handlers
-        ExternalDataHandler externalDataHandlerPull = new ExternalDataHandlerPull(
-                externalDataManager);
-        formDef.getEvaluationContext().addFunctionHandler(externalDataHandlerPull);
+        externalDataManager = Collect.getInstance().getExternalDataManager();
 
         try {
-            loadExternalData(formMediaDir);
+            ExternalDataUseCases.create(formDef, formMediaDir, this::isCancelled, progress -> {
+                publishProgress(progress.apply(Collect.getInstance().getResources()));
+            });
         } catch (Exception e) {
             Timber.e(e, "Exception thrown while loading external data");
             errorMsg = e.getMessage();
@@ -176,9 +237,7 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
         }
 
         // create FormEntryController from formdef
-        final FormEntryModel fem = new FormEntryModel(formDef);
-        final FormEntryController fec = new FormEntryController(fem);
-        fec.addPostProcessor(new EntityFormFinalizationProcessor());
+        final FormEntryController fec = formEntryControllerFactory.create(formDef, formMediaDir);
 
         boolean usedSavepoint = false;
 
@@ -222,20 +281,70 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
             }
         }
         data = new FECWrapper(fc, usedSavepoint);
+        if (isFinalizedFormEdit) {
+            FormEntryUseCases.saveInstanceToDisk(fc);
+        }
         return data;
+    }
+
+    private void logFormDetails(File formFile, File formMediaDir) {
+        long formFileBytesSize = formFile.length();
+
+        List<String> csvFileBytesSizes = new ArrayList<>();
+        File[] files = formMediaDir.listFiles();
+        if (files != null) {
+            for (File mediaFile : files) {
+                if (mediaFile.getName().endsWith(".csv")) {
+                    csvFileBytesSizes.add(mediaFile.length() + "B");
+                }
+            }
+        }
+
+        if (csvFileBytesSizes.isEmpty()) {
+            Timber.w(
+                    "Attempting to load from %s, file is %dB",
+                    formFile.getAbsolutePath(),
+                    formFileBytesSize
+            );
+        } else {
+            Timber.w(
+                    "Attempting to load from %s, file is %dB and has CSV files %s",
+                    formFile.getAbsolutePath(),
+                    formFileBytesSize,
+                    String.join(", ", csvFileBytesSizes)
+            );
+        }
+    }
+
+    private static void unzipMediaFiles(File formMediaDir) {
+        File[] zipFiles = formMediaDir.listFiles(new FileFilter() {
+            @Override
+            public boolean accept(File file) {
+                return file.getName().toLowerCase(Locale.US).endsWith(".zip");
+            }
+        });
+
+        if (zipFiles != null) {
+            ZipUtils.unzip(zipFiles);
+            for (File zipFile : zipFiles) {
+                boolean deleted = zipFile.delete();
+                if (!deleted) {
+                    Timber.w("Cannot delete %s. It will be re-unzipped next time. :(", zipFile.toString());
+                }
+            }
+        }
     }
 
     private FormDef createFormDefFromCacheOrXml(String formPath, File formXml) throws XFormParser.ParseException {
         publishProgress(
-                getLocalizedString(Collect.getInstance(), R.string.survey_loading_reading_form_message));
+                getLocalizedString(Collect.getInstance(), org.odk.collect.strings.R.string.survey_loading_reading_form_message));
 
-        final FormDef formDefFromCache = FormDefCache.readCache(formXml);
+        final FormDef formDefFromCache = new ExternalizableFormDefCache().readCache(formXml);
         if (formDefFromCache != null) {
             return formDefFromCache;
         }
 
         // no binary, read from xml
-        Timber.i("Attempting to load from: %s", formXml.getAbsolutePath());
         final long start = System.currentTimeMillis();
         String lastSavedSrc = FileUtils.getOrCreateLastSavedSrc(formXml);
         FormDef formDefFromXml = XFormUtils.getFormFromFormXml(formPath, lastSavedSrc);
@@ -248,7 +357,7 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
             formDef = formDefFromXml;
 
             try {
-                FormDefCache.writeCache(formDef, formXml.getPath());
+                new ExternalizableFormDefCache().writeCache(formDef, formXml.getPath());
             } catch (IOException e) {
                 Timber.e(e);
             }
@@ -299,35 +408,31 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
     }
 
     private boolean initializeForm(FormDef formDef, FormEntryController fec) throws IOException {
-        final InstanceInitializationFactory instanceInit = new InstanceInitializationFactory();
         boolean usedSavepoint = false;
 
         if (instancePath != null) {
             File instanceXml = new File(instancePath);
 
-            // Use the savepoint file only if it's newer than the last manual save
-            final File savepointFile = SaveFormToDisk.getSavepointFile(instanceXml.getName());
-            if (savepointFile.exists()
-                    && savepointFile.lastModified() > instanceXml.lastModified()) {
+            if (savepoint != null) {
+                final File savepointFile = new File(savepoint.getSavepointFilePath());
                 usedSavepoint = true;
                 instanceXml = savepointFile;
-                Timber.w("Loading instance from savepoint file: %s",
-                        savepointFile.getAbsolutePath());
+                Timber.w("Loading instance from savepoint file: %s", savepointFile.getAbsolutePath());
             }
 
             if (instanceXml.exists()) {
                 // This order is important. Import data, then initialize.
                 try {
                     Timber.i("Importing data");
-                    publishProgress(getLocalizedString(Collect.getInstance(), R.string.survey_loading_reading_data_message));
+                    publishProgress(getLocalizedString(Collect.getInstance(), org.odk.collect.strings.R.string.survey_loading_reading_data_message));
                     importData(instanceXml, fec);
-                    formDef.initialize(false, instanceInit);
+                    formDef.initialize(isFinalizedFormEdit ? FormInitializationMode.FINALIZED_FORM_EDIT : FormInitializationMode.DRAFT_FORM_EDIT);
                 } catch (IOException | RuntimeException e) {
                     // Skip a savepoint file that is corrupted or 0-sized
                     if (usedSavepoint && !(e.getCause() instanceof XPathTypeMismatchException)) {
                         usedSavepoint = false;
                         instancePath = null;
-                        formDef.initialize(true, instanceInit);
+                        formDef.initialize(FormInitializationMode.NEW_FORM);
                         Timber.e(e, "Bad savepoint");
                     } else {
                         // The saved instance is corrupted.
@@ -337,66 +442,12 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
                     }
                 }
             } else {
-                formDef.initialize(true, instanceInit);
+                formDef.initialize(FormInitializationMode.NEW_FORM);
             }
         } else {
-            formDef.initialize(true, instanceInit);
+            formDef.initialize(FormInitializationMode.NEW_FORM);
         }
         return usedSavepoint;
-    }
-
-    @SuppressWarnings("unchecked")
-    private void loadExternalData(File mediaFolder) {
-        // SCTO-594
-        File[] zipFiles = mediaFolder.listFiles(new FileFilter() {
-            @Override
-            public boolean accept(File file) {
-                return file.getName().toLowerCase(Locale.US).endsWith(".zip");
-            }
-        });
-
-        if (zipFiles != null) {
-            ZipUtils.unzip(zipFiles);
-            for (File zipFile : zipFiles) {
-                boolean deleted = zipFile.delete();
-                if (!deleted) {
-                    Timber.w("Cannot delete %s. It will be re-unzipped next time. :(", zipFile.toString());
-                }
-            }
-        }
-
-        File[] csvFiles = mediaFolder.listFiles(new FileFilter() {
-            @Override
-            public boolean accept(File file) {
-                String lowerCaseName = file.getName().toLowerCase(Locale.US);
-                return lowerCaseName.endsWith(".csv") && !lowerCaseName.equalsIgnoreCase(
-                        ITEMSETS_CSV);
-            }
-        });
-
-        Map<String, File> externalDataMap = new HashMap<>();
-
-        if (csvFiles != null) {
-
-            for (File csvFile : csvFiles) {
-                String dataSetName = csvFile.getName().substring(0,
-                        csvFile.getName().lastIndexOf("."));
-                externalDataMap.put(dataSetName, csvFile);
-            }
-
-            if (!externalDataMap.isEmpty()) {
-
-                publishProgress(Collect.getInstance()
-                        .getString(R.string.survey_loading_reading_csv_message));
-
-                ExternalDataReader externalDataReader = new ExternalDataReaderImpl(this);
-                externalDataReader.doImport(externalDataMap);
-            }
-        }
-    }
-
-    public void publishExternalDataLoadingProgress(String message) {
-        publishProgress(message);
     }
 
     @Override
@@ -418,6 +469,18 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
         // get the root of the saved and template instances
         TreeElement savedRoot = XFormParser.restoreDataModel(fileBytes, null).getRoot();
         TreeElement templateRoot = fec.getModel().getForm().getInstance().getRoot().deepCopy(true);
+
+        // add deprecatedID to the templateRoot meta section if the savedRoot contains it
+        TreeElement metaSection = savedRoot.getFirstChild("meta");
+        if (metaSection != null) {
+            TreeElement deprecatedId = metaSection.getFirstChild("deprecatedID");
+            if (deprecatedId != null) {
+                metaSection = templateRoot.getFirstChild("meta");
+                if (metaSection != null) {
+                    metaSection.addChild(new TreeElement("deprecatedID"));
+                }
+            }
+        }
 
         // weak check for matching forms
         if (!savedRoot.getName().equals(templateRoot.getName()) || savedRoot.getMult() != 0) {
@@ -456,8 +519,6 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
 
     @Override
     protected void onCancelled() {
-        super.onCancelled();
-
         if (externalDataManager != null) {
             externalDataManager.close();
         }
@@ -488,10 +549,6 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
 
     public FormController getFormController() {
         return (data != null) ? data.getController() : null;
-    }
-
-    public ExternalDataManager getExternalDataManager() {
-        return externalDataManager;
     }
 
     public boolean hasUsedSavepoint() {
@@ -573,5 +630,9 @@ public class FormLoaderTask extends AsyncTask<String, String, FormLoaderTask.FEC
 
     public FormDef getFormDef() {
         return formDef;
+    }
+
+    public interface FormEntryControllerFactory {
+        FormEntryController create(@NonNull FormDef formDef, @NonNull File formMediaDir);
     }
 }

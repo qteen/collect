@@ -22,23 +22,36 @@ fun <T> LiveData<T>.getOrAwaitValue(
 ): T {
     var data: T? = null
     val latch = CountDownLatch(1)
-    val observer = object : Observer<T> {
-        override fun onChanged(o: T?) {
-            data = o
-            latch.countDown()
-            this@getOrAwaitValue.removeObserver(this)
-        }
+    val observer = Observer<T> { o ->
+        data = o
+        latch.countDown()
     }
-    this.observeForever(observer)
 
+    this.observeForever(observer)
     afterObserve.invoke()
 
     // Don't wait indefinitely if the LiveData is not set.
-    if (!latch.await(time, timeUnit)) {
+    if (latch.await(time, timeUnit)) {
+        this.removeObserver(observer)
+    } else {
         this.removeObserver(observer)
         throw TimeoutException("LiveData value was never set.")
     }
 
     @Suppress("UNCHECKED_CAST")
     return data as T
+}
+
+fun <T> LiveData<T>.recordValues(block: (List<T>) -> Unit) {
+    val list = mutableListOf<T>()
+    val observer = Observer<T> {
+        list.add(it)
+    }
+
+    try {
+        this.observeForever(observer)
+        block(list)
+    } finally {
+        this.removeObserver(observer)
+    }
 }

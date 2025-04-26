@@ -5,15 +5,18 @@
 -dontwarn org.xmlpull.v1.**
 -dontwarn org.hamcrest.**
 -dontwarn com.rarepebble.**
+-dontwarn com.networknt.**
+-dontwarn android.content.res.**
+-dontwarn org.kxml2.io.**
 
--keep class org.javarosa.**
 -keep class org.odk.collect.android.logic.actions.**
 -keep class android.support.v7.widget.** { *; }
 -keep class org.mp4parser.boxes.** { *; }
--keepclassmembers class * {
-  @com.google.api.client.util.Key <fields>;
-}
 -keep class * extends androidx.fragment.app.Fragment{}
+
+-keep class * implements org.javarosa.core.util.externalizable.Externalizable{}
+-keep class org.javarosa.core.model.instance.geojson.GeojsonFeature { *; }
+-keep class org.javarosa.core.model.instance.geojson.GeojsonGeometry { *; }
 
 -dontobfuscate
 
@@ -23,3 +26,6 @@
 -keepnames class okhttp3.internal.publicsuffix.PublicSuffixDatabase
 -dontwarn org.codehaus.mojo.animal_sniffer.*
 -dontwarn okhttp3.internal.platform.ConscryptPlatform
+
+# Keep line numbers for Crashlytics https://stackoverflow.com/questions/38529304/android-crashlytics-sending-incorrect-line-number
+-keepattributes SourceFile,LineNumberTable

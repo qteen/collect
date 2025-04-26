@@ -19,6 +19,7 @@ import android.content.Context;
 
 import org.javarosa.core.model.data.IAnswerData;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
+import org.odk.collect.android.utilities.Appearances;
 import org.odk.collect.android.widgets.utilities.StringWidgetUtils;
 
 /**
@@ -27,11 +28,12 @@ import org.odk.collect.android.widgets.utilities.StringWidgetUtils;
 @SuppressLint("ViewConstructor")
 public class IntegerWidget extends StringWidget {
 
-    public IntegerWidget(Context context, QuestionDetails questionDetails) {
-        super(context, questionDetails);
-        render();
+    public IntegerWidget(Context context, QuestionDetails questionDetails, Dependencies dependencies) {
+        super(context, questionDetails, dependencies);
 
-        StringWidgetUtils.adjustEditTextAnswerToIntegerWidget(answerText, questionDetails.getPrompt());
+        boolean useThousandSeparator = Appearances.useThousandSeparator(questionDetails.getPrompt());
+        Integer answer = StringWidgetUtils.getIntegerAnswerValueFromIAnswerData(questionDetails.getPrompt().getAnswerValue());
+        widgetAnswerText.setIntegerType(useThousandSeparator, answer);
     }
 
     @Override

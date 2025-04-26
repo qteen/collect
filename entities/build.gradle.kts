@@ -1,21 +1,19 @@
-import dependencies.Dependencies
-import dependencies.Versions
-
 plugins {
-    id("com.android.library")
-    id("kotlin-android")
-    id("kotlin-kapt")
-    id("androidx.navigation.safeargs.kotlin")
+    alias(libs.plugins.androidLibrary)
+    alias(libs.plugins.kotlinAndroid)
+    alias(libs.plugins.kotlinKapt)
+    alias(libs.plugins.safeargsKotlin)
 }
 
 apply(from = "../config/quality.gradle")
 
 android {
-    compileSdk = Versions.android_compile_sdk
+    namespace = "org.odk.collect.entities"
+
+    compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
-        minSdk = Versions.android_min_sdk
-        targetSdk = Versions.android_target_sdk
+        minSdk = libs.versions.minSdk.get().toInt()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
@@ -29,12 +27,8 @@ android {
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-
-    kotlinOptions {
-        jvmTarget = "1.8"
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     testOptions {
@@ -49,20 +43,29 @@ android {
 }
 
 dependencies {
-    coreLibraryDesugaring(Dependencies.desugar)
+    coreLibraryDesugaring(libs.desugar)
 
     implementation(project(":strings"))
     implementation(project(":shared"))
     implementation(project(":androidshared"))
+    implementation(project(":material"))
+    implementation(project(":async"))
+    implementation(project(":lists"))
 
-    implementation(Dependencies.kotlin_stdlib)
-    implementation(Dependencies.androidx_appcompat)
-    implementation(Dependencies.android_material)
-    implementation(Dependencies.androidx_navigation_fragment_ktx)
-    implementation(Dependencies.androidx_navigation_ui)
-    implementation(Dependencies.dagger)
-    kapt(Dependencies.dagger_compiler)
+    implementation(libs.kotlinStdlib)
+    implementation(libs.javarosa) {
+        exclude(group = "joda-time")
+        exclude(group = "org.hamcrest", module = "hamcrest-all")
+    }
+    implementation(libs.androidxAppcompat)
+    implementation(libs.androidMaterial)
+    implementation(libs.androidxNavigationFragmentKtx)
+    implementation(libs.androidxNavigationUi)
+    implementation(libs.dagger)
+    kapt(libs.daggerCompiler)
 
-    testImplementation(Dependencies.junit)
-    testImplementation(Dependencies.robolectric)
+    testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.hamcrest)
+    testImplementation(libs.mockitoKotlin)
 }

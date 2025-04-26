@@ -28,7 +28,8 @@ class FormEditActionTest {
     @Test
     fun editForm_andThenFillingForm_returnsNewInstanceURI() {
         rule.startAtMainMenu()
-            .copyAndSyncForm("one-question.xml")
+            .copyForm("one-question.xml")
+            .clickFillBlankForm() // Sync form
 
         val formId = ContentProviderUtils.getFormDatabaseId("DEMO", "one_question")
         val uri = FormsContract.getUri("DEMO", formId)
@@ -37,7 +38,7 @@ class FormEditActionTest {
         val result = rule.launchForResult(formIntent, FormEntryPage("One Question")) {
             it.answerQuestion("what is your age", "31")
                 .swipeToEndScreen()
-                .clickSaveAndExit(AppClosedPage())
+                .clickFinalize(AppClosedPage())
         }
 
         val instanceId = ContentProviderUtils.getInstanceDatabaseId("DEMO", "one_question")

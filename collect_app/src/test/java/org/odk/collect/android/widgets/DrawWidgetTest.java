@@ -17,7 +17,7 @@ import org.javarosa.core.reference.ReferenceManager;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.odk.collect.android.R;
-import org.odk.collect.android.draw.DrawActivity;
+import org.odk.collect.draw.DrawActivity;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.injection.config.AppDependencyModule;
 import org.odk.collect.android.support.CollectHelpers;
@@ -72,7 +72,7 @@ public class DrawWidgetTest extends FileWidgetTest<DrawWidget> {
         };
         return new DrawWidget(activity,
                 new QuestionDetails(formEntryPrompt, readOnlyOverride),
-                fakeQuestionMediaManager, new FakeWaitingForDataRegistry(), TempFiles.getPathInTempDir());
+                fakeQuestionMediaManager, new FakeWaitingForDataRegistry(), TempFiles.getPathInTempDir(), dependencies);
     }
 
     @NonNull
@@ -85,7 +85,7 @@ public class DrawWidgetTest extends FileWidgetTest<DrawWidget> {
     public void usingReadOnlyOptionShouldMakeAllClickableElementsDisabled() {
         when(formEntryPrompt.isReadOnly()).thenReturn(true);
 
-        assertThat(getSpyWidget().drawButton.getVisibility(), is(View.GONE));
+        assertThat(getSpyWidget().binding.drawButton.getVisibility(), is(View.GONE));
     }
 
     @Test
@@ -93,7 +93,7 @@ public class DrawWidgetTest extends FileWidgetTest<DrawWidget> {
         readOnlyOverride = true;
         when(formEntryPrompt.isReadOnly()).thenReturn(false);
 
-        assertThat(getSpyWidget().drawButton.getVisibility(), is(View.GONE));
+        assertThat(getSpyWidget().binding.drawButton.getVisibility(), is(View.GONE));
     }
 
     @Test
@@ -212,19 +212,29 @@ public class DrawWidgetTest extends FileWidgetTest<DrawWidget> {
                 .withAnswerDisplayText(DrawWidgetTest.DEFAULT_IMAGE_ANSWER)
                 .build();
 
-        Intent intent = getIntentLaunchedByClick(R.id.simple_button);
+        Intent intent = getIntentLaunchedByClick(R.id.draw_button);
         assertComponentEquals(activity, DrawActivity.class, intent);
         assertExtraEquals(DrawActivity.OPTION, DrawActivity.OPTION_DRAW, intent);
         assertExtraEquals(DrawActivity.REF_IMAGE, Uri.fromFile(file), intent);
     }
 
     @Test
-    public void whenPromptHasDefaultAnswerThatDoesNotExist_doNotPassUriToDrawActivity() {
+    public void whenPromptHasDefaultAnswerThatDoesNotExist_doNotPassUriToDrawActivity() throws Exception {
+        ReferenceManager referenceManager = setupFakeReferenceManager(singletonList(
+                new Pair<>(DrawWidgetTest.DEFAULT_IMAGE_ANSWER, "/something")
+        ));
+        CollectHelpers.overrideAppDependencyModule(new AppDependencyModule() {
+            @Override
+            public ReferenceManager providesReferenceManager() {
+                return referenceManager;
+            }
+        });
+
         formEntryPrompt = new MockFormEntryPromptBuilder()
                 .withAnswerDisplayText(DrawWidgetTest.DEFAULT_IMAGE_ANSWER)
                 .build();
 
-        Intent intent = getIntentLaunchedByClick(R.id.simple_button);
+        Intent intent = getIntentLaunchedByClick(R.id.draw_button);
         assertComponentEquals(activity, DrawActivity.class, intent);
         assertExtraEquals(DrawActivity.OPTION, DrawActivity.OPTION_DRAW, intent);
         assertThat(intent.hasExtra(DrawActivity.REF_IMAGE), is(false));
@@ -232,7 +242,7 @@ public class DrawWidgetTest extends FileWidgetTest<DrawWidget> {
 
     @Test
     public void whenThereIsNoAnswer_doNotPassUriToDrawActivity() {
-        Intent intent = getIntentLaunchedByClick(R.id.simple_button);
+        Intent intent = getIntentLaunchedByClick(R.id.draw_button);
         assertComponentEquals(activity, DrawActivity.class, intent);
         assertExtraEquals(DrawActivity.OPTION, DrawActivity.OPTION_DRAW, intent);
         assertThat(intent.hasExtra(DrawActivity.REF_IMAGE), is(false));

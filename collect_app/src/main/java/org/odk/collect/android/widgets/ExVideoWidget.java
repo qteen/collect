@@ -3,13 +3,11 @@ package org.odk.collect.android.widgets;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
-import android.util.TypedValue;
 import android.view.View;
 
 import org.javarosa.core.model.data.IAnswerData;
 import org.javarosa.core.model.data.StringData;
 import org.javarosa.form.api.FormEntryPrompt;
-import org.odk.collect.android.R;
 import org.odk.collect.android.databinding.ExVideoWidgetAnswerBinding;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
 import org.odk.collect.android.utilities.ApplicationConstants;
@@ -36,8 +34,8 @@ public class ExVideoWidget extends QuestionWidget implements FileWidget, WidgetD
     File answerFile;
 
     public ExVideoWidget(Context context, QuestionDetails questionDetails, QuestionMediaManager questionMediaManager,
-                         WaitingForDataRegistry waitingForDataRegistry, FileRequester fileRequester) {
-        super(context, questionDetails);
+                         WaitingForDataRegistry waitingForDataRegistry, FileRequester fileRequester, Dependencies dependencies) {
+        super(context, dependencies, questionDetails);
 
         this.waitingForDataRegistry = waitingForDataRegistry;
         this.questionMediaManager = questionMediaManager;
@@ -52,8 +50,6 @@ public class ExVideoWidget extends QuestionWidget implements FileWidget, WidgetD
 
         binding = ExVideoWidgetAnswerBinding.inflate(((Activity) context).getLayoutInflater());
 
-        binding.captureVideoButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, answerFontSize);
-        binding.playVideoButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, answerFontSize);
         binding.captureVideoButton.setVisibility(questionDetails.isReadOnly() ? GONE : VISIBLE);
         binding.captureVideoButton.setOnClickListener(view -> launchExternalApp());
         binding.playVideoButton.setOnClickListener(view -> mediaUtils.openFile(getContext(), answerFile, "video/*"));
@@ -97,7 +93,7 @@ public class ExVideoWidget extends QuestionWidget implements FileWidget, WidgetD
             }
         } else if (object != null) {
             if (object instanceof File) {
-                ToastUtils.showLongToast(getContext(), R.string.invalid_file_type);
+                ToastUtils.showLongToast(org.odk.collect.strings.R.string.invalid_file_type);
                 mediaUtils.deleteMediaFile(((File) object).getAbsolutePath());
                 Timber.e(new Error("ExVideoWidget's setBinaryData must receive a video file but received: " + FileUtils.getMimeType((File) object)));
             } else {

@@ -1,8 +1,12 @@
 package org.odk.collect.android.widgets.support
 
 import androidx.fragment.app.Fragment
+import org.mockito.Mockito.mock
+import org.odk.collect.maps.LineDescription
 import org.odk.collect.maps.MapFragment
+import org.odk.collect.maps.MapFragmentDelegate
 import org.odk.collect.maps.MapPoint
+import org.odk.collect.maps.PolygonDescription
 import org.odk.collect.maps.markers.MarkerDescription
 import org.odk.collect.maps.markers.MarkerIconDescription
 
@@ -10,9 +14,12 @@ class NoOpMapFragment : Fragment(), MapFragment {
 
     override fun init(
         readyListener: MapFragment.ReadyListener?,
-        errorListener: MapFragment.ErrorListener?,
+        errorListener: MapFragment.ErrorListener?
     ) {
     }
+
+    override val mapFragmentDelegate: MapFragmentDelegate
+        get() = mock()
 
     override fun getCenter(): MapPoint {
         TODO("Not yet implemented")
@@ -32,9 +39,9 @@ class NoOpMapFragment : Fragment(), MapFragment {
     }
 
     override fun zoomToBoundingBox(
-        points: MutableIterable<MapPoint>?,
+        points: Iterable<MapPoint>?,
         scaleFactor: Double,
-        animate: Boolean,
+        animate: Boolean
     ) {
     }
 
@@ -42,7 +49,7 @@ class NoOpMapFragment : Fragment(), MapFragment {
         TODO("Not yet implemented")
     }
 
-    override fun addMarkers(markers: MutableList<MarkerDescription>?): MutableList<Int> {
+    override fun addMarkers(markers: List<MarkerDescription>): MutableList<Int> {
         TODO("Not yet implemented")
     }
 
@@ -53,15 +60,11 @@ class NoOpMapFragment : Fragment(), MapFragment {
         TODO("Not yet implemented")
     }
 
-    override fun addPolyLine(
-        points: MutableIterable<MapPoint>,
-        closed: Boolean,
-        draggable: Boolean
-    ): Int {
+    override fun addPolyLine(lineDescription: LineDescription): Int {
         TODO("Not yet implemented")
     }
 
-    override fun addPolygon(points: MutableIterable<MapPoint>): Int {
+    override fun addPolygon(polygonDescription: PolygonDescription): Int {
         TODO("Not yet implemented")
     }
 

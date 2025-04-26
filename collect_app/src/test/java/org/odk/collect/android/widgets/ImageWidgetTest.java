@@ -65,7 +65,7 @@ public class ImageWidgetTest extends FileWidgetTest<ImageWidget> {
             }
         };
         return new ImageWidget(activity, new QuestionDetails(formEntryPrompt, readOnlyOverride),
-                fakeQuestionMediaManager, new FakeWaitingForDataRegistry(), TempFiles.getPathInTempDir());
+                fakeQuestionMediaManager, new FakeWaitingForDataRegistry(), TempFiles.getPathInTempDir(), dependencies);
     }
 
     @NonNull
@@ -75,13 +75,31 @@ public class ImageWidgetTest extends FileWidgetTest<ImageWidget> {
     }
 
     @Test
-    public void buttonsShouldLaunchCorrectIntents() {
+    public void buttonsShouldLaunchCorrectIntentsWhenThereIsNoCustomPackage() {
         stubAllRuntimePermissionsGranted(true);
 
-        Intent intent = getIntentLaunchedByClick(R.id.capture_image);
+        Intent intent = getIntentLaunchedByClick(R.id.capture_button);
         assertActionEquals(MediaStore.ACTION_IMAGE_CAPTURE, intent);
+        assertThat(intent.getPackage(), equalTo(null));
 
-        intent = getIntentLaunchedByClick(R.id.choose_image);
+        intent = getIntentLaunchedByClick(R.id.choose_button);
+        assertActionEquals(Intent.ACTION_GET_CONTENT, intent);
+        assertTypeEquals("image/*", intent);
+    }
+
+    @Test
+    public void buttonsShouldLaunchCorrectIntentsWhenCustomPackageIsSet() {
+        formEntryPrompt = new MockFormEntryPromptBuilder()
+                .withAdditionalAttribute("intent", "com.customcameraapp")
+                .build();
+
+        stubAllRuntimePermissionsGranted(true);
+
+        Intent intent = getIntentLaunchedByClick(R.id.capture_button);
+        assertActionEquals(MediaStore.ACTION_IMAGE_CAPTURE, intent);
+        assertThat(intent.getPackage(), equalTo("com.customcameraapp"));
+
+        intent = getIntentLaunchedByClick(R.id.choose_button);
         assertActionEquals(Intent.ACTION_GET_CONTENT, intent);
         assertTypeEquals("image/*", intent);
     }
@@ -90,15 +108,15 @@ public class ImageWidgetTest extends FileWidgetTest<ImageWidget> {
     public void buttonsShouldNotLaunchIntentsWhenPermissionsDenied() {
         stubAllRuntimePermissionsGranted(false);
 
-        assertNull(getIntentLaunchedByClick(R.id.capture_image));
+        assertNull(getIntentLaunchedByClick(R.id.capture_button));
     }
 
     @Test
     public void usingReadOnlyOptionShouldMakeAllClickableElementsDisabled() {
         when(formEntryPrompt.isReadOnly()).thenReturn(true);
 
-        assertThat(getSpyWidget().captureButton.getVisibility(), is(View.GONE));
-        assertThat(getSpyWidget().chooseButton.getVisibility(), is(View.GONE));
+        assertThat(getSpyWidget().binding.captureButton.getVisibility(), is(View.GONE));
+        assertThat(getSpyWidget().binding.chooseButton.getVisibility(), is(View.GONE));
     }
 
     @Test
@@ -106,8 +124,8 @@ public class ImageWidgetTest extends FileWidgetTest<ImageWidget> {
         readOnlyOverride = true;
         when(formEntryPrompt.isReadOnly()).thenReturn(false);
 
-        assertThat(getSpyWidget().captureButton.getVisibility(), is(View.GONE));
-        assertThat(getSpyWidget().chooseButton.getVisibility(), is(View.GONE));
+        assertThat(getSpyWidget().binding.captureButton.getVisibility(), is(View.GONE));
+        assertThat(getSpyWidget().binding.chooseButton.getVisibility(), is(View.GONE));
     }
 
     @Test

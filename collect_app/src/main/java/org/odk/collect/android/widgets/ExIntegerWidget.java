@@ -21,8 +21,9 @@ import android.content.Context;
 
 import org.javarosa.core.model.data.IAnswerData;
 import org.javarosa.core.model.data.IntegerData;
-import org.odk.collect.android.externaldata.ExternalAppsUtils;
+import org.odk.collect.android.dynamicpreload.ExternalAppsUtils;
 import org.odk.collect.android.formentry.questions.QuestionDetails;
+import org.odk.collect.android.utilities.Appearances;
 import org.odk.collect.android.widgets.utilities.StringRequester;
 import org.odk.collect.android.widgets.utilities.StringWidgetUtils;
 import org.odk.collect.android.widgets.utilities.WaitingForDataRegistry;
@@ -38,11 +39,12 @@ import java.io.Serializable;
 @SuppressLint("ViewConstructor")
 public class ExIntegerWidget extends ExStringWidget {
 
-    public ExIntegerWidget(Context context, QuestionDetails questionDetails, WaitingForDataRegistry waitingForDataRegistry, StringRequester stringRequester) {
-        super(context, questionDetails, waitingForDataRegistry, stringRequester);
-        render();
+    public ExIntegerWidget(Context context, QuestionDetails questionDetails, WaitingForDataRegistry waitingForDataRegistry, StringRequester stringRequester, Dependencies dependencies) {
+        super(context, questionDetails, waitingForDataRegistry, stringRequester, dependencies);
 
-        StringWidgetUtils.adjustEditTextAnswerToIntegerWidget(answerText, questionDetails.getPrompt());
+        boolean useThousandSeparator = Appearances.useThousandSeparator(questionDetails.getPrompt());
+        Integer answer = StringWidgetUtils.getIntegerAnswerValueFromIAnswerData(questionDetails.getPrompt().getAnswerValue());
+        binding.widgetAnswerText.setIntegerType(useThousandSeparator, answer);
     }
 
     @Override
@@ -57,13 +59,12 @@ public class ExIntegerWidget extends ExStringWidget {
 
     @Override
     public IAnswerData getAnswer() {
-        return StringWidgetUtils.getIntegerData(answerText.getText().toString(), getFormEntryPrompt());
+        return StringWidgetUtils.getIntegerData(binding.widgetAnswerText.getAnswer(), getFormEntryPrompt());
     }
 
     @Override
     public void setData(Object answer) {
         IntegerData integerData = ExternalAppsUtils.asIntegerData(answer);
-        answerText.setText(integerData == null ? null : integerData.getValue().toString());
-        widgetValueChanged();
+        binding.widgetAnswerText.setAnswer(integerData == null ? null : integerData.getValue().toString());
     }
 }
