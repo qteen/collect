@@ -24,22 +24,6 @@ class EntityFormTest {
         .around(rule)
 
     @Test
-    fun fillingEntityRegistrationForm_createsEntityWithValuesTreatedAsOpaqueStrings() {
-        testDependencies.server.addForm("entities-with-dates-registration.xml")
-        testDependencies.server.addForm("entities-with-dates-follow-up.xml")
-
-        rule.withMatchExactlyProject(testDependencies.server.url)
-            .startBlankForm("Entities With Dates Registration")
-            .swipeToEndScreen()
-            .clickFinalize()
-
-            .startBlankForm("Entities With Dates Follow Up")
-            // .assertText("2024-11-15")
-            .swipeToNextQuestion("Select date")
-            .assertText("2024-11-15")
-    }
-
-    @Test
     fun fillingEntityRegistrationForm_createsEntityForFollowUpForms() {
         testDependencies.server.addForm("one-question-entity-registration.xml")
         testDependencies.server.addForm(
@@ -257,5 +241,97 @@ class EntityFormTest {
             .assertQuestion("Select person")
             .assertText("Roman Roy")
             .assertTextDoesNotExist("Logan Roy")
+    }
+
+    @Test
+    fun editingEntityRegistrationForm_doesNotCreateEntityForFollowUpForms() {
+        testDependencies.server.addForm("one-question-entity-registration-editable.xml")
+        testDependencies.server.addForm(
+            "one-question-entity-update.xml",
+            listOf(EntityListItem("people.csv"))
+        )
+
+        rule.withMatchExactlyProject(testDependencies.server.url)
+            .startBlankForm("One Question Entity Registration Editable")
+            .fillOutAndFinalize(FormEntryPage.QuestionAndAnswer("Name", "Logan Roy"))
+            .clickSendFinalizedForm(1)
+            .clickOnForm("One Question Entity Registration Editable")
+            .editForm("One Question Entity Registration Editable")
+            .clickOnQuestion("Name")
+            .answerQuestion("Name", "Kendall Roy")
+            .swipeToEndScreen("One Question Entity Registration Editable (Edit 1)")
+            .clickFinalize()
+
+            .startBlankForm("One Question Entity Update")
+            .assertQuestion("Select person")
+            .assertText("Roman Roy")
+            .assertText("Logan Roy")
+            .assertTextDoesNotExist("Kendall Roy")
+    }
+
+    @Test
+    fun editingEntityUpdateForm_doesNotUpdateEntityForFollowUpForms() {
+        testDependencies.server.addForm(
+            "one-question-entity-update-editable.xml",
+            listOf(EntityListItem("people.csv"))
+        )
+
+        rule.withMatchExactlyProject(testDependencies.server.url)
+            .startBlankForm("One Question Entity Update Editable")
+            .assertQuestion("Select person")
+            .clickOnText("Roman Roy")
+            .swipeToNextQuestion("Name")
+            .swipeToEndScreen()
+            .clickFinalize()
+            .clickSendFinalizedForm(1)
+            .clickOnForm("One Question Entity Update Editable")
+            .editForm("One Question Entity Update Editable")
+            .clickOnQuestion("Name")
+            .answerQuestion("Name", "Romulus Roy")
+            .swipeToEndScreen("One Question Entity Update Editable (Edit 1)")
+            .clickFinalize()
+
+            .startBlankForm("One Question Entity Update Editable")
+            .assertText("Roman Roy")
+            .assertTextDoesNotExist("Romulus Roy")
+    }
+
+    @Test
+    fun whenListIsApprovalEntityList_localEntitiesCannotBeCreated() {
+        testDependencies.server.addForm("one-question-entity-registration.xml")
+        testDependencies.server.addForm(
+            "one-question-entity-update.xml",
+            listOf(EntityListItem("people.csv", true))
+        )
+
+        rule.withMatchExactlyProject(testDependencies.server.url)
+            .startBlankForm("One Question Entity Registration")
+            .fillOutAndFinalize(FormEntryPage.QuestionAndAnswer("Name", "Logan Roy"))
+
+            .startBlankForm("One Question Entity Update")
+            .assertQuestion("Select person")
+            .assertTextDoesNotExist("Logan Roy")
+    }
+
+    @Test
+    fun whenListIsApprovalEntityList_localEntitiesCanBeUpdated() {
+        testDependencies.server.addForm("one-question-entity-registration.xml")
+        testDependencies.server.addForm(
+            "one-question-entity-update.xml",
+            listOf(EntityListItem("people.csv", true))
+        )
+
+        rule.withMatchExactlyProject(testDependencies.server.url)
+            .startBlankForm("One Question Entity Update")
+            .assertQuestion("Select person")
+            .clickOnText("Roman Roy")
+            .swipeToNextQuestion("Name")
+            .answerQuestion("Name", "Romulus Roy")
+            .swipeToEndScreen()
+            .clickFinalize()
+
+            .startBlankForm("One Question Entity Update")
+            .assertText("Romulus Roy")
+            .assertTextDoesNotExist("Roman Roy")
     }
 }

@@ -128,6 +128,7 @@ import org.odk.collect.android.fragments.dialogs.LocationProvidersDisabledDialog
 import org.odk.collect.android.fragments.dialogs.NumberPickerDialog;
 import org.odk.collect.android.fragments.dialogs.RankingWidgetDialog;
 import org.odk.collect.android.fragments.dialogs.SelectMinimalDialog;
+import org.odk.collect.android.instancemanagement.InstanceExtKt;
 import org.odk.collect.android.instancemanagement.InstancesDataService;
 import org.odk.collect.android.instancemanagement.LocalInstancesUseCases;
 import org.odk.collect.android.instancemanagement.autosend.AutoSendSettingsProvider;
@@ -189,7 +190,7 @@ import org.odk.collect.permissions.PermissionListener;
 import org.odk.collect.permissions.PermissionsChecker;
 import org.odk.collect.permissions.PermissionsProvider;
 import org.odk.collect.printer.HtmlPrinter;
-import org.odk.collect.qrcode.QRCodeCreatorImpl;
+import org.odk.collect.qrcode.zxing.QRCodeCreatorImpl;
 import org.odk.collect.settings.SettingsProvider;
 import org.odk.collect.settings.keys.ProjectKeys;
 import org.odk.collect.strings.localization.LocalizedActivity;
@@ -1178,6 +1179,7 @@ public class FormFillingActivity extends LocalizedActivity implements AnimationL
      * a button for saving and exiting.
      */
     private SwipeHandler.View createViewForFormEnd(FormController formController) {
+        String userVisibleInstanceName = null;
         if (formController.getSubmissionMetadata().instanceName != null) {
             saveName = formController.getSubmissionMetadata().instanceName;
         } else {
@@ -1194,6 +1196,7 @@ public class FormFillingActivity extends LocalizedActivity implements AnimationL
                 Instance instance = new InstancesRepositoryProvider(Collect.getInstance()).create().get(ContentUriHelper.getIdFromUri(instanceUri));
                 if (instance != null) {
                     saveName = instance.getDisplayName();
+                    userVisibleInstanceName = InstanceExtKt.userVisibleInstanceName(instance, getResources());
                 }
             }
 
@@ -1208,7 +1211,8 @@ public class FormFillingActivity extends LocalizedActivity implements AnimationL
 
         return new FormEndView(
                 this,
-                saveName,
+                userVisibleInstanceName != null ? userVisibleInstanceName : saveName,
+                formEntryViewModel.isFormEditableAfterFinalization(),
                 formEndViewModel,
                 markAsFinalized -> saveForm(true, markAsFinalized, saveName, false)
         );

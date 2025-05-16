@@ -6,6 +6,8 @@ import static org.odk.collect.android.database.instances.DatabaseInstanceColumns
 import static org.odk.collect.android.database.instances.DatabaseInstanceColumns.CAN_EDIT_WHEN_COMPLETE;
 import static org.odk.collect.android.database.instances.DatabaseInstanceColumns.DELETED_DATE;
 import static org.odk.collect.android.database.instances.DatabaseInstanceColumns.DISPLAY_NAME;
+import static org.odk.collect.android.database.instances.DatabaseInstanceColumns.EDIT_NUMBER;
+import static org.odk.collect.android.database.instances.DatabaseInstanceColumns.EDIT_OF;
 import static org.odk.collect.android.database.instances.DatabaseInstanceColumns.GEOMETRY;
 import static org.odk.collect.android.database.instances.DatabaseInstanceColumns.GEOMETRY_TYPE;
 import static org.odk.collect.android.database.instances.DatabaseInstanceColumns.INSTANCE_FILE_PATH;
@@ -14,6 +16,7 @@ import static org.odk.collect.android.database.instances.DatabaseInstanceColumns
 import static org.odk.collect.android.database.instances.DatabaseInstanceColumns.LAST_STATUS_CHANGE_DATE;
 import static org.odk.collect.android.database.instances.DatabaseInstanceColumns.STATUS;
 import static org.odk.collect.android.database.instances.DatabaseInstanceColumns.SUBMISSION_URI;
+import static org.odk.collect.db.sqlite.SQLiteDatabaseExt.addColumn;
 import static org.odk.collect.db.sqlite.SQLiteDatabaseExt.doesColumnExist;
 
 import android.database.sqlite.SQLiteDatabase;
@@ -37,7 +40,7 @@ public class InstanceDatabaseMigrator implements DatabaseMigrator {
             LAST_STATUS_CHANGE_DATE, DELETED_DATE, GEOMETRY, GEOMETRY_TYPE};
 
     public void onCreate(SQLiteDatabase db) {
-        createInstancesTableV8(db);
+        createInstancesTableV9(db);
     }
 
     @SuppressWarnings({"checkstyle:FallThrough"})
@@ -59,14 +62,16 @@ public class InstanceDatabaseMigrator implements DatabaseMigrator {
             case 7:
                 upgradeToVersion8(db);
             case 8:
+                upgradeToVersion9(db);
+            case 9:
                 // Remember to bump the database version number in {@link org.odk.collect.android.database.DatabaseConstants}
-                // upgradeToVersion9(db);
+                // upgradeToVersion10(db);
         }
     }
 
     private void upgradeToVersion2(SQLiteDatabase db) {
         if (!doesColumnExist(db, INSTANCES_TABLE_NAME, CAN_EDIT_WHEN_COMPLETE)) {
-            SQLiteUtils.addColumn(db, INSTANCES_TABLE_NAME, CAN_EDIT_WHEN_COMPLETE, "text");
+            addColumn(db, INSTANCES_TABLE_NAME, CAN_EDIT_WHEN_COMPLETE, "text");
 
             db.execSQL("UPDATE " + INSTANCES_TABLE_NAME + " SET "
                     + CAN_EDIT_WHEN_COMPLETE + " = '" + true
@@ -77,11 +82,11 @@ public class InstanceDatabaseMigrator implements DatabaseMigrator {
     }
 
     private void upgradeToVersion3(SQLiteDatabase db) {
-        SQLiteUtils.addColumn(db, INSTANCES_TABLE_NAME, JR_VERSION, "text");
+        addColumn(db, INSTANCES_TABLE_NAME, JR_VERSION, "text");
     }
 
     private void upgradeToVersion4(SQLiteDatabase db) {
-        SQLiteUtils.addColumn(db, INSTANCES_TABLE_NAME, DELETED_DATE, "date");
+        addColumn(db, INSTANCES_TABLE_NAME, DELETED_DATE, "date");
     }
 
     /**
@@ -126,8 +131,8 @@ public class InstanceDatabaseMigrator implements DatabaseMigrator {
     }
 
     private void upgradeToVersion6(SQLiteDatabase db, String name) {
-        SQLiteUtils.addColumn(db, name, GEOMETRY, "text");
-        SQLiteUtils.addColumn(db, name, GEOMETRY_TYPE, "text");
+        addColumn(db, name, GEOMETRY, "text");
+        addColumn(db, name, GEOMETRY_TYPE, "text");
     }
 
     private void upgradeToVersion7(SQLiteDatabase db) {
@@ -139,8 +144,13 @@ public class InstanceDatabaseMigrator implements DatabaseMigrator {
     }
 
     private void upgradeToVersion8(SQLiteDatabase db) {
-        SQLiteUtils.addColumn(db, INSTANCES_TABLE_NAME, CAN_DELETE_BEFORE_SEND, "text");
+        addColumn(db, INSTANCES_TABLE_NAME, CAN_DELETE_BEFORE_SEND, "text");
         db.execSQL("UPDATE " + INSTANCES_TABLE_NAME + " SET " + CAN_DELETE_BEFORE_SEND + " = 'true';");
+    }
+
+    private void upgradeToVersion9(SQLiteDatabase db) {
+        db.execSQL("ALTER TABLE " + INSTANCES_TABLE_NAME + " ADD COLUMN " + EDIT_OF + " integer REFERENCES " + INSTANCES_TABLE_NAME + "(" + _ID + ") CHECK (" + EDIT_OF + " != " + _ID + ")");
+        db.execSQL("ALTER TABLE " + INSTANCES_TABLE_NAME + " ADD COLUMN " + EDIT_NUMBER + " integer CHECK ((" + EDIT_OF + " IS NULL AND " + EDIT_NUMBER + " IS NULL) OR + (" + EDIT_OF + " IS NOT NULL AND + " + EDIT_NUMBER + " IS NOT NULL))");
     }
 
     private void createInstancesTableV5(SQLiteDatabase db, String name) {
@@ -204,5 +214,26 @@ public class InstanceDatabaseMigrator implements DatabaseMigrator {
                 + DELETED_DATE + " date, "
                 + GEOMETRY + " text, "
                 + GEOMETRY_TYPE + " text);");
+    }
+
+    public void createInstancesTableV9(SQLiteDatabase db) {
+        db.execSQL("CREATE TABLE IF NOT EXISTS " + INSTANCES_TABLE_NAME + " ("
+                + _ID + " integer primary key autoincrement, "
+                + DISPLAY_NAME + " text not null, "
+                + SUBMISSION_URI + " text, "
+                + CAN_EDIT_WHEN_COMPLETE + " text, "
+                + CAN_DELETE_BEFORE_SEND + " text, "
+                + INSTANCE_FILE_PATH + " text not null, "
+                + JR_FORM_ID + " text not null, "
+                + JR_VERSION + " text, "
+                + STATUS + " text not null, "
+                + LAST_STATUS_CHANGE_DATE + " date not null, "
+                + DELETED_DATE + " date, "
+                + GEOMETRY + " text, "
+                + GEOMETRY_TYPE + " text, "
+                + EDIT_OF + " integer REFERENCES " + INSTANCES_TABLE_NAME + "(" + _ID + ") CHECK (" + EDIT_OF + " != " + _ID + "),"
+                + EDIT_NUMBER + " integer CHECK ((" + EDIT_OF + " IS NULL AND " + EDIT_NUMBER + " IS NULL) OR + (" + EDIT_OF + " IS NOT NULL AND + " + EDIT_NUMBER + " IS NOT NULL))"
+                + ");"
+        );
     }
 }

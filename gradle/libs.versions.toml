@@ -48,7 +48,6 @@ okHttpTls = { group = "com.squareup.okhttp3", name = "okhttp-tls", version.ref =
 okHttpDigest = { group = "io.github.rburgst", name = "okhttp-digest", version = "3.1.1" }
 persianJodaTime = { group = "com.github.mohamadian", name = "persianjodatime", version = "1.2" }
 myanmarCalendar = { group = "com.github.chanmratekoko", name = "myanmar-calendar", version = "1.0.6.RC3" } # Check if https://github.com/chanmratekoko/mmcalendar/issues/4 no longer takes place before upgrading
-bikramSambat = { group = "bikramsambat", name = "bikram-sambat", version = "1.1.0" }
 danlewAndroidJoda = { group = "net.danlew", name = "android.joda", version = "2.13.0.1" }
 rarepebbleColorpicker = { group = "com.github.martin-stone", name = "hsv-alpha-color-picker-android", version = "3.1.0" }
 commonsIo = { group = "commons-io", name = "commons-io", version = "2.5" } # Commons 2.6+ introduce java.nio usage that we can't access until our minSdkVersion >= 26 (https://developer.android.com/reference/java/io/File#toPath())
@@ -84,6 +83,8 @@ cameraxLifecycle = { group = "androidx.camera", name = "camera-lifecycle", versi
 cameraxCamera2 = { group = "androidx.camera", name = "camera-camera2", version.ref = "camerax" }
 cameraxVideo = { group = "androidx.camera", name = "camera-video", version.ref = "camerax" }
 jsoup = { group = "org.jsoup", name = "jsoup", version = "1.18.3" }
+mlkit-barcodescanning = 'com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.1'
+camera-mlkit-vision = { group = "androidx.camera", name = "camera-mlkit-vision", version = "1.4.2" }
 
 # Test dependencies
 junit = { group = "junit", name = "junit", version = "4.13.2" }
